@@ -10,3 +10,12 @@ Project for tracking poker stats from tournaments.
 1. Track game statistics
 1. Personalized game statistics
 1. TODO... more stuff
+
+
+# TODO
+This is a notes section for me personally.
+
+### Next time
+1. Work on email verification
+1. Login
+1. Logout

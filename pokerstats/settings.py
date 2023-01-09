@@ -96,10 +96,6 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = 'account.Account'
-# AUTHENTICATION_BACKENDS = ( 
-#     'django.contrib.auth.backends.AllowAllUsersModelBackend', 
-#     'accounts.backends.CaseInsensitiveModelBackend',
-# )
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
