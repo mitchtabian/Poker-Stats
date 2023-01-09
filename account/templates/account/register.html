@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %} 
+
+{% load crispy_forms_tags %}         
+
+<div class="container text-center">
+	<div class="row">
+		<form method="POST">
+			{% csrf_token %}
+			{% crispy register_form %}                    
+		</form>
+		<p class="text-center">If you already have an account, <a href="/login">login</a> instead.</p>
+	</div>
+</div>
+
+<style>
+	.submit-button {
+		margin-top: 16px;
+		margin-bottom: 16px;
+	}
+</style>
+{% endblock %}
