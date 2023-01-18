@@ -17,6 +17,7 @@ This is a notes section for me personally.
 
 ### Next time
 1. Work on email verification
+	1. Can't use less-secure-apps with gmail anymore. Need to find another provider.
 1. Login
 1. Logout
 

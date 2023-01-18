@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
     # Third party apps
     'crispy_forms',
+    "verify_email.apps.VerifyEmailConfig",
 
     'django.contrib.admin',
     'django.contrib.auth',

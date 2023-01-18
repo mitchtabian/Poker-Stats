@@ -7,6 +7,7 @@ from account.strings import (
 	error_unsuccessful_registration
 )
 
+
 def register_view(request):
 	if request.method == "POST":
 		form = AccountCreationForm(request.POST)
