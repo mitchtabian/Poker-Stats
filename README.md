@@ -19,3 +19,4 @@ This is a notes section for me personally.
 1. Work on email verification
 1. Login
 1. Logout
+

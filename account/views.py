@@ -2,6 +2,10 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.shortcuts import render, redirect
 from account.forms import AccountCreationForm
+from account.strings import (
+	registration_successful,
+	error_unsuccessful_registration
+)
 
 def register_view(request):
 	if request.method == "POST":
@@ -14,9 +18,9 @@ def register_view(request):
 					messages.error(request, e.args[0])
 				return return_registration_form(request, form)
 			login(request, user)
-			messages.success(request, "Registration successful." )
+			messages.success(request, registration_successful)
 			return redirect("home")
-		messages.error(request, "Unsuccessful registration. Invalid information.")
+		messages.error(request, error_unsuccessful_registration)
 		return return_registration_form(request, form)
 	form = AccountCreationForm()
 	return return_registration_form(request, form)

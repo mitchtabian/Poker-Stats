@@ -79,12 +79,15 @@ class AccountManager(BaseUserManager):
 
 		return True
 
+"""
+is_active: False if email is not verified.
+"""
 class Account(AbstractBaseUser):
 	email					= models.EmailField(verbose_name='email', max_length=60, unique=True)
 	username				= models.CharField(verbose_name="username", max_length=30, unique=True)
 	is_admin				= models.BooleanField(default=False)
 	is_staff				= models.BooleanField(default=False)
-	is_active				= models.BooleanField(default=True)
+	is_active				= models.BooleanField(default=False)
 	date_joined				= models.DateTimeField(verbose_name='date joined', auto_now_add=True)
 
 	USERNAME_FIELD			= 'email'
@@ -110,3 +113,4 @@ class Account(AbstractBaseUser):
 		if self.is_admin:
 			return True
 		return self.is_staff
+
