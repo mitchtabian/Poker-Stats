@@ -17,7 +17,7 @@ This is a notes section for me personally.
 
 ### Next time
 1. Work on email verification
-	1. Can't use less-secure-apps with gmail anymore. Need to find another provider.
+	1. Figure out what happens if they don't click the link in their email when registering. They cannot login until the email is verified so need to send another link. See heading "Resend Email using Email Form" here: https://pypi.org/project/Django-Verify-Email/
 1. Login
 1. Logout
 

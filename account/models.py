@@ -89,6 +89,7 @@ class Account(AbstractBaseUser):
 	is_staff				= models.BooleanField(default=False)
 	is_active				= models.BooleanField(default=False)
 	date_joined				= models.DateTimeField(verbose_name='date joined', auto_now_add=True)
+	last_login				= models.DateTimeField("last login", blank=True, null=True)
 
 	USERNAME_FIELD			= 'email'
 	REQUIRED_FIELDS			= ['username']
