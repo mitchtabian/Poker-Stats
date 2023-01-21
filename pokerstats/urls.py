@@ -1,8 +1,12 @@
 from django.contrib import admin
 from django.urls import include, path
+from django.contrib.auth import views
 
+from account.views import (
+    login_view,
+    register_view,
+)
 from root.views import root_view
-from account.views import login_view, register_view
 
 urlpatterns = [
     path('', root_view, name="home"),

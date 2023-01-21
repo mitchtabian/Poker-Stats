@@ -99,7 +99,16 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = 'account.Account'
+
+# Where the user is redirected after clicking verification email.
 LOGIN_URL = 'login'
+
+# Max retrys for sending verification email.
+MAX_RETRIES = 999
+
+EXPIRE_AFTER = "1m" # TODO REMOVE
+
+REQUEST_NEW_EMAIL_TEMPLATE = 'account/resend_account_verification_form.html'
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

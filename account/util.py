@@ -8,3 +8,4 @@ def validate_email(email):
 		return email
 	else:
 		raise ValueError(f'{email} is not a valid email address.')
+

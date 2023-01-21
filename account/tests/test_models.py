@@ -1,4 +1,3 @@
-from django.db.utils import IntegrityError
 from django.test import TestCase
 from account.models import Account
 
@@ -11,11 +10,11 @@ class AccountTestCase(TestCase):
 
 	def test_does_not_create_duplicate_accounts_with_same_email(self):
 		# Will throw exception if you try to create account with same email.
-		self.assertRaises(IntegrityError, Account.objects.create_user, email="test@test.com", username="tester2", password='password')
+		self.assertRaises(ValueError, Account.objects.create_user, email="test@test.com", username="tester2", password='password')
 
 	def test_does_not_create_duplicate_accounts_with_same_email_different_case(self):
 		# Will throw exception if you try to create account with same email (different case).
-		self.assertRaises(IntegrityError, Account.objects.create_user, email="tEsT@test.com", username="tester2", password='password')
+		self.assertRaises(ValueError, Account.objects.create_user, email="tEsT@test.com", username="tester2", password='password')
 
 	def test_does_not_create_duplicate_accounts_with_same_username(self):
 		# Should throw exception if you try to create account with same username.

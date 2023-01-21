@@ -1,8 +1,10 @@
 from account.models import Account
 from account.exceptions import EmailAlreadyInUseException
+from account.strings import passwords_dont_match_error
 from crispy_forms.layout import Layout, Fieldset, Submit, MultiField, Field, Div
 from crispy_forms.helper import FormHelper
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 
 class AccountCreationForm(forms.ModelForm):
 
@@ -32,7 +34,7 @@ class AccountCreationForm(forms.ModelForm):
         password1 = self.cleaned_data.get("password1")  
         password2 = self.cleaned_data.get("password2")
         if password1 and password2 and password1 != password2:
-            raise forms.ValidationError("Passwords don't match")
+            raise forms.ValidationError(passwords_dont_match_error)
         return password2
 
     def save(self, commit=True):
@@ -49,6 +51,28 @@ class AccountCreationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+"""
+Overrides the error returns from the Authentication form.
+All errors are handled manually in account.views.login_view, except random ones. So return a generic error message.
+
+Manually handled errors:
+(1) Account does not exist with given email.
+(2) Password is incorrect.
+(3) Account is not verified.
+"""
+class AccountLoginForm(AuthenticationForm):
+    def __init__(self, *args, **kwargs):
+        self.error_messages['invalid_login'] = 'An error occurred.'
+        super().__init__(*args, **kwargs)
+
+
+
+
+
+
+
+
 
 
 
