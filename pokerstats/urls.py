@@ -1,10 +1,24 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from root.views import root_view
+from root.views import (
+    contact_view,
+    root_view,
+)
+
+from user.views import CustomPasswordChangeView
 
 urlpatterns = [
     path('', root_view, name="home"),
+    path('accounts/password/change/', CustomPasswordChangeView.as_view(), name="account_change_password"),
     path('accounts/', include("allauth.urls")),
     path('admin/', admin.site.urls),
+    path('contact/', contact_view, name="contact"),
+    path('user/', include("user.urls"), name="user"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

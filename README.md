@@ -17,13 +17,6 @@ Project for tracking poker stats from tournaments.
 This is a notes section for me personally.
 
 ### Next time
-1. Improve look of all the django-allauth forms. Just like how you did the Login form.
-	- listed here https://github.com/pennersr/django-allauth/blob/master/allauth/account/urls.py
-1. Build very basic profile screen where they can change:
-	1. password
-	1. Username
-	1. Update email and secondary email via the django-allauth api?
-	1. 
 1. Create new project with all registration stuff so I don't need to do this next time I create a project.
 
 
@@ -40,5 +33,6 @@ This is a notes section for me personally.
 	1. https://github.com/ksarthak4ever/Django-Video_Subscription_App
 	1. https://www.codesnail.com/django-allauth-email-authentication-tutorial
 	1. https://medium.com/@ksarthak4ever/django-custom-user-model-allauth-for-oauth-20c84888c318
-
+1. django-bootstrap-v5
+	1. doc: https://django-bootstrap-v5.readthedocs.io/en/latest/index.html
 

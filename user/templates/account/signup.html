@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+{% load account socialaccount %}
+
+{% block head_title %}{% trans "Signup" %}{% endblock %}
+
+{% block content %}
+
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+      <h1>{% trans "Sign Up" %}</h1>
+
+      <p>{% blocktrans %}Already have an account? Then please <a href="{{ login_url }}">sign in</a>.{% endblocktrans %}</p>
+
+      {% get_providers as socialaccount_providers %}
+
+      {% if socialaccount_providers %}
+      <div class="socialaccount_ballot mb-3">
+        {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+      </div>
+      {% endif %}
+
+      <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+        {% endif %}
+        {% buttons submit='Sign Up' %}{% endbuttons %}
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Sign Up Closed" %}{% endblock %}
+
+{% block content %}
+{% load bootstrap5 %}
+{% bootstrap_css %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+
+		<h1>{% trans "Sign Up Closed" %}</h1>
+
+		<p>{% trans "We are sorry, but the sign up is currently closed." %}</p>
+	</div>
+  </div>
+</div>
+{% endblock %}

@@ -25,14 +25,8 @@
       of your existing third party accounts. Or, <a href="{{ signup_url }}">sign up</a>
       for a {{ site_name }} account and sign in below:{% endblocktrans %}</p>
 
-      <div class="socialaccount_ballot">
-
-        <ul class="socialaccount_providers">
-
-          {% include "socialaccount/snippets/provider_list.html" with process="login" %}
-
-        </ul>
-
+      <div class="socialaccount_ballot mb-3">
+        {% include "socialaccount/snippets/provider_list.html" with process="login" %}
       </div>
 
       {% include "socialaccount/snippets/login_extra.html" %}
@@ -48,12 +42,23 @@
         {% if redirect_field_value %}
         <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
         {% endif %}
-        <a class="button secondaryAction" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
-        <!-- <button class="primaryAction" type="submit">{#% trans "Sign In" %#}</button> -->
-        {% buttons submit='Sign In' %}{% endbuttons %}
+        <p>
+          <a class="button secondaryAction" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
+        </p>
+        <button class="btn btn-primary primaryAction" type="submit">{% trans "Sign In" %}</a>
       </form>
 
       {% endblock %}
     </div>
   </div>
 </div>
+
+
+
+
+
+
+
+
+
+
