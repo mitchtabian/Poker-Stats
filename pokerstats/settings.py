@@ -33,22 +33,26 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
     # My apps
-    'account',
+    'user',
     'root',
 
     # Third party apps
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'bootstrap5',
     'crispy_forms',
-    "verify_email.apps.VerifyEmailConfig",
 
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
@@ -98,17 +102,45 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'account.Account'
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend'
+]
 
-# Where the user is redirected after clicking verification email.
-LOGIN_URL = 'login'
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            'client_id': env('GOOGLE_AUTH_CLIENT_ID'),
+            'secret': env('GOOGLE_AUTH_CLIENT_SECRET'),
+            'key': ''
+        }
+    }
+}
 
-# Max retrys for sending verification email.
-MAX_RETRIES = 999
 
-EXPIRE_AFTER = "1m" # TODO REMOVE
+AUTH_USER_MODEL = 'user.User'
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
+ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_CONFIRMATION_COOLDOWN=1
+ACCOUNT_LOGIN_ON_PASSWORD_RESET=True
+LOGIN_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+LOGIN_REDIRECT_URL = 'home'
 
-REQUEST_NEW_EMAIL_TEMPLATE = 'account/resend_account_verification_form.html'
+SITE_ID = 1
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

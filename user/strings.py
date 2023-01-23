@@ -7,5 +7,5 @@ registration_successful = "Registration successful. Check your email to login."
 def login_success(user):
 	return f"Login success! You are now logged in as {user}."
 
-def account_with_email_does_not_exist(email):
-	return f'An account with email={email} does not exist.'
+def user_with_email_does_not_exist(email):
+	return f'A user with email={email} does not exist.'
