@@ -33,6 +33,14 @@ class UserManager(BaseUserManager):
 		user.save(using=self._db)
 		return user
 
+	# Use this to fetch an User by id.
+	def get_by_id(self, id):
+		try:
+			user = self.get(pk=id)
+		except User.DoesNotExist:
+			user = None
+		return user
+
 	# Use this to fetch an User by email. This is case-insensitive!
 	def get_by_email(self, email):
 		try:

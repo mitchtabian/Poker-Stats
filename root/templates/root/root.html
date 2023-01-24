@@ -1,11 +1,29 @@
 {% extends 'base.html' %}
+
+{% block head_title %}Create Tournament{% endblock %}
+
 {% block content %}
 
-{% if user.is_authenticated %}
-	<p>Loggged in as {{user.username}}.</p>
-{% else %}
-	<p>You are not logged in.</p>
-{% endif %}
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
 
+<div class="container">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+		{% if user.is_authenticated %}
+		<p>Loggged in as {{user.username}}.</p>
+		<p><a href="{% url 'account_logout' %}">logout</a></p>
+		<p><a href="{% url 'user:profile' pk=user.pk %}">profile</a></p>
+		{% else %}
+		<p><a href="{% url 'account_login' %}">login</a></p>
+		{% endif %}
+
+		<ul>
+			<li><a href="{% url 'tournament:create_tournament' %}">Create a Tournament</a></li>
+		</ul>
+	</div>
+  </div>
+</div>
 
 {% endblock content %}
