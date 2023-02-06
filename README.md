@@ -18,11 +18,7 @@ Project for tracking poker stats from tournaments.
 This is a notes section for me personally.
 
 ## Next time
-1. tournament structure UI
-	- This is fucked. Using a form seems impossible since I have to dynamically add "positions". 
-	- Maybe I can render the "first place" integer field only, and then render additional ones using ajax. Then in the form.save method I can find those fields and set them. That seems like it would work.
-	- https://www.caktusgroup.com/blog/2018/05/07/creating-dynamic-forms-django/
-1. Unit test tournament stuff
+1. Add Players to tournament? This should be a request-based system
 
 
 ## TODO (after app is fully functional)
@@ -30,7 +26,10 @@ This is a notes section for me personally.
 1. Add recaptcha to registration/login https://pypi.org/project/django-recaptcha/
 	- Or maybe just delete accounts after X days if they have not be verified?
 1. Improve UI. It looks like shit
-
+1. UNIT TESTS!!!
+1. Screenshot tests?
+1. Figure out how to make the website timezone aware
+	- Probably just need to save the timezone of the user in their profile data and then do a conversion in every view that uses a date.
 
 # Resources
 1. django-allauth
@@ -40,4 +39,9 @@ This is a notes section for me personally.
 	1. https://medium.com/@ksarthak4ever/django-custom-user-model-allauth-for-oauth-20c84888c318
 1. django-bootstrap-v5
 	1. doc: https://django-bootstrap-v5.readthedocs.io/en/latest/index.html
+
+
+
+
+
 

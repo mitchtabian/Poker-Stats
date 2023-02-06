@@ -162,6 +162,10 @@ class TournamentManager(models.Manager):
 			tournament = None
 		return tournament
 
+	def get_by_user(self, user):
+		tournaments = super().get_queryset().filter(admin=user)
+		return tournaments
+
 class Tournament(models.Model):
 	title 					= models.CharField(max_length=254, blank=False, null=False)
 	admin					= models.ForeignKey(User, on_delete=models.CASCADE)

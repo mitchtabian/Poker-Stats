@@ -4,17 +4,6 @@
 
 {% block content %}
 
-<!--
-TODO
-x) If bounty is entire buyin, then cannot have payout percentages.
-x) Write doc on how the hidden hidden_payout_structure field works.
-x) When "+" clicked, maintain previously entered percentages
-1) Validation on bounty amount: must be less than buyin amount
-2) Payout percentages must sum to 100
-3) All fields are required? required=""??
-4)
--->
-
 <div class="container">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
@@ -132,7 +121,7 @@ x) When "+" clicked, maintain previously entered percentages
           <div id="id_payout_structure_container">
             <div id="id_payout_structure_inner_container">
               <div id="id_payout_places_container">
-                <!-- Payout percentages are added programatically -->
+                <!-- Payout percentages are added programatically here via addPayoutPosition. -->
               </div>
 
               <svg xmlns="http://www.w3.org/2000/svg" id="id_add_payout" width="24" height="24" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16" onclick="incrementPayoutPositions()">
@@ -256,7 +245,7 @@ x) When "+" clicked, maintain previously entered percentages
   }
 
   /**
-   * TODO doc
+   * Adds a new element for capturing a "payout percentage".
    * */
   function addPayoutPosition(position, value) {
     var name = "payout_place_" + position;
@@ -296,7 +285,7 @@ x) When "+" clicked, maintain previously entered percentages
   }
 
   /**
-   * TODO doc
+   * Before submitting the form, extract the payout percentages from the form and populate an invisible input that's used in the view.
    * */
   function submitForm(event) {
     event.preventDefault();
@@ -306,7 +295,7 @@ x) When "+" clicked, maintain previously entered percentages
 
 
   /**
-   * TODO doc
+   * Extract the payout percentages from the form and populate an invisible input thats used in the view.
    * */
   function populatePayoutPercentages() {
     // Get values from each "payout_place" input field
@@ -318,7 +307,7 @@ x) When "+" clicked, maintain previously entered percentages
       percentages.push(element.value)
     }
 
-    // // Populate "hidden_payout_structure" with data before submitting.
+    // Populate "hidden_payout_structure" with data before submitting.
     var hiddenPayoutStructureElement = document.getElementById("id_hidden_payout_structure");
     hiddenPayoutStructureElement.value = percentages.join(',');
   }

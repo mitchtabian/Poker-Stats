@@ -17,7 +17,7 @@ admin.site.register(TournamentStructure, TournamentStructureAdmin)
 
 class TournamentAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('title', 'admin', 'tournament_structure')}),
+        (None, {'fields': ('title', 'admin', 'tournament_structure', 'started_at', 'completed_at')}),
     )
 
     list_display = ('title', 'admin', 'tournament_structure')

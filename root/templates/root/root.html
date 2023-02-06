@@ -11,7 +11,7 @@
 <div class="container">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
-		{% if user.is_authenticated %}
+		{% if request.user.is_authenticated %}
 		<p>Loggged in as {{user.username}}.</p>
 		<p><a href="{% url 'account_logout' %}">logout</a></p>
 		<p><a href="{% url 'user:profile' pk=user.pk %}">profile</a></p>
@@ -20,7 +20,10 @@
 		{% endif %}
 
 		<ul>
+			{% if request.user.is_authenticated %}
 			<li><a href="{% url 'tournament:create_tournament' %}">Create a Tournament</a></li>
+			<li><a href="{% url 'tournament:tournament_list' pk=request.user.pk %}">Tournament list</a></li>
+			{% endif %}
 		</ul>
 	</div>
   </div>

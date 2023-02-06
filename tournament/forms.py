@@ -4,7 +4,6 @@ from django.forms import widgets
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-
 from tournament.models import TournamentStructure, Tournament
 from tournament.strings import (
 	bounty_amount_exceeds_buyin_amount_error,
@@ -32,7 +31,6 @@ class TournamentStructureWidgetCanAdd(widgets.Select):
 		self.related_url = related_url
 
 	def render(self, name, value, *args, **kwargs):
-		self.related_url = reverse(self.related_url)
 		output = [super(TournamentStructureWidgetCanAdd, self).render(name, value, *args, **kwargs)]
 		output.append(u'<a href="%s" class="add-another" id="add_id_%s" onclick="return showAddAnotherPopup(this);"> ' % \
 		(self.related_url, name))
@@ -46,30 +44,18 @@ class CreateTournamentForm(forms.Form):
 									queryset=None,
 									widget=TournamentStructureWidgetCanAdd(
 										TournamentStructure,
-										related_url="tournament:create_tournament_structure"
+										related_url="/tournament/create_tournament_structure/?next=/tournament/create_tournament/"
 									)
 								)
 
+	class Meta:
+		model = Tournament
+		fields = ('title', 'tournament_structure')
 
-class PercentageWidgetCanAdd(widgets.NumberInput):
-
-	def __init__(self, related_model, related_url=None, *args, **kw):
-		super(PercentageWidgetCanAdd, self).__init__(*args, **kw)
-		if not related_url:
-			rel_to = related_model
-			info = (rel_to._meta.app_label, rel_to._meta.object_name.lower())
-			related_url = '/'
-
-		# Be careful that here "reverse" is not allowed
-		self.related_url = related_url
-
-	def render(self, name, value, *args, **kwargs):
-		self.related_url = reverse(self.related_url)
-		output = [super(PercentageWidgetCanAdd, self).render(name, value, *args, **kwargs)]
-		output.append(u'<a href="%s" class="add-another" id="add_id_%s" onclick="return showAddAnotherPopup(this);"> ' % \
-		(self.related_url, name))
-		output.append(u'Add another position</a>')                                                                                                                              
-		return mark_safe(u''.join(output))
+	def __init__(self, *args, **kwargs):
+		self.user = kwargs.pop('user', None)
+		super(CreateTournamentForm, self).__init__(*args, **kwargs)
+		self.fields['tournament_structure'].queryset = TournamentStructure.objects.get_structures_by_user(self.user)
 
 
 class CreateTournamentStructureForm(forms.Form):

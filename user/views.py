@@ -44,3 +44,9 @@ user_profile_view = login_required(UserProfileView.as_view())
 
 def cannot_edit_others_profile(request):
 	return render(request=request, template_name="user/cannot_edit_someone_elses_profile.html", context={})
+
+
+
+
+
+	

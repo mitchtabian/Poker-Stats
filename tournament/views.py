@@ -1,52 +1,92 @@
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.messages.views import SuccessMessageMixin
-from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.views.generic.edit import FormView, CreateView
-from django.views.generic.detail import DetailView
+from django.utils import timezone
 
 from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm
 from tournament.models import Tournament, TournamentStructure
 
 
-class TournamentCreateView(LoginRequiredMixin, SuccessMessageMixin, FormView):
-	template_name = 'tournament/create_tournament.html'
-	form_class = CreateTournamentForm
-	success_message = 'Tournament Created'
+@login_required
+def tournament_create_view(request, *args, **kwargs):
+	context = {}
+	if request.method == 'POST':
+		form = CreateTournamentForm(request.POST, user=request.user)
+		if form.is_valid():
+			tournament = Tournament.objects.create_tournament(
+				user = request.user,
+				title = form.cleaned_data['title'],
+				tournament_structure = form.cleaned_data['tournament_structure'],
+			)
+			if tournament is not None:
+				messages.success(request, "Tournament Created!")
 
-	def get_success_url(self):
-		return reverse('tournament:create_tournament')
+			redirect_url = request.GET.get('next')
+			if redirect_url is not None:
+				return redirect(redirect_url)
+			form = CreateTournamentForm(user=request.user)
+	else:
+		form = CreateTournamentForm(user=request.user)
 
-	def form_valid(self, form):
-		user = self.request.user
-		form.instance.admin = user
-		return super().form_valid(form)
+	context['form'] = form
+	return render(request=request, template_name='tournament/create_tournament.html', context=context)
 
-	def get_context_data(self, **kwargs):
-		context = super().get_context_data(**kwargs)
-		form = CreateTournamentForm()
-		user = self.request.user
-		form.fields['tournament_structure'].queryset = TournamentStructure.objects.get_structures_by_user(user)
-		context['form'] = form
-		return context
+@login_required
+def tournament_list_view(request, *args, **kwargs):
+	context = {}
+	context['tournaments'] = Tournament.objects.get_by_user(user=request.user)
+	return render(request=request, template_name="tournament/tournament_list.html", context=context)
 
 """
 TODO
-Add login required mixin
-Add authenticated required mixin?
+1) request to join tournament feature?
 """
-def tournament_structure_create_view(request):
+@login_required
+def tournament_view(request, *args, **kwargs):
 	context = {}
-	# if this is a POST request we need to process the form data
+	context['tournament'] = Tournament.objects.get_by_id(kwargs['pk'])
+	return render(request=request, template_name="tournament/tournament_view.html", context=context)
+
+@login_required
+def start_tournament(request, *args, **kwargs):
+	user = request.user
+	tournament = Tournament.objects.get_by_id(kwargs['pk'])
+	if tournament.admin != user:
+		messages.warning(request, "You are not the admin of this Tournament.")
+	tournament.started_at = timezone.now()
+	tournament.save()
+	return redirect("tournament:tournament_view", pk=kwargs['pk'])
+
+@login_required
+def complete_tournament(request, *args, **kwargs):
+	user = request.user
+	tournament = Tournament.objects.get_by_id(kwargs['pk'])
+	if tournament.admin != user:
+		messages.warning(request, "You are not the admin of this Tournament.")
+	tournament.completed_at = timezone.now()
+	tournament.save()
+	return redirect("tournament:tournament_view", pk=kwargs['pk'])
+
+@login_required
+def undo_completed_at(request, *args, **kwargs):
+	user = request.user
+	tournament = Tournament.objects.get_by_id(kwargs['pk'])
+	if tournament.admin != user:
+		messages.warning(request, "You are not the admin of this Tournament.")
+	tournament.completed_at = None
+	tournament.save()
+	return redirect("tournament:tournament_view", pk=kwargs['pk'])
+
+@login_required
+def tournament_structure_create_view(request, *args, **kwargs):
+	context = {}
 	if request.method == 'POST':
-		# create a form instance and populate it with data from the request:
 		form = CreateTournamentStructureForm(request.POST)
-		# check whether it's valid:
 		if form.is_valid():
 			payout_percentages = [int(int_percentage) for int_percentage in (form.cleaned_data['hidden_payout_structure'].split(","))]
 			tournament_structure = TournamentStructure.objects.create_tournament_struture(
-				user = request.user, # TODO(add login required mixin or whatever)
+				user = request.user,
 				title = form.cleaned_data['title'],
 				allow_rebuys = form.cleaned_data['allow_rebuys'],
 				buyin_amount = form.cleaned_data['buyin_amount'],
@@ -56,9 +96,11 @@ def tournament_structure_create_view(request):
 
 			messages.success(request, "Created new Tournament Structure")
 
-			# TODO(redirect using next?)
+			redirect_url = request.GET.get('next')
+			if redirect_url is not None:
+				return redirect(redirect_url)
+			form = CreateTournamentStructureForm()
 
-	# if a GET (or any other method) we'll create a blank form
 	else:
 		form = CreateTournamentStructureForm()
 

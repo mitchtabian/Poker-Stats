@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block head_title %}Tournaments{% endblock %}
+
+{% block content %}
+
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+      <h1 class="mb-3">{{tournament.title}}</h1>
+      {% if tournament.completed_at %}
+        <p>Completed on {{tournament.completed_at}}</p>
+        <p>Need to edit the Tournament? You'll need to mark it as "incomplete". <a href="{% url 'tournament:undo_complete' pk=tournament.id %}">Mark as incomplete</a>.</p>
+      {% else %}
+        {% if tournament.started_at %}
+          <p>Started on: {{tournament.started_at}}</p>
+          <p>Is this tournament done? <a href="{% url 'tournament:complete' pk=tournament.id %}">Complete Tournament</a>.</p>
+        {% else %}
+          <a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-primary">Start Tournament</a>
+        {% endif %}
+      {% endif %}
+	</div>
+  </div>
+</div>
+
+{% endblock content %}
