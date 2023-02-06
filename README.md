@@ -21,6 +21,7 @@ This is a notes section for me personally.
 1. tournament structure UI
 	- This is fucked. Using a form seems impossible since I have to dynamically add "positions". 
 	- Maybe I can render the "first place" integer field only, and then render additional ones using ajax. Then in the form.save method I can find those fields and set them. That seems like it would work.
+	- https://www.caktusgroup.com/blog/2018/05/07/creating-dynamic-forms-django/
 1. Unit test tournament stuff
 
 

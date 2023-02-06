@@ -4,21 +4,365 @@
 
 {% block content %}
 
-{% load bootstrap5 %}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
+<!--
+TODO
+x) If bounty is entire buyin, then cannot have payout percentages.
+x) Write doc on how the hidden hidden_payout_structure field works.
+x) When "+" clicked, maintain previously entered percentages
+1) Validation on bounty amount: must be less than buyin amount
+2) Payout percentages must sum to 100
+3) All fields are required? required=""??
+4)
+-->
 
 <div class="container">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
-      <h1 class="mb-3">Create Tournament Structure</h1>
-      <form method="POST">
+      <h1 class="mb-3">Tournament Structure</h1>
+      <form method="POST" id="id_form">
         {% csrf_token %}
-        {% bootstrap_form form %}
-        <button class="btn btn-primary" type="submit">Create</button>
+
+        <!-- Title -->
+        <div class="mb-3">
+          <label class="form-label" for="id_title">Title</label>
+          <input type="text" name="title" class="form-control" placeholder="Title" required id="id_title" value="{{form.title.value}}">
+          {% if form.errors %}
+          {% for field in form %}
+            {% if field.name == 'title' %}
+              {% for error in field.errors %}
+              <div class="field_error mt-2">
+                <span>Error: {{ error }}</span>
+              </div>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+          {% endif %}
+        </div>
+
+        <!-- Buyin amount -->
+        <div class="mb-3">
+          <label class="form-label" for="id_buyin_amount">Buyin amount</label>
+          <input type="number" name="buyin_amount" class="form-control" placeholder="Buyin amount" required id="id_buyin_amount" value='{{form.buyin_amount.value}}'>
+          {% if form.errors %}
+          {% for field in form %}
+            {% if field.name == 'buyin_amount' %}
+              {% for error in field.errors %}
+              <div class="field_error mt-2">
+                <span>Error: {{ error }}</span>
+              </div>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+          {% endif %}
+        </div>
+
+        <!-- Allow Rebuys -->
+        <div class="mb-3">
+          <div class="form-check">
+            <input type="checkbox" name="allow_rebuys" class="form-check-input" id="id_allow_rebuys" {% if form.allow_rebuys.value == True %}checked{% else %}''{% endif %}>
+            <label class="form-check-label" for="id_allow_rebuys">Allow rebuys</label>
+            {% if form.errors %}
+            {% for field in form %}
+              {% if field.name == 'allow_rebuys' %}
+                {% for error in field.errors %}
+                <div class="field_error mt-2">
+                  <span>Error: {{ error }}</span>
+                </div>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- is Bounty Tournament? -->
+        <div class="mb-3">
+
+          <div class="form-check">
+            <input type="checkbox" name="is_bounty_tournament" class="form-check-input" id="id_is_bounty_tournament" {% if form.is_bounty_tournament.value == True %}checked{% else %}''{% endif %} onclick="toggleIsBountyTournament()">
+            <label class="form-check-label" for="id_is_bounty_tournament">Bounty Tournament</label>
+            {% if form.errors %}
+            {% for field in form %}
+              {% if field.name == 'is_bounty_tournament' %}
+                {% for error in field.errors %}
+                <div class="field_error mt-2">
+                  <span>Error: {{ error }}</span>
+                </div>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Bounty amount -->
+        <div class="d-none" id="id_bounty_amount_element">
+          <div id="id_bounty_amount_inner_element">
+            <label class="form-label" for="id_bounty_amount">Bounty amount</label>
+            <span id="id_bounty_info_popup_container" data-toggle="tooltip" data-placement="top">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_bounty_info" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+              </svg>
+            </span>
+            <input type="number" name="bounty_amount" class="form-control" placeholder="Bounty amount" required id="id_bounty_amount" value="{{form.bounty_amount.value}}">
+            {% if form.errors %}
+            {% for field in form %}
+              {% if field.name == 'bounty_amount' %}
+                {% for error in field.errors %}
+                <div class="field_error mt-2">
+                  <span>Error: {{ error }}</span>
+                </div>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Payout percentages -->
+        <div class="mb-3" id="id_payout_structure_container_parent">
+          <label class="form-label" for="id_payout_structure">Payout Structure</label>
+          <span id="id_percentages_info_popup_container" data-toggle="tooltip" data-placement="top">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_bounty_info" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+              </svg>
+            </span>
+          <div id="id_payout_structure_container">
+            <div id="id_payout_structure_inner_container">
+              <div id="id_payout_places_container">
+                <!-- Payout percentages are added programatically -->
+              </div>
+
+              <svg xmlns="http://www.w3.org/2000/svg" id="id_add_payout" width="24" height="24" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16" onclick="incrementPayoutPositions()">
+                <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"></path>
+                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"></path>
+              </svg>
+            </div>
+          </div>
+          <input class="d-none" type="text" name="hidden_payout_structure" id="id_hidden_payout_structure" value="{{form.hidden_payout_structure.value}}">
+          {% if form.errors %}
+          {% for field in form %}
+            {% if field.name == 'hidden_payout_structure' %}
+              {% for error in field.errors %}
+              <div class="field_error mt-2">
+                <span>Error: {{ error }}</span>
+              </div>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+          {% endif %}
+        </div>
+
+        <button id="id_submit_button" class="btn btn-primary" type="submit">Create</button>
       </form>
-	</div>
+	 </div>
   </div>
 </div>
 
+<style type="text/css">
+  #id_submit_button {
+    margin-top: 16px;
+  }
+
+  #id_bounty_amount_inner_element {
+    padding-left: 32px;
+    padding-bottom: 16px;
+  }
+
+  #id_bounty_amount_element {
+    border-left: 3px solid #cccccc;
+  }
+
+  #id_payout_structure_container {
+    border-left: 3px solid #cccccc;
+  }
+
+  #id_payout_structure_inner_container {
+    padding-left: 32px;
+    padding-bottom: 16px;
+    padding-top: 16px;
+  }
+
+  #id_add_payout:hover {
+    background: #cccccc;
+    cursor: pointer;
+  }
+
+  #id_add_payout {
+    margin-top: 16px;
+    color: #0275d8;
+  }
+
+  .field_error {
+    color:#d9534f;
+    padding: 16px;
+    border: 2px solid #d9534f;
+    background: #f2f2f2;
+    border-radius: 8px;
+    margin: 16px;
+  }
+
+</style>
+
+<script type="text/javascript">
+
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+
+  // Set "Bounty amount" tooltip text
+  document.getElementById("id_bounty_info_popup_container").title = "When a player is eliminated, this is paid to the player who did the eliminating."
+
+  // Set "payout percentage" tooltip text
+  document.getElementById("id_percentages_info_popup_container").title = "What percentage will each player get for placing?"
+
+  var isBountyTournament = false;
+
+  function toggleIsBountyTournament() {
+    isBountyTournament = !isBountyTournament;
+    var bountyAmountElement = document.getElementById("id_bounty_amount_element");
+    if (isBountyTournament) {
+      bountyAmountElement.classList.remove("d-none");
+    } else {
+      bountyAmountElement.classList.add("d-none");
+    }
+  }
+
+  var numPercentageInputs = 1;
+
+  function buildPlaceholderText(place) {
+    if (place == 1) {
+      return "Percenage paid to 1st place"
+    } else if (place == 2) {
+      return "Percenage paid to 2nd place"
+    } else if(place == 3) {
+      return "Percenage paid to 3rd place"
+    } else {
+      return "Percenage paid to " + place + "th place"
+    }
+  }
+
+  function removePayoutPosition(position) {
+    var numElementsRemoved = 0
+    for (let i = position; i < numPercentageInputs; i++) {
+      var elementId = "div_id_payout_place_" + i;
+      document.getElementById("id_payout_places_container").removeChild(document.getElementById(elementId))
+      numElementsRemoved += 1
+    }
+    numPercentageInputs -= numElementsRemoved
+  }
+
+  /**
+   * TODO doc
+   * */
+  function addPayoutPosition(position, value) {
+    var name = "payout_place_" + position;
+    var id = "id_" + name;
+    var placeholder = buildPlaceholderText(position)
+    var newInput = document.createElement("div")
+    // Set a unique id so it can be removed if the user wants to.
+    newInput.setAttribute("id", "div_" + id)
+    var pctValue = ""
+    if (value != "None") {
+      pctValue = value
+    }
+    newInput.innerHTML = '<div class="input-group mb-3"><span class="input-group-text" id="id_remove_percentage_' + position + '" onclick="removePayoutPosition(' + position + ')"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-square" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"></path><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"></path></svg></span><input type="number" name="' + name + '" class="form-control" placeholder="' + placeholder + '" id="' + id + '" value="' + pctValue + '"></div>'
+
+    document.getElementById("id_payout_places_container").appendChild(newInput)
+
+    // Apply css to new element
+    var iconId = "id_remove_percentage_" + position
+    document.getElementById(iconId).style.color = "#d9534f"
+
+    var css = '#' + iconId + ':hover{ background: #cccccc; cursor: pointer;}'
+    var style = document.createElement('style');
+    style.setAttribute('type', 'text/css');
+    if ('textContent' in style) {
+      style.textContent = css;
+    } else {
+      style.styleSheet.cssText = css;
+    }
+    document.getElementsByTagName('head')[0].appendChild(style);
+
+    // Increment the counter so we know how many inputs there are.
+    numPercentageInputs += 1
+  }
+
+  function incrementPayoutPositions() {
+    addPayoutPosition(numPercentageInputs, "None")
+  }
+
+  /**
+   * TODO doc
+   * */
+  function submitForm(event) {
+    event.preventDefault();
+    populatePayoutPercentages()
+    document.getElementById("id_form").submit();
+  }
+
+
+  /**
+   * TODO doc
+   * */
+  function populatePayoutPercentages() {
+    // Get values from each "payout_place" input field
+    document.getElementById("id_payout_places_container")
+    var percentages = []
+    for (let position = 1; position < numPercentageInputs; position++) {
+      var id = "id_payout_place_" + position
+      var element = document.getElementById(id);
+      percentages.push(element.value)
+    }
+
+    // // Populate "hidden_payout_structure" with data before submitting.
+    var hiddenPayoutStructureElement = document.getElementById("id_hidden_payout_structure");
+    hiddenPayoutStructureElement.value = percentages.join(',');
+  }
+
+  document.getElementById("id_submit_button").addEventListener("click", submitForm)
+
+
+  /**
+   * percentages: array of strings. Ex: ['60', '30', '10']
+   * */
+  function buildPayoutPositionsFromPercentages(percentages) {
+    document.getElementById("id_payout_places_container").innerHTML = ""
+    for (let i = 0; i <= percentages.length - 1; i++) {
+      addPayoutPosition(i + 1, percentages[i])
+    }
+  }
+
+  function initalState() {
+    if (document.getElementById('id_is_bounty_tournament').checked) {
+      isBountyTournament = true
+      var bountyAmountElement = document.getElementById("id_bounty_amount_element");
+      bountyAmountElement.classList.remove("d-none");
+    }
+
+    var initialPercentageValuesFromForm = document.getElementById("id_hidden_payout_structure").value;
+    // If there are existing percentage values, use those to populate the fields.
+    if (initialPercentageValuesFromForm != "None") {
+      var percentages = initialPercentageValuesFromForm.split(",")
+      buildPayoutPositionsFromPercentages(percentages)
+    } else { // Otherwise, start from 1.
+      incrementPayoutPositions();
+    }
+  }
+
+  initalState()
+</script>
+
+
 {% endblock content %}
+
+
+
+
+
+
+
+

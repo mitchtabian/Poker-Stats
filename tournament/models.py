@@ -76,10 +76,10 @@ class TournamentStructure(models.Model):
 	user 					= models.ForeignKey(User, on_delete=models.CASCADE)
 
 	# Cost to buy into this tournament.
-	buyin_amount			= models.DecimalField(max_digits=9, decimal_places=2)
+	buyin_amount			= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
-	# Optional. Not all tournaments must have bounties.
-	bounty_amount			= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
+	# Optional. Not all tournaments must have bounties. If this is null, it is not a bounty tournament.
+	bounty_amount			= models.DecimalField(max_digits=9, decimal_places=2, blank=True, null=True)
 	
 	"""
 	Ex: (70, 20, 10)

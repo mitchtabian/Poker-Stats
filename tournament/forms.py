@@ -1,10 +1,23 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import widgets
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 
 from tournament.models import TournamentStructure, Tournament
+from tournament.strings import (
+	bounty_amount_exceeds_buyin_amount_error,
+	percentages_must_be_a_number,
+	percentages_must_be_greater_than_0,
+	percentages_must_not_be_empty,
+	percentages_must_sum_to_100,
+	this_number_cannot_be_negative,
+	this_number_must_be_greater_than_0,
+	you_must_enter_a_bounty_amount,
+	you_must_enter_a_buyin_amount,
+	you_must_enter_a_payout_structure,
+)
 
 class TournamentStructureWidgetCanAdd(widgets.Select):
 
@@ -58,84 +71,64 @@ class PercentageWidgetCanAdd(widgets.NumberInput):
 		output.append(u'Add another position</a>')                                                                                                                              
 		return mark_safe(u''.join(output))
 
-PERCENTAGE_CHOICES = list(str(i*5) for i in range(1, 20))
-
-def get_percentage_field_name(position):
-	if position == 1:
-		return "First place"
-	if position == 2:
-		return "Second place"
-	if position == 3:
-		return "Third place"
-	else:
-		return "dunno"
 
 class CreateTournamentStructureForm(forms.Form):
-	title 						= forms.CharField()
-	buyin_amount		 		= forms.IntegerField()
-	bounty_amount		 		= forms.IntegerField()
-	allow_rebuys		 		= forms.BooleanField()
-	# payout_percentages			= forms.MultipleChoiceField(choices = PERCENTAGE_CHOICES)
+	title 						= forms.CharField(label="Title", required=True, initial="")
+	buyin_amount		 		= forms.IntegerField(label="Buyin amount", required=True)
+	allow_rebuys		 		= forms.BooleanField(label="Allow rebuys", required=False, initial=False)
+	is_bounty_tournament		= forms.BooleanField(label="Is bounty tournament", required=False, initial=False)
+	bounty_amount		 		= forms.IntegerField(label="Bounty amount", required=False)
+	hidden_payout_structure		= forms.CharField(label="Payout structure")
 
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-		# TODO(set label somehow? "Pay Structure")
-		field_name = get_percentage_field_name(1)
-		self.fields[field_name] = forms.IntegerField(
-			required=False,
-			widget=PercentageWidgetCanAdd(
-				int,
-				related_url="tournament:create_tournament_structure"
-			)
-		)
-		self.fields[field_name].label = field_name
-		self.fields[field_name].initial = 100
-		# for i in range(1, len(PERCENTAGE_CHOICES)):
-		# 	field_name = get_percentage_field_name(i)
-		# 	self.fields[field_name] = forms.IntegerField(required=False)
-		# 	self.fields[field_name].label = field_name
-		# 	self.fields[field_name].initial = 100
-			# try:
-			# 	self.initial[field_name] = PERCENTAGE_CHOICES[i]
-			# except IndexError:
-			# 	self.initial[field_name] = ""
-		# create an extra blank field
-		# field_name = f'percentage_{i + 1,}'
-		# self.fields[field_name] = forms.CharField(required=False)
+	def clean_buyin_amount(self):
+		buyin_amount = self.cleaned_data.get('buyin_amount')
+		if buyin_amount is None:
+			self.add_error("buyin_amount", you_must_enter_a_buyin_amount)
+		if buyin_amount <= 0:
+			self.add_error("buyin_amount", this_number_must_be_greater_than_0)
+		return buyin_amount
 
-	def clean(self):
-		percentages = set()
-		i = 0
-		field_name = f'percentage_{i,}'
-		while self.cleaned_data.get(field_name):
-			percentage = self.cleaned_data[field_name]
-			if percentage in percentages:
-				self.add_error(field_name, 'Duplicate')
+	def clean_bounty_amount(self):
+		# bounty is less than buyin amount
+		buyin_amount = self.cleaned_data.get('buyin_amount')
+		bounty_amount = self.cleaned_data.get('bounty_amount')
+		is_bounty_tournament = self.cleaned_data.get('is_bounty_tournament')
+		if is_bounty_tournament:
+			if bounty_amount is None:
+				self.add_error("bounty_amount", you_must_enter_a_bounty_amount)
+			elif bounty_amount <= 0:
+				self.add_error("bounty_amount", this_number_must_be_greater_than_0)
 			else:
-				percentages.add(percentage)
-			i += 1
-			field_name = f'percentage_{i,}'
-		self.cleaned_data['percentages'] = percentages
+				if bounty_amount >= buyin_amount:
+					self.add_error("bounty_amount", bounty_amount_exceeds_buyin_amount_error)
+		return bounty_amount
 
-	def save(self):
-		# tournament_structure = self.instance
-		# tournament_structure.title = self.cleaned_data['title']
-		# tournament_structure.buyin_amount = self.cleaned_data['buyin_amount']
-		# tournament_structure.bounty_amount = self.cleaned_data['bounty_amount']
-		# tournament_structure.allow_rebuys = self.cleaned_data['allow_rebuys']
+	def clean_hidden_payout_structure(self):
+		payout_structure_raw = self.cleaned_data.get('hidden_payout_structure')
+		if payout_structure_raw is None:
+			self.add_error("hidden_payout_structure", you_must_enter_a_payout_structure)
+		percentages = payout_structure_raw.split(",")
+		pct_sum = 0
+		for percentage in percentages:
+			if percentage is None:
+				self.add_error("hidden_payout_structure", percentages_must_not_be_empty)
+			try:
+				pct_sum += int(percentage)
+				if int(percentage) <= 0:
+					self.add_error("hidden_payout_structure", percentages_must_be_greater_than_0)
+			except Exception as e:
+				self.add_error("hidden_payout_structure", percentages_must_be_a_number)
+		if pct_sum != 100:
+			self.add_error("hidden_payout_structure", percentages_must_sum_to_100)
+		return payout_structure_raw
 
-		print(f"percentages: {self.cleaned_data['percentages']}")
-		# tournament_structure.payout_percentages = list()
-		# tournament_structure.save()
 
-		structure = TournamentStructure.objects.create_tournament_struture(
-			title=self.cleaned_data['title'],
-			buyin_amount=self.cleaned_data['buyin_amount'],
-			bounty_amount=self.cleaned_data['bounty_amount'],
-			allow_rebuys=self.cleaned_data['allow_rebuys'],
-			payout_percentages=listOf(60,20,20)
-		)
-		print(f"structure: {structure}")
+
+
+
+
+
+
 
 
 
