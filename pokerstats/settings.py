@@ -37,6 +37,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     # My apps
+    'tournament',
     'user',
     'root',
 
@@ -175,7 +176,7 @@ DEFAULT_FROM_EMAIL = 'noreply<verify@tabian.ca>'
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'US/Pacific'
 
 USE_I18N = True
 

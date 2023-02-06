@@ -16,6 +16,7 @@ urlpatterns = [
     path('accounts/', include("allauth.urls")),
     path('admin/', admin.site.urls),
     path('contact/', contact_view, name="contact"),
+    path('tournament/', include("tournament.urls"), name="tournament"),
     path('user/', include("user.urls"), name="user"),
 ]
 

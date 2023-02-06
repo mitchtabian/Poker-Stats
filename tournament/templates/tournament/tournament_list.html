@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block head_title %}Tournaments{% endblock %}
+
+{% block content %}
+
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-lg-2 col-lg-8">
+      <h1 class="mb-3">Tournaments</h1>
+      {% if tournaments %}
+        <ul>
+        {% for tournament in tournaments %}
+        <li>
+          <a href="{% url 'tournament:tournament_view' pk=tournament.id %}">{{tournament.title}}</a>
+          {% if tournament.completed_at %}
+            (completed on {{tournament.completed_at}})
+          {% else %}
+            {% if tournament.started_at %}
+              (started on {{tournament.started_at}})
+            {% endif %}
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <p>You haven't created any Tournaments. Create one <a href="{% url 'tournament:create_tournament' %}">here</a>.</p>
+      {% endif %}
+	</div>
+  </div>
+</div>
+
+{% endblock content %}
