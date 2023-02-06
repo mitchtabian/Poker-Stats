@@ -10,25 +10,18 @@
 
 <div class="container">
   <div class="row">
-    <div class="offset-lg-2 col-lg-8">
+    <div class="offset-lg-3 col-lg-6">
       <h1 class="mb-3">Tournaments</h1>
+      <a class="btn btn-primary mb-4" href="{% url 'tournament:create_tournament' %}">Create new Tournament</a>
       {% if tournaments %}
-        <ul>
+        <ul class="list-group">
         {% for tournament in tournaments %}
-        <li>
-          <a href="{% url 'tournament:tournament_view' pk=tournament.id %}">{{tournament.title}}</a>
-          {% if tournament.completed_at %}
-            (completed on {{tournament.completed_at}})
-          {% else %}
-            {% if tournament.started_at %}
-              (started on {{tournament.started_at}})
-            {% endif %}
-          {% endif %}
-        </li>
+        <a href="{% url 'tournament:tournament_view' pk=tournament.id %}" class="list-group-item list-group-item-action">
+          <span>{{tournament.title}} (<span style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}}</span>)
+        </span>
+        </a>
         {% endfor %}
       </ul>
-      {% else %}
-        <p>You haven't created any Tournaments. Create one <a href="{% url 'tournament:create_tournament' %}">here</a>.</p>
       {% endif %}
 	</div>
   </div>

@@ -58,6 +58,18 @@ class CreateTournamentForm(forms.Form):
 		self.fields['tournament_structure'].queryset = TournamentStructure.objects.get_structures_by_user(self.user)
 
 
+class EditTournamentForm(forms.Form):
+	title 						= forms.CharField()
+	tournament_structure 		= forms.ModelChoiceField(queryset=None)
+	# players 					= forms.CharField() # TODO same thing as with hidden_payout_structure but with id of users
+
+	def __init__(self, *args, **kwargs):
+		self.user = kwargs.pop('user', None)
+		self.tournament_pk = kwargs.pop('tournament_pk', None)
+		super(EditTournamentForm, self).__init__(*args, **kwargs)
+		self.fields['tournament_structure'].queryset = TournamentStructure.objects.get_structures_by_user(self.user)
+		self.fields['title'].initial = Tournament.objects.get_by_id(self.tournament_pk).title
+
 class CreateTournamentStructureForm(forms.Form):
 	title 						= forms.CharField(label="Title", required=True, initial="")
 	buyin_amount		 		= forms.IntegerField(label="Buyin amount", required=True)

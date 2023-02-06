@@ -3,6 +3,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+from enum import Enum
 
 from user.models import User
 
@@ -65,6 +66,13 @@ class TournamentStructureManager(models.Manager):
 		structures = super().get_queryset().filter(user=user)
 		return structures
 
+	def get_by_id(self, id):
+		try:
+			structure = self.get(pk=id)
+		except TournamentStructure.DoesNotExist:
+			structure = None
+		return structure
+
 """
 Note: buyin_amount already takes into account the bounty_amount. 
 Ex: If buyin_amount=60 and bounty_amount=10, the total amount a user must pay to play is 60.
@@ -100,6 +108,12 @@ class TournamentStructure(models.Model):
 
 	def __str__(self):
 		return self.title
+
+	def is_bounty_tournament(self):
+		if self.bounty_amount != None:
+			return True
+		else:
+			return False
 
 def validate_tournament_structure_owner(user, tournament_structure):
 	if tournament_structure.user != user:
@@ -166,6 +180,17 @@ class TournamentManager(models.Manager):
 		tournaments = super().get_queryset().filter(admin=user)
 		return tournaments
 
+"""
+The states a tournament can be in.
+OPEN: started_at == None and completed_at == None.
+STARTED: started_at != None and completed_at == None.
+COMPLETED: started_at != None and complated_at != None.
+"""
+class TournamentState(Enum):
+	OPEN = 0
+	STARTED = 1
+	COMPLETED = 2
+
 class Tournament(models.Model):
 	title 					= models.CharField(max_length=254, blank=False, null=False)
 	admin					= models.ForeignKey(User, on_delete=models.CASCADE)
@@ -181,6 +206,22 @@ class Tournament(models.Model):
 
 	def __str__(self):
 		return self.title
+
+	def get_state(self):
+		if self.started_at == None and self.completed_at == None:
+			return TournamentState.OPEN
+		if self.started_at != None and self.completed_at == None:
+			return TournamentState.STARTED 
+		if self.started_at != None and self.completed_at != None:
+			return TournamentState.COMPLETED
+
+	def get_state_string(self):
+		if self.get_state() == TournamentState.OPEN:
+			return "OPEN"
+		if self.get_state() == TournamentState.STARTED:
+			return "STARTED"
+		if self.get_state() == TournamentState.COMPLETED:
+			return "COMPLETED"
 
 class TournamentPlayerManager(models.Manager):
 

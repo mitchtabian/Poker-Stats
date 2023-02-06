@@ -4,8 +4,8 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils import timezone
 
-from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm
-from tournament.models import Tournament, TournamentStructure
+from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm, EditTournamentForm
+from tournament.models import Tournament, TournamentStructure, TournamentState
 
 
 @login_required
@@ -25,7 +25,7 @@ def tournament_create_view(request, *args, **kwargs):
 			redirect_url = request.GET.get('next')
 			if redirect_url is not None:
 				return redirect(redirect_url)
-			form = CreateTournamentForm(user=request.user)
+			return redirect("tournament:tournament_view", pk=tournament.id)
 	else:
 		form = CreateTournamentForm(user=request.user)
 
@@ -45,7 +45,10 @@ TODO
 @login_required
 def tournament_view(request, *args, **kwargs):
 	context = {}
-	context['tournament'] = Tournament.objects.get_by_id(kwargs['pk'])
+	tournament = Tournament.objects.get_by_id(kwargs['pk'])
+	context['tournament'] = tournament
+	context['tournament_state'] = tournament.get_state()
+	print(f"state: {tournament.get_state()}")
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
 
 @login_required
@@ -98,6 +101,9 @@ def tournament_structure_create_view(request, *args, **kwargs):
 
 			redirect_url = request.GET.get('next')
 			if redirect_url is not None:
+				# If they were editing a tournament, make sure to select the new tournament structure when they return.
+				if "/tournament/tournament_edit/" in redirect_url:
+					redirect_url = f"{redirect_url}?selected_structure_pk={tournament_structure.pk}"
 				return redirect(redirect_url)
 			form = CreateTournamentStructureForm()
 
@@ -107,7 +113,38 @@ def tournament_structure_create_view(request, *args, **kwargs):
 	context['form'] = form
 	return render(request=request, template_name='tournament/create_tournament_structure.html', context=context)
 
+@login_required
+def tournament_edit_view(request, *args, **kwargs):
+	context = {}
+	tournament = Tournament.objects.get_by_id(kwargs['pk'])
+	if request.method == 'POST':
+		form = EditTournamentForm(request.POST, user=request.user, tournament_pk=tournament.id)
+		if form.is_valid():
+			# TODO players stuff
 
+			tournament.tournament_structure = form.cleaned_data['tournament_structure']
+			tournament.title = form.cleaned_data['title']
+			tournament.save()
+
+			messages.success(request, "Tournament Updated!")
+
+			return redirect("tournament:tournament_view", pk=tournament.id)
+	else:
+		form = EditTournamentForm(user=request.user, tournament_pk=tournament.id)
+	context['form'] = form
+	context['tournament_pk'] = tournament.id
+	initial_selected_structure = tournament.tournament_structure
+	seleted_structure_pk_from_kwargs = None
+
+	# Check if we are returning from creating a new structure. If we are, select that structure.
+	try:
+		seleted_structure_pk_from_kwargs = request.GET.get('selected_structure_pk')
+	except Exception as e:
+		pass
+	if seleted_structure_pk_from_kwargs != None:
+		initial_selected_structure = TournamentStructure.objects.get_by_id(seleted_structure_pk_from_kwargs)
+	context['initial_selected_structure'] = initial_selected_structure
+	return render(request=request, template_name='tournament/tournament_edit_view.html', context=context)
 
 
 

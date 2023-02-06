@@ -1,0 +1,57 @@
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Buyin Amount</th>
+      <th scope="col">Bounty Tournament?</th>
+      <th scope="col">Bounty Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td scope="row">${{tournament_structure.buyin_amount}}</td>
+      <td>{{tournament_structure.is_bounty_tournament}}</td>
+      <td>{% if tournament_structure.is_bounty_tournament %}${{tournament.tournament_structure.bounty_amount}}{% else %}N/A{% endif %}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="tournament-placements-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Placement</th>
+        <th scope="col">Payout (%)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pct in tournament_structure.payout_percentages %}
+        <tr>
+          <td scope="row">{{forloop.counter}}</td>
+          <td>{{pct}}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
+<style type="text/css">
+
+  .tournament-placements-container {
+    padding: 16px;
+    background-color: #f2f2f2;
+    border-radius: 8px;
+    margin-top: 32px;
+  }
+</style>
+
+
+
+
+
+
+
+
+
+
+

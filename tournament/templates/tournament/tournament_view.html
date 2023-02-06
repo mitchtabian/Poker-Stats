@@ -11,20 +11,143 @@
 <div class="container">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
-      <h1 class="mb-3">{{tournament.title}}</h1>
-      {% if tournament.completed_at %}
-        <p>Completed on {{tournament.completed_at}}</p>
-        <p>Need to edit the Tournament? You'll need to mark it as "incomplete". <a href="{% url 'tournament:undo_complete' pk=tournament.id %}">Mark as incomplete</a>.</p>
+      <h1 class="mb-3">
+        <div class="d-flex justify-content-between">
+          <span>{{tournament.title}}</span>
+          <a href="{% url 'tournament:tournament_edit' pk=tournament.id %}">
+            <svg id="id_edit_tournament_structure" xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+              <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+            </svg>
+          </a>
+        </div>
+
+      </h1>
+
+      <!-- Players -->
+      <h5>Players</h5>
+      <hr>
+      <div class="tournament-details-group">
+        todo list players
+      </div>
+
+      <!-- Tournament Structure -->
+      <h5>Structure</h5>
+      <hr>
+      <div class="tournament-details-group">
+        {% include 'tournament/snippets/tournament_structure_table.html' with tournament_structure=tournament.tournament_structure %}
+      </div>
+
+
+      <!-- Tournament state -->
+      <h5>State</h5>
+      <hr>
+      <div class="state-container tournament-details-group">
+      <!-- CLOSED -->
+      {% if tournament_state.value == 2 %}
+        <span class="info-icon-container" id="id_closed_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="The Tournament is completed. You'll need to reopen it to make changes.">
+          <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_closed_state_info_icon" viewBox="0 0 16 16">
+          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+          <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+          </svg>
+        </span>
+        <p class="mt-2">Completed on {{tournament.completed_at}}</p>
+        <div class="reopen-container">
+          <p>Need to edit the Tournament? Undo completion to make changes.</p>
+          <a class="btn btn-warning" href="{% url 'tournament:undo_complete' pk=tournament.id %}">Undo completion</a>
+        </div>
       {% else %}
-        {% if tournament.started_at %}
-          <p>Started on: {{tournament.started_at}}</p>
-          <p>Is this tournament done? <a href="{% url 'tournament:complete' pk=tournament.id %}">Complete Tournament</a>.</p>
+        <!-- STARTED -->
+        {% if tournament_state.value == 1 %}
+          <span class="info-icon-container" id="id_started_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="The Tournament is started. You can still add players and make adjustments.">
+            <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_started_state_info_icon" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+            </svg>
+          </span>
+          <p class="mt-2">Started on: {{tournament.started_at}}</p>
+          <a class="btn btn-primary" href="{% url 'tournament:complete' pk=tournament.id %}">Complete Tournament</a>
+        <!-- OPEN -->
         {% else %}
-          <a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-primary">Start Tournament</a>
+          <span class="info-icon-container" id="id_started_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="The Tournament has not been started yet.">
+            <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_started_state_info_icon" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+            </svg>
+          </span>
+          <p class="mt-3"><a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-primary">Start Tournament</a></p>
         {% endif %}
       {% endif %}
-	</div>
+    </div>
+	 </div>
   </div>
 </div>
 
+<style type="text/css">
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .state-container {
+    margin: auto;
+    padding-bottom: 8px;
+    padding-top: 8px;
+  }
+
+  .state-label {
+    margin: auto;
+    text-align: bottom;
+    vertical-align: bottom;
+  }
+
+  .info-icon-container {
+    margin: auto;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .reopen-container {
+    padding-top: 16px;
+    padding-bottom: 16px;
+    padding-left: 32px;
+    padding-right: 32px;
+    background-color: #f2f2f2;
+    border-radius: 8px;
+  }
+
+  .tournament-details-group {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+
+  #id_edit_tournament_structure:hover {
+    background: #cccccc;
+    cursor: pointer;
+  }
+
+  #id_edit_tournament_structure {
+    color: #0275d8;
+  }
+</style>
+
+<script type="text/javascript">
+
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+</script>
+
 {% endblock content %}
+
+
+
+
+
+

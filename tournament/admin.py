@@ -8,7 +8,7 @@ class TournamentStructureAdmin(admin.ModelAdmin):
         (None, {'fields': ('title', 'user', 'buyin_amount', 'bounty_amount', 'payout_percentages', 'allow_rebuys')}),
     )
 
-    list_display = ('title', 'user', 'buyin_amount')
+    list_display = ('pk', 'title', 'user', 'buyin_amount')
     search_fields = ('title', 'user')
 
 

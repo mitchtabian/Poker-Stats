@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block head_title %}Edit Tournament{% endblock %}
+
+{% block content %}
+
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+      <form method="POST">
+        {% csrf_token %}
+        <!-- Title -->
+        <h5>Title</h5>
+        <hr>
+        <input type="text" name="title" class="form-control tournament-title" placeholder="Title" required id="id_title" value="{{form.title.value}}">
+
+
+        <!-- Players -->
+        <h5>Players</h5>
+        <hr>
+        <div class="tournament-details-group">
+          todo add/remove players
+        </div>
+
+        <!-- Tournament Structure -->
+        <h5>Structure</h5>
+        <hr>
+        <div class="tournament-details-group">
+          <select name="tournament_structure" id="id_tournament_structure" class="form-select mb-3 mt-3" aria-label="Select Tournament Structure">
+            {% for structure in form.tournament_structure.field.queryset.all %}
+              {% if structure == initial_selected_structure %}
+              <option value="{{structure.pk}}" selected>{{structure}}</option>
+              {% else %}
+              <option value="{{structure.pk}}">{{structure}}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          <a href="{% url 'tournament:create_tournament_structure' %}?next=/tournament/tournament_edit/{{tournament_pk}}/">Create new Tournament Structure</a>
+        </div>
+
+        <button id="id_submit_button" class="btn btn-primary" type="submit">Save</button>
+    </form>
+	 </div>
+  </div>
+</div>
+
+<style type="text/css">
+  .tournament-title {
+    margin-bottom: 16px;
+    margin-top: 16px;
+  }
+
+  #id_save_tournament:hover {
+    background: #cccccc;
+    cursor: pointer;
+  }
+
+  #id_save_tournament {
+    color: #0275d8;
+    margin: auto;
+  }
+
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .tournament-details-group {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+
+</style>
+
+<script type="text/javascript">
+
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+</script>
+
+{% endblock content %}
+
+
+
+
+
+
