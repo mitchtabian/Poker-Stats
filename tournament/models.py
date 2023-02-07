@@ -1,3 +1,4 @@
+import json
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
@@ -115,6 +116,22 @@ class TournamentStructure(models.Model):
 		else:
 			return False
 
+	"""
+	Builds a JSON representations of a TournamentStructure.
+	"""
+	def buildJson(self):
+		data = {}
+		data['pk'] = self.pk
+		data['title'] = self.title
+		data['buyin_amount'] = f"{self.buyin_amount}"
+		if self.bounty_amount != None:
+			data['bounty_amount'] = f"{self.bounty_amount}"
+		payout_percentages = []
+		for pct in self.payout_percentages:
+			payout_percentages.append(f"{pct}")
+		data['payout_percentages'] = payout_percentages
+		return json.dumps(data)
+
 def validate_tournament_structure_owner(user, tournament_structure):
 	if tournament_structure.user != user:
 		raise ValidationError("You cannot use a Tournament Structure that you don't own.")
@@ -133,6 +150,13 @@ class TournamentManager(models.Manager):
 			tournament_structure=structures[0]
 		)
 		tournament.save(using=self._db)
+
+		# The admin automatically becomes a player in the tournament
+		player = TournamentPlayer.objects.create_player_for_tournament(
+			user_id = user.id,
+			tournament_id = tournament.id	
+		)
+
 		return tournament
 
 	def create_tournament(self, title, user, tournament_structure):
@@ -143,6 +167,13 @@ class TournamentManager(models.Manager):
 			tournament_structure=tournament_structure
 		)
 		tournament.save(using=self._db)
+
+		# The admin automatically becomes a player in the tournament
+		player = TournamentPlayer.objects.create_player_for_tournament(
+			user_id = user.id,
+			tournament_id = tournament.id	
+		)
+
 		return tournament
 
 	# Tournament.objects.complete_tournament(user, 1)
@@ -182,13 +213,13 @@ class TournamentManager(models.Manager):
 
 """
 The states a tournament can be in.
-OPEN: started_at == None and completed_at == None.
-STARTED: started_at != None and completed_at == None.
+INACTIVE: started_at == None and completed_at == None.
+ACTIVE: started_at != None and completed_at == None.
 COMPLETED: started_at != None and complated_at != None.
 """
 class TournamentState(Enum):
-	OPEN = 0
-	STARTED = 1
+	INACTIVE = 0
+	ACTIVE = 1
 	COMPLETED = 2
 
 class Tournament(models.Model):
@@ -209,17 +240,17 @@ class Tournament(models.Model):
 
 	def get_state(self):
 		if self.started_at == None and self.completed_at == None:
-			return TournamentState.OPEN
+			return TournamentState.INACTIVE
 		if self.started_at != None and self.completed_at == None:
-			return TournamentState.STARTED 
+			return TournamentState.ACTIVE 
 		if self.started_at != None and self.completed_at != None:
 			return TournamentState.COMPLETED
 
 	def get_state_string(self):
-		if self.get_state() == TournamentState.OPEN:
-			return "OPEN"
-		if self.get_state() == TournamentState.STARTED:
-			return "STARTED"
+		if self.get_state() == TournamentState.INACTIVE:
+			return "INACTIVE"
+		if self.get_state() == TournamentState.ACTIVE:
+			return "ACTIVE"
 		if self.get_state() == TournamentState.COMPLETED:
 			return "COMPLETED"
 
@@ -277,6 +308,14 @@ class TournamentPlayerManager(models.Manager):
 		return players
 
 	"""
+	Get all the TournamentPlayers for this player.
+	"""
+	def get_all_tournament_players_by_user_id(self, user_id):
+		user = User.objects.get_by_id(user_id)
+		players = super().get_queryset().filter(user=user)
+		return players
+
+	"""
 	A player has re-bought.
 	Increment num_rebuys.
 
@@ -323,6 +362,82 @@ class TournamentPlayer(models.Model):
 
 	def __str__(self):
 		return self.user.username
+
+class TournamentInviteManager(models.Manager):
+	
+	# Send a tournament invite to a user. When they accept, they will become a TournamentPlayer.
+	def send_invite(self, sent_from_user_id, send_to_user_id, tournament_id):
+		try:
+			send_to = User.objects.get_by_id(send_to_user_id)
+			sent_from = User.objects.get_by_id(sent_from_user_id)
+			try:
+				tournament = Tournament.objects.get_by_id(tournament_id)
+
+				# Verify the person sending the invite is the tournament admin
+				if tournament.admin != sent_from:
+					raise ValidationError("You're not the admin of this Tournament.")
+
+				# Verify the admin is not inviting themself to the tournament
+				if tournament.admin == send_to:
+					raise ValidationError("You can't invite yourself to the Tournament.")
+
+				# Verify the Tournament isn't already completed
+				if tournament.get_state() == TournamentState.COMPLETED:
+					raise ValidationError("You can't invite to a Tournment that's already completed.")
+
+				# Verify there isn't already a pending invite.
+				pending_invite = TournamentInvite.objects.find_pending_invites(send_to.id, tournament.id)
+				if len(pending_invite) > 0:
+					raise ValidationError(f"{send_to.username} has already been invited.")
+
+				# Verify this user isn't already a player in this tournament
+				player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+					user_id = send_to.id,
+					tournament_id = tournament.id
+				)
+				if player != None:
+					raise ValidationError(f"{send_to.username} is already in this tournament.")
+
+				if len(pending_invite) > 0:
+					raise ValidationError(f"{send_to.username} has already been invited.")
+
+				invite = self.model(
+					send_to=send_to,
+					tournament=tournament
+				)
+				invite.save(using=self._db)
+				return invite
+			except Tournament.DoesNotExist:
+				raise ValidationError("The tournament you're inviting to doesn't exist.")
+		except User.DoesNotExist:
+			raise ValidationError("The user you're inviting doesn't exist.")
+
+	# Return a queryset containing any pending invites for a user and a tournament.
+	def find_pending_invites(self, send_to_user_id, tournament_id):
+		send_to = User.objects.get_by_id(send_to_user_id)
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		invites = super().get_queryset().filter(send_to=send_to, tournament=tournament)
+		return invites
+
+	def find_pending_invites_for_user(self, send_to_user_id):
+		send_to = User.objects.get_by_id(send_to_user_id)
+		invites = super().get_queryset().filter(send_to=send_to)
+		return invites
+
+	def find_pending_invites_for_tournament(self, tournament_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		invites = super().get_queryset().filter(tournament=tournament)
+		return invites
+
+class TournamentInvite(models.Model):
+	send_to 				= models.ForeignKey(User, on_delete=models.CASCADE)
+	tournament 				= models.ForeignKey(Tournament, on_delete=models.CASCADE)
+
+	objects = TournamentInviteManager()
+
+	def __str__(self):
+		return f"Invite for tournament {self.tournament.title} sent to {self.send_to.username}."
+
 
 
 class TournamentEliminationManager(models.Manager):

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination
+from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination, TournamentInvite
 
 
 class TournamentStructureAdmin(admin.ModelAdmin):
@@ -37,6 +37,17 @@ class TournamentPlayerAdmin(admin.ModelAdmin):
 
 
 admin.site.register(TournamentPlayer, TournamentPlayerAdmin)
+
+class TournamentInviteAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('send_to', 'tournament')}),
+    )
+
+    list_display = ('send_to', 'tournament')
+    search_fields = ('send_to', 'tournament' )
+
+
+admin.site.register(TournamentInvite, TournamentInviteAdmin)
 
 class TournamentEliminationAdmin(admin.ModelAdmin):
     fieldsets = (

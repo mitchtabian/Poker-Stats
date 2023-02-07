@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block head_title %}Tournament admin{% endblock %}
+
+{% block content %}
+
+<div class="container" id="parent">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+
+      <!-- Admin View title-->
+      <h2>Tournament Admin View</h2>
+      <hr>
+
+      <!-- Tournament Title -->
+      <p>{{tournament.title}}</p>
+
+
+
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+</style>
+{% endblock content %}

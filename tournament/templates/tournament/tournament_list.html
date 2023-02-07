@@ -11,18 +11,10 @@
 <div class="container">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
-      <h1 class="mb-3">Tournaments</h1>
+      <h2 class="mb-3">My Tournaments</h2>
+      <p>These are Tournaments that you're the admin of.</p>
       <a class="btn btn-primary mb-4" href="{% url 'tournament:create_tournament' %}">Create new Tournament</a>
-      {% if tournaments %}
-        <ul class="list-group">
-        {% for tournament in tournaments %}
-        <a href="{% url 'tournament:tournament_view' pk=tournament.id %}" class="list-group-item list-group-item-action">
-          <span>{{tournament.title}} (<span style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}}</span>)
-        </span>
-        </a>
-        {% endfor %}
-      </ul>
-      {% endif %}
+      {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=tournaments %}
 	</div>
   </div>
 </div>

@@ -4,31 +4,58 @@
 
 {% block content %}
 
-{% load bootstrap5 %}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
-
-<div class="container">
+<div class="container" id="parent">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
-      <h1 class="mb-3">
+
+      <!-- title -->
+      <h2 class="mb-3">
         <div class="d-flex justify-content-between">
-          <span>{{tournament.title}}</span>
+          <span class="tournament-title">{{tournament.title}}</span>
+          {% if request.user == tournament.admin and tournament.get_state_string == "INACTIVE" %}
           <a href="{% url 'tournament:tournament_edit' pk=tournament.id %}">
             <svg id="id_edit_tournament_structure" xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
               <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
               <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
             </svg>
           </a>
+          {% endif %}
         </div>
+      </h2>
 
-      </h1>
+      <!-- Admin -->
+      {% if request.user == tournament.admin %}
+      <h5>Admin</h5>
+      <hr>
+      <div class="tournament-details-group">
+        {% if tournament.get_state_string == 'ACTIVE' %}
+        <a class="mt-2 btn btn-primary" href="{% url 'tournament:tournament_admin_view' pk=tournament.id %}">Admin view</a>
+        {% else %}
+          <span>The admin view is only available once a Tournament has been activated.</span>
+        {% endif %}
+      </div>
+      {% endif %}
 
       <!-- Players -->
       <h5>Players</h5>
       <hr>
       <div class="tournament-details-group">
-        todo list players
+
+        {% if tournament.get_state_string == "INACTIVE" %}
+        {% include 'tournament/snippets/tournament_players_inactive_state.html' with players=players invites=invites %}
+        {% elif tournament.get_state_string == "ACTIVE" %}
+        {% include 'tournament/snippets/tournament_players_active_state.html' with players=players %}
+        {% else %}
+        {% include 'tournament/snippets/tournament_players_completed_state.html' with players=players %}
+        {% endif %}
+
+        {% if request.user == tournament.admin and tournament.get_state_string == "INACTIVE" %}
+          <div class="mt-4">
+            <h6>Invite Players</h6>
+            <input hx-get="{% url 'tournament:tournament_view' pk=tournament.id %}" hx-target="#parent" hx-swap="innerHTML" hx-trigger="input delay:0.3s" type="text" name="search" id="id_search" class="form-control mt-3" placeholder="Add players" aria-label="Add players" value="{{search}}">
+            {% include 'tournament/snippets/user_search_results.html' %}
+          </div>
+        {% endif %}
       </div>
 
       <!-- Tournament Structure -->
@@ -43,42 +70,52 @@
       <h5>State</h5>
       <hr>
       <div class="state-container tournament-details-group">
-      <!-- CLOSED -->
+      <!-- COMPLETED -->
       {% if tournament_state.value == 2 %}
-        <span class="info-icon-container" id="id_closed_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="The Tournament is completed. You'll need to reopen it to make changes.">
-          <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
+        <span class="info-icon-container" id="id_closed_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="The Tournament is completed. Undo completion to make changes.">
+          <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'INACTIVE' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_closed_state_info_icon" viewBox="0 0 16 16">
           <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
           <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
           </svg>
         </span>
         <p class="mt-2">Completed on {{tournament.completed_at}}</p>
+        {% if request.user == tournament.admin %}
         <div class="reopen-container">
           <p>Need to edit the Tournament? Undo completion to make changes.</p>
           <a class="btn btn-warning" href="{% url 'tournament:undo_complete' pk=tournament.id %}">Undo completion</a>
         </div>
+        {% endif %}
       {% else %}
-        <!-- STARTED -->
+        <!-- ACTIVE -->
         {% if tournament_state.value == 1 %}
-          <span class="info-icon-container" id="id_started_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="The Tournament is started. You can still add players and make adjustments.">
-            <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
+          <span class="info-icon-container" id="id_started_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="You cannot add/remove players or edit the structure.">
+            <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'INACTIVE' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_started_state_info_icon" viewBox="0 0 16 16">
               <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
               <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
             </svg>
           </span>
           <p class="mt-2">Started on: {{tournament.started_at}}</p>
-          <a class="btn btn-primary" href="{% url 'tournament:complete' pk=tournament.id %}">Complete Tournament</a>
-        <!-- OPEN -->
+          {% if request.user == tournament.admin %}
+            <div class="reopen-container mb-4">
+              <p>Need to add/remove players or edit the Tournament Structure?</p>
+              <a class="btn btn-warning" href="{% url 'tournament:undo_started' pk=tournament.id %}">de-activate</a>
+            </div>
+            <a class="btn btn-primary" href="{% url 'tournament:complete' pk=tournament.id %}">Complete Tournament</a>
+          {% endif %}
+        <!-- INACTIVE -->
         {% else %}
           <span class="info-icon-container" id="id_started_state_info_icon_container" data-toggle="tooltip" data-placement="top" title="The Tournament has not been started yet.">
-            <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'OPEN' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
+            <span class="state-label" style="font-weight: bold; color: {% if tournament.get_state_string == 'INACTIVE' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">{{tournament.get_state_string}} </span>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" id="id_started_state_info_icon" viewBox="0 0 16 16">
               <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
               <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
             </svg>
           </span>
-          <p class="mt-3"><a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-primary">Start Tournament</a></p>
+          {% if request.user == tournament.admin %}
+          <p class="mt-3"><a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-primary">Activate Tournament</a></p>
+          {% endif %}
         {% endif %}
       {% endif %}
     </div>
@@ -134,9 +171,20 @@
   #id_edit_tournament_structure {
     color: #0275d8;
   }
+
+  .tournament-title {
+    max-width: 90%;
+  }
 </style>
 
+<script src="https://unpkg.com/htmx.org@1.8.5"></script>
+
 <script type="text/javascript">
+
+  document.body.addEventListener('htmx:configRequest', (event) => {
+    event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+  })
+
 
   // Initialize tooltip plugin
   $(function () {

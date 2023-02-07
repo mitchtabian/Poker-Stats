@@ -1,0 +1,5 @@
+{% if tournament.get_state_string == "INACTIVE" %}
+TODO: Do something different with this one. Instead of the normal players table show analyics information.
+{% else %}
+<p>Invalid state: {{tournament.get_state_string}}</p>
+{% endif %}

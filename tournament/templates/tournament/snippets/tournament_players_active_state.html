@@ -1,0 +1,42 @@
+{% if tournament.get_state_string == "ACTIVE" %}
+
+{% if players or invites %}
+<div class="mt-3 players-container" id="id_players_container">
+  <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Player</th>
+      <th scope="col">rebuys?</th>
+      <th scope="col">bounties?</th>
+      <th scope="col">Eliminated?</th>
+    </tr>
+  </thead>
+  <tbody>
+
+      <!-- player contains rebuys? But what about bounties? Need to zip sometihng? Or custom DS?-->
+      {% for player in players %}
+      <tr>
+        <td scope="row">{{player.user.username}} {% if player.user == tournament.admin %}<span style="font-weight: bold;">(admin)</span>{% endif %}</td>
+        <td>xx</td>
+        <td>yy</td>
+        <td>yes/no</td>
+      </tr>
+      {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<style type="text/css">
+  .players-container {
+    padding: 16px;
+    background-color: #f2f2f2;
+    border-radius: 8px;
+    margin-top: 32px;
+    min-width: 350px;
+  }
+</style>
+{% endif %}
+
+{% else %}
+<p>Invalid state: {{tournament.get_state_string}}</p>
+{% endif %}
