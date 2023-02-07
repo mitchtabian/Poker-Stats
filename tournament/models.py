@@ -475,22 +475,13 @@ class TournamentEliminationManager(models.Manager):
 		if eliminatee not in tournament_users:
 			raise ValidationError(f"{eliminatee.username} is not part of this tournament.")
 
-
 		# Verify a multiple-eliminations aren't happening unless they've rebought.
-		# Compare the numbers of times they've been eliminated against the number of rebuys.
-		# Remember: If they've rebought once they will have one existing elimination.
-		existing_eliminations = self.get_eliminations_by_tournament(tournament_id)
-		player_eliminations = 0
-		tournament_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-			user_id=eliminatee.id,
-			tournament_id=tournament_id,
+		is_player_eliminated = self.is_player_eliminated(
+			user_id = eliminatee.id,
+			tournament_id = tournament_id
 		)
-		for elimination in existing_eliminations:
-			if elimination.eliminatee == eliminatee:
-				player_eliminations += 1
-			if player_eliminations > 0:
-				if player_eliminations > tournament_player.num_rebuys:
-					raise ValidationError(f"{eliminatee.username} has already been eliminated and has no more re-buys.")
+		if is_player_eliminated:
+			raise ValidationError(f"{eliminatee.username} has already been eliminated and has no more re-buys.")
 
 		elimination = self.model(
 			tournament=tournament,
@@ -499,6 +490,28 @@ class TournamentEliminationManager(models.Manager):
 		)
 		elimination.save(using=self._db)
 		return elimination
+
+	"""
+	Return True is a player has been eliminated from a Tournament (and has no more rebuys).
+	How?
+	Compare the number of times they've been eliminated against the number of rebuys.
+	Remember: If they've rebought once they will have one existing elimination.
+	"""
+	def is_player_eliminated(self, user_id, tournament_id):
+		existing_eliminations = self.get_eliminations_by_tournament(tournament_id)
+		player_eliminations = 0
+		tournament_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			user_id=user_id,
+			tournament_id=tournament_id,
+		)
+		for elimination in existing_eliminations:
+			if elimination.eliminatee.id == user_id:
+				player_eliminations += 1
+			if player_eliminations > 0:
+				if player_eliminations > tournament_player.num_rebuys:
+					return True
+		return False
+
 
 """
 Tracks the data for eliminations. 

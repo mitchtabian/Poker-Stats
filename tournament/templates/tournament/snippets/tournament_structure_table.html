@@ -1,33 +1,35 @@
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Buyin Amount</th>
-      <th scope="col">Bounty Tournament?</th>
-      <th scope="col">Bounty Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td scope="row">${{tournament_structure.buyin_amount}}</td>
-      <td>{{tournament_structure.is_bounty_tournament}}</td>
-      <td>{% if tournament_structure.is_bounty_tournament %}${{tournament_structure.bounty_amount}}{% else %}N/A{% endif %}</td>
-    </tr>
-  </tbody>
-</table>
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col"><div class="table-col">Buyin Amount</div></th>
+        <th scope="col"><div class="table-col">Bounty Tournament?</div></th>
+        <th scope="col"><div class="table-col">Bounty Amount</div></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td scope="row"><div class="table-row">${{tournament_structure.buyin_amount}}</div></td>
+        <td><div class="table-row">{{tournament_structure.is_bounty_tournament}}</div></td>
+        <td><div class="table-row">{% if tournament_structure.is_bounty_tournament %}${{tournament_structure.bounty_amount}}{% else %}N/A{% endif %}</div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
 <div class="tournament-placements-container">
   <table class="table">
     <thead>
       <tr>
-        <th scope="col">Placement</th>
-        <th scope="col">Payout (%)</th>
+        <th scope="col"><div class="table-col">Placement</div></th>
+        <th scope="col table-col"><div class="table-col">Payout (%)</div></th>
       </tr>
     </thead>
     <tbody>
       {% for pct in tournament_structure.payout_percentages %}
         <tr>
-          <td scope="row">{{forloop.counter}}</td>
-          <td>{{pct}}</td>
+          <td scope="row"><div class="table-row">{{forloop.counter}}</div></td>
+          <td><div class="table-row">{{pct}}</div></td>
         </tr>
       {% endfor %}
     </tbody>
@@ -37,12 +39,47 @@
 
 <style type="text/css">
 
-  .tournament-placements-container {
-    padding: 16px;
-    background-color: #f2f2f2;
-    border-radius: 8px;
-    margin-top: 32px;
+  @media only screen and (max-width: 500px) {
+    .table-col {
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .table-row {
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .tournament-placements-container {
+      padding: 4px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      margin-top: 8px;
+/*      margin-bottom: 16px;*/
+    }
   }
+
+  @media only screen and (min-width: 501px) {
+    .table-col {
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .table-row {
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .tournament-placements-container {
+      padding: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+  }
+
+
+
 </style>
 
 

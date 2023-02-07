@@ -1,0 +1,121 @@
+{% for player_data in player_tournament_data %}
+  <div class="player-table-container">
+    <p class="player-table-username">{{player_data.username}}</p>
+    <p class="{% if player_data.is_eliminated == True %}text-danger{% else %}text-success{% endif %} player-table-status">
+      {% if player_data.is_eliminated == True %}Eliminated{% else %}Active{% endif %}
+    </p>
+
+    <!-- TODO If not bounty tournament and not rebuy tournament, do not show table. Instead just show simplified version with only elimination status and username -->
+    <div class="player-table">
+      <table class="table">
+        <thead>
+          <tr>
+            <!-- TODO Only show Bounties if its a bounty tournament -->
+            <th scope="col" class="table-header">Bounties</th>
+            <!-- TODO Only show Rebuys if its a rebuy tournament -->
+            <th scope="col" class="table-header">Rebuys</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td scope="row" class="table-row">{{player_data.bounties}}</td>
+            <td class="table-row">{{player_data.rebuys}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end player-action-button">
+      {% if player_data.is_eliminated == True %}
+      <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#exampleModal">Rebuy</button>
+      {% else %}
+        <button onclick="eliminationModalClicked('1', 'mitch')" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#eliminate_model">Eliminate</button>
+      {% endif %}
+    </div>
+  </div>
+{% endfor %}
+
+<style type="text/css">
+
+  @media only screen and (max-width: 500px) {
+    .player-table-container {
+      margin-top: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+    }
+
+    .player-table {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .table-row {
+      text-align: center;
+    }
+
+    .table-header {
+      text-align: center;
+    }
+
+    .player-action-button {
+      margin-top: 8px;
+    }
+
+    .player-table-username {
+      font-weight: 450;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .player-table-status {
+      margin-bottom: 6px;
+      margin-top: 4px;
+    }
+  }
+
+
+  @media only screen and (min-width: 501px) {
+    .player-table-container {
+      margin-top: 32px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .player-table {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .table-row {
+      text-align: center;
+    }
+
+    .table-header {
+      text-align: center;
+    }
+
+    .player-action-button {
+      margin-top: 16px;
+    }
+
+    .player-table-username {
+      font-weight: 450;
+      font-size: 20px;
+      margin-bottom: 3px;
+      margin-top: 3px;
+    }
+
+    .player-table-status {
+      margin-bottom: 8px;
+      margin-top: 4px;
+      font-size: 14px;
+    }
+  }
+
+</style>
+
+

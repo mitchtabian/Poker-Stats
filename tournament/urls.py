@@ -2,6 +2,7 @@ from django.urls import include, path
 
 from tournament.views import (
     complete_tournament,
+    eliminate_player_from_tournament,
     invite_player_to_tournament,
     get_tournament_structure,
     join_tournament,
@@ -24,6 +25,7 @@ urlpatterns = [
     path('complete/<int:pk>/', complete_tournament, name="complete"),
     path('create_tournament/', tournament_create_view, name="create_tournament"),
     path('create_tournament_structure/', tournament_structure_create_view, name="create_tournament_structure"),
+    path('eliminate_player/<int:tournament_id>/<int:eliminator_id>/<int:eliminatee_id>/', eliminate_player_from_tournament, name="eliminate_player"),
     path('invite_player_to_tournament/<int:player_id>/<int:tournament_id>/', invite_player_to_tournament, name="invite_player"),
     path('get_tournament_structure/', get_tournament_structure, name="get_tournament_structure"),
     path('join_tournament/<int:pk>/', join_tournament, name="join_tournament"),

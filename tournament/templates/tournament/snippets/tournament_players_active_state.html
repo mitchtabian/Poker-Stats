@@ -1,25 +1,27 @@
 {% if tournament.get_state_string == "ACTIVE" %}
 
 {% if players or invites %}
-<div class="mt-3 players-container" id="id_players_container">
+
+<div class="mt-3 players-container table-responsive" id="id_players_container">
   <table class="table">
   <thead>
     <tr>
-      <th scope="col">Player</th>
-      <th scope="col">rebuys?</th>
-      <th scope="col">bounties?</th>
-      <th scope="col">Eliminated?</th>
+      <th><div class="player-table-col">Player</div></th>
+      <th><div class="player-table-col">Bounties</div></th>
+      <th><div class="player-table-col">Rebuys</div></th>
     </tr>
   </thead>
   <tbody>
-
-      <!-- player contains rebuys? But what about bounties? Need to zip sometihng? Or custom DS?-->
       {% for player in players %}
       <tr>
-        <td scope="row">{{player.user.username}} {% if player.user == tournament.admin %}<span style="font-weight: bold;">(admin)</span>{% endif %}</td>
-        <td>xx</td>
-        <td>yy</td>
-        <td>yes/no</td>
+        <td scope="row">
+          <div class="d-flex flex-column player-table-row">
+            <div class="player-username">gfdmkgfdgkdfmkggdfkgfmdkgnmfdklgmdfklgmdfklgmfd</div>
+            <div class="player-status-text">Active</div>
+          </div>
+        </td>
+        <td><div class="player-table-row">xx</div></td>
+        <td><div class="player-table-row">yy</div></td>
       </tr>
       {% endfor %}
   </tbody>
@@ -27,12 +29,69 @@
 </div>
 
 <style type="text/css">
-  .players-container {
-    padding: 16px;
-    background-color: #f2f2f2;
-    border-radius: 8px;
-    margin-top: 32px;
-    min-width: 350px;
+
+  @media only screen and (max-width: 500px) {
+    .players-container {
+      padding: 8px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .player-status-text {
+      color: #5cb85c;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .player-username {
+      max-width: 150px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: left;
+    }
+
+    .player-table-col {
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .player-table-row {
+      font-size: 12px;
+      text-align: left;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .players-container {
+      padding: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      margin-top: 32px;
+    }
+
+    .player-status-text {
+      color: #5cb85c;
+      font-size: 12px;
+    }
+
+    .player-username {
+      max-width: 380px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .player-table-col {
+      font-size: 16px;
+      text-align: left;
+    }
+
+    .player-table-row {
+      font-size: 16px;
+      text-align: left;
+    }
   }
 </style>
 {% endif %}
@@ -40,3 +99,5 @@
 {% else %}
 <p>Invalid state: {{tournament.get_state_string}}</p>
 {% endif %}
+
+

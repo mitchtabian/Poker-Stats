@@ -7,7 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm, EditTournamentForm
-from tournament.models import Tournament, TournamentStructure, TournamentState, TournamentInvite, TournamentPlayer
+from tournament.models import Tournament, TournamentStructure, TournamentState, TournamentInvite, TournamentPlayer, TournamentElimination
+from tournament.util import PlayerTournamentData
 from user.models import User
 
 @login_required
@@ -205,6 +206,38 @@ def invite_player_to_tournament(request, *args, **kwargs):
 		messages.error(request, e.args[0])
 	return render_tournament_view(request, tournament_id)
 
+"""
+Eliminate a player from a tournament.
+HTMX request for tournament_admin_view.
+"""
+@login_required
+def eliminate_player_from_tournament(request, *args, **kwargs):
+	user = request.user
+	try:
+		# Who is doing the eliminating
+		eliminator_id = kwargs['eliminator_id']
+
+		# Who is being eliminated
+		eliminatee_id = kwargs['eliminatee_id']
+
+		# Tournament id where this is taking place
+		tournament_id = kwargs['tournament_id']
+	
+		# Verify the admin is the one eliminating
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		if tournament.admin != user:
+			messages.error(request, "Only the admin can eliminate players.")
+			return render_tournament_admin_view(request, tournament_id)
+
+		# All the validation is performed in the create_elimination function.
+		elimination = TournamentElimination.objects.create_elimination(
+			tournament_id = tournament_id,
+			eliminator_id = eliminator_id,
+			eliminatee_id = eliminatee_id
+		)
+	except Exception as e:
+		messages.error(request, e.args[0])
+	return render_tournament_admin_view(request, tournament_id)
 
 """
 Common function shared between tournament_view and htmx requests used in that view.
@@ -325,11 +358,63 @@ def tournament_edit_view(request, *args, **kwargs):
 	context['tournament_structures'] = TournamentStructure.objects.get_structures_by_user(request.user)
 	return render(request=request, template_name='tournament/tournament_edit_view.html', context=context)
 
+@login_required
 def tournament_admin_view(request, *args, **kwargs):
-	context = {}
 	tournament = Tournament.objects.get_by_id(kwargs['pk'])
+	return render_tournament_admin_view(request, tournament.id)
+
+
+
+"""
+Convenience function for the htmx functions that happen on tournament_admin_view.
+"""
+@login_required
+def render_tournament_admin_view(request, tournament_id):
+	context = {}
+	tournament = Tournament.objects.get_by_id(tournament_id)
+	if tournament.get_state() != TournamentState.ACTIVE:
+		messages.error(request, "Admin view is not available until Tournament is activated.")
+		return redirect("tournament:tournament_view", pk=tournament.id)
+	if request.user != tournament.admin:
+		messages.error(request, "You are not the Tournament admin.")
+		return redirect("tournament:tournament_view", pk=tournament.id)
+
+	context['tournament_state'] = tournament.get_state()
 	context['tournament'] = tournament
+
+	# Build the PlayerTournamentData list
+	player_tournament_data = []
+	players = TournamentPlayer.objects.get_tournament_players(tournament_id)
+	for player in players:
+		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+			tournament_id = tournament_id,
+			eliminator_id = player.user.id
+		)
+		is_eliminated = TournamentElimination.objects.is_player_eliminated(
+			user_id = player.user.id,
+			tournament_id = tournament_id
+		)
+		data = PlayerTournamentData(
+					user_id = player.user.id,
+					username = player.user.username,
+					rebuys = player.num_rebuys,
+					bounties = len(eliminations),
+					is_eliminated = is_eliminated
+				)
+		player_tournament_data.append(data)
+	context['player_tournament_data'] = player_tournament_data
+
 	return render(request=request, template_name="tournament/tournament_admin_view.html", context=context)
+
+
+
+
+
+
+
+
+
+
 
 
 
