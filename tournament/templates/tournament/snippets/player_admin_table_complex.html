@@ -1,35 +1,53 @@
+<!--
+This is used if the tournament is a bounty tournament OR rebuys are allowed.
+Otherwise use player_admin_table_simple.html
+ -->
+
+<!-- Elimination Modals -->
+{% include 'tournament/snippets/player_admin_elimination_modals.html' with player_tournament_data=player_tournament_data %}
+
+<!-- Rebuy Modals -->
+{% include 'tournament/snippets/player_admin_rebuy_modals.html' with player_tournament_data=player_tournament_data %}
+
 {% for player_data in player_tournament_data %}
   <div class="player-table-container">
-    <p class="player-table-username">{{player_data.username}}</p>
+    <div class="d-flex flex-row justify-content-between player-action-button">
+      <p class="player-table-username">{{player_data.username}}</p>
+      <div class="">
+        {% if player_data.is_eliminated == True %}
+        <button class="btn btn-success player-action-button" data-bs-toggle="modal" data-bs-target="#id_rebuy_modal_{{player_data.user_id}}">Rebuy</button>
+        {% else %}
+          <button class="btn btn-danger player-action-button" onclick="eliminationModalClicked('{{player_data.user_id}}')" data-bs-toggle="modal" data-bs-target="#id_eliminate_modal_{{player_data.user_id}}">Eliminate</button>
+        {% endif %}
+      </div>
+    </div>
     <p class="{% if player_data.is_eliminated == True %}text-danger{% else %}text-success{% endif %} player-table-status">
       {% if player_data.is_eliminated == True %}Eliminated{% else %}Active{% endif %}
     </p>
 
-    <!-- TODO If not bounty tournament and not rebuy tournament, do not show table. Instead just show simplified version with only elimination status and username -->
     <div class="player-table">
       <table class="table">
         <thead>
           <tr>
-            <!-- TODO Only show Bounties if its a bounty tournament -->
+            {% if is_bounty_tournament %}
             <th scope="col" class="table-header">Bounties</th>
-            <!-- TODO Only show Rebuys if its a rebuy tournament -->
+            {% endif %}
+            {% if allow_rebuys %}
             <th scope="col" class="table-header">Rebuys</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
           <tr>
+            {% if is_bounty_tournament %}
             <td scope="row" class="table-row">{{player_data.bounties}}</td>
+            {% endif %}
+            {% if allow_rebuys %}
             <td class="table-row">{{player_data.rebuys}}</td>
+            {% endif %}
           </tr>
         </tbody>
       </table>
-    </div>
-    <div class="d-flex justify-content-end player-action-button">
-      {% if player_data.is_eliminated == True %}
-      <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#exampleModal">Rebuy</button>
-      {% else %}
-        <button onclick="eliminationModalClicked('1', 'mitch')" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#eliminate_model">Eliminate</button>
-      {% endif %}
     </div>
   </div>
 {% endfor %}
@@ -60,13 +78,18 @@
     }
 
     .player-action-button {
-      margin-top: 8px;
+      font-size: 12px;
     }
 
     .player-table-username {
       font-weight: 450;
       font-size: 18px;
       margin-bottom: 4px;
+      max-width: 250px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: left;
     }
 
     .player-table-status {
@@ -99,7 +122,7 @@
     }
 
     .player-action-button {
-      margin-top: 16px;
+      font-size: 16px;
     }
 
     .player-table-username {
@@ -107,6 +130,11 @@
       font-size: 20px;
       margin-bottom: 3px;
       margin-top: 3px;
+      max-width: 350px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: left;
     }
 
     .player-table-status {

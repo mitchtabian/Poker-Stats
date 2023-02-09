@@ -5,6 +5,7 @@ from django.urls import include, path
 
 from root.views import (
     contact_view,
+    error_view,
     root_view,
 )
 
@@ -16,6 +17,7 @@ urlpatterns = [
     path('accounts/', include("allauth.urls")),
     path('admin/', admin.site.urls),
     path('contact/', contact_view, name="contact"),
+    path('error/<str:error_message>/', error_view, name="error"),
     path('tournament/', include("tournament.urls"), name="tournament"),
     path('user/', include("user.urls"), name="user"),
 ]

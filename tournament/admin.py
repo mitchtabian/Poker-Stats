@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination, TournamentInvite
+from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination, TournamentInvite, TournamentPlayerResult
 
 
 class TournamentStructureAdmin(admin.ModelAdmin):
@@ -51,14 +51,25 @@ admin.site.register(TournamentInvite, TournamentInviteAdmin)
 
 class TournamentEliminationAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('tournament', 'eliminator', 'eliminatee')}),
+        (None, {'fields': ('tournament', 'eliminator', 'eliminatee', 'eliminated_at')}),
     )
 
-    list_display = ('tournament', 'eliminator', 'eliminatee')
+    list_display = ('tournament', 'eliminator', 'eliminatee', 'eliminated_at')
     search_fields = ('tournament', 'eliminator', 'eliminatee', )
 
 
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
+
+class TournamentPlayerResultAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('player', 'tournament', 'net_earnings', 'gross_earnings')}),
+    )
+
+    list_display = ('player', 'tournament', 'net_earnings',  'gross_earnings')
+    search_fields = ('player', 'tournament',)
+
+
+admin.site.register(TournamentPlayerResult, TournamentPlayerResultAdmin)
 
 
 

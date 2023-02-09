@@ -23,3 +23,9 @@ def root_view(request):
 
 def contact_view(request):
 	return render(request, "root/contact.html")
+
+def error_view(request, *args, **kwargs):
+	message = kwargs['error_message']
+	context = {}
+	context['message'] = message
+	return render(request=request, template_name="root/error.html", context=context)

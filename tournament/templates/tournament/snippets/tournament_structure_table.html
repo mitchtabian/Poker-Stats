@@ -2,16 +2,26 @@
   <table class="table">
     <thead>
       <tr>
-        <th scope="col"><div class="table-col">Buyin Amount</div></th>
-        <th scope="col"><div class="table-col">Bounty Tournament?</div></th>
-        <th scope="col"><div class="table-col">Bounty Amount</div></th>
+        <th scope="col"><div class="table-col">Total</div></th>
+        {% if tournament_structure.is_bounty_tournament %}
+          <th scope="col"><div class="table-col">Bounty</div></th>
+        {% endif %}
+        <th scope="col"><div class="table-col">Rebuys</div></th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td scope="row"><div class="table-row">${{tournament_structure.buyin_amount}}</div></td>
-        <td><div class="table-row">{{tournament_structure.is_bounty_tournament}}</div></td>
-        <td><div class="table-row">{% if tournament_structure.is_bounty_tournament %}${{tournament_structure.bounty_amount}}{% else %}N/A{% endif %}</div></td>
+        {% if tournament_structure.is_bounty_tournament %}
+          <td><div class="table-row">${{tournament_structure.bounty_amount}}</div></td>
+        {% endif %}
+        <td><div class="table-row">
+          {% if tournament_structure.allow_rebuys %}
+            Yes
+          {% else %}
+            No
+          {% endif %}
+        </div></td>
       </tr>
     </tbody>
   </table>
@@ -55,7 +65,6 @@
       background-color: #f2f2f2;
       border-radius: 8px;
       margin-top: 8px;
-/*      margin-bottom: 16px;*/
     }
   }
 

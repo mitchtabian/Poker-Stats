@@ -16,51 +16,26 @@
 
       <!-- TournamentPlayerData table -->
       {% if player_tournament_data %}
-      {% include 'tournament/snippets/player_admin_table.html' with player_tournament_data=player_tournament_data %}
+        <div class="tournament-details-group">
+          {% if is_bounty_tournament == True or allow_rebuys == True %}
+            {% include 'tournament/snippets/player_admin_table_complex.html' with player_tournament_data=player_tournament_data allow_rebuys=allow_rebuys is_bounty_tournament=is_bounty_tournament %}
+          {% else %}
+            {% include 'tournament/snippets/player_admin_table_simple.html' with player_tournament_data=player_tournament_data %}
+          {% endif %}
+        </div>
       {% endif %}
 
       <!-- Tournament state -->
       <h5 class="mt-4">State</h5>
       <hr>
-      {% include 'tournament/snippets/tournament_state_snippet.html' with tournament=tournament tournament_state=tournament_state %}
+      <div class="tournament-details-group">
+        {% include 'tournament/snippets/tournament_state_snippet.html' with tournament=tournament tournament_state=tournament_state %}
+      </div>
 
 
     </div>
   </div>
 </div>
-
-<!-- Modal -->
-<!-- TODO Position at bottom of screen instead of top?-->
-<div class="modal fade" id="eliminate_model" tabindex="-1" aria-labelledby="Elimination Modal" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="id_elimination_modal_title">
-          <!-- This is programatically set when the elimination button is clicked -->
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <!-- Hidden field that will contain the eliminatee's id. Populated programatically. -->
-      <div class="d-none" id="id_hidden_eliminatee"></div>
-      <div class="modal-body">
-        TODO continue here. Need to add a TournamentPlayer's list with a radio button single selection.
-        Don't use a 'select' since its fucked on mobile.
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-danger">Eliminate</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script type="text/javascript">
-  function eliminationModalClicked(eliminatee_id, eliminatee_username) {
-    document.getElementById("id_elimination_modal_title").innerHTML = "Who eliminated " + eliminatee_username + "?"
-    document.getElementById("id_hidden_eliminatee").innerHTML = eliminatee_id
-  }
-
-</script>
 
 <style type="text/css">
 
@@ -69,6 +44,22 @@
     margin-bottom: 8px;
   }
 
+  @media only screen and (max-width: 500px) {
+    .tournament-details-group {
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .tournament-details-group {
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+  }
 </style>
 {% endblock content %}
 

@@ -1,4 +1,10 @@
-{% if tournament.get_state_string == "ACTIVE" %}
+<!--
+This is used if the tournament is NOT a bounty tournament AND rebuys are NOT allowed.
+Otherwise use player_admin_table_complex.html
+ -->
+
+<!-- Elimination Modals -->
+{% include 'tournament/snippets/player_admin_elimination_modals.html' with player_tournament_data=player_tournament_data %}
 
 {% if player_tournament_data %}
  <div class="mt-3 players-container table-responsive" id="id_players_container">
@@ -6,22 +12,8 @@
   <thead>
     <tr>
       <th><div class="player-table-col">Player</div></th>
-      <th>
-        <div class="player-table-col">
-          {% if is_bounty_tournament %}
-            Bounties
-          {% else %}
-            Eliminations
-          {% endif %}
-        </div>
-      </th>
-      {% if allow_rebuys %}
-        <th>
-          <div class="player-table-col">
-            Rebuys
-          </div>
-        </th>
-      {% endif %}
+      <th><div class="player-table-col">Eliminations</div></th>
+      <th><div class="player-table-col">Action</div></th>
     </tr>
   </thead>
   <tbody>
@@ -40,19 +32,22 @@
             {{player_data.bounties}}
           </div>
         </td>
-        {% if allow_rebuys %}
-          <td>
-            <div class="player-table-row">
-              {{player_data.rebuys}}
-            </div>
-          </td>
-        {% endif %}
+        <td>
+          <div class="player-table-row">
+            {% if player_data.is_eliminated != True %}
+              <button class="btn btn-danger player-action-btn" onclick="eliminationModalClicked('{{player_data.user_id}}')" data-bs-toggle="modal" data-bs-target="#id_eliminate_modal_{{player_data.user_id}}">Eliminate</button>
+            {% else %}
+              N/A
+            {% endif %}
+          </div>
+        </td>
       </tr>
       {% endfor %}
   </tbody>
 </table>
 </div>
 {% endif %}
+
 
 <style type="text/css">
 
@@ -88,7 +83,7 @@
       text-align: left;
     }
 
-    .action-btn {
+    .player-action-btn {
       font-size: 12px;
     }
   }
@@ -124,9 +119,5 @@
     }
   }
 </style>
-
-{% else %}
-<p>Invalid state: {{tournament.get_state_string}}</p>
-{% endif %}
 
 

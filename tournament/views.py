@@ -1,13 +1,14 @@
 import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils import timezone
 
 from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm, EditTournamentForm
-from tournament.models import Tournament, TournamentStructure, TournamentState, TournamentInvite, TournamentPlayer, TournamentElimination
+from tournament.models import Tournament, TournamentStructure, TournamentState, TournamentInvite, TournamentPlayer, TournamentElimination, TournamentPlayerResult
 from tournament.util import PlayerTournamentData
 from user.models import User
 
@@ -48,49 +49,88 @@ def tournament_view(request, *args, **kwargs):
 
 @login_required
 def start_tournament(request, *args, **kwargs):
-	user = request.user
-	tournament = Tournament.objects.get_by_id(kwargs['pk'])
-	if tournament.admin != user:
-		messages.warning(request, "You are not the admin of this Tournament.")
-	tournament.started_at = timezone.now()
-	tournament.save()
+	tournament_id = kwargs['pk']
+	try:
+		user = request.user
+		
+		# Verify the admin is performing this action
+		verify_admin(
+			user = user,
+			tournament_id = tournament_id,
+			error_message = "You are not the admin of this Tournament."
+		)
 
-	# Delete all the pending invites
-	invites = TournamentInvite.objects.find_pending_invites_for_tournament(tournament.id)
-	for invite in invites:
-		invite.delete()
+		tournament = Tournament.objects.start_tournament(user=user, tournament_id=tournament_id)
 
-	return redirect("tournament:tournament_view", pk=kwargs['pk'])
+		# Delete all the pending invites
+		invites = TournamentInvite.objects.find_pending_invites_for_tournament(tournament.id)
+		for invite in invites:
+			invite.delete()
+	except Exception as e:
+		messages.error(request, e.args[0])
+	return redirect("tournament:tournament_view", pk=tournament_id)
 
 @login_required
 def complete_tournament(request, *args, **kwargs):
-	user = request.user
-	tournament = Tournament.objects.get_by_id(kwargs['pk'])
-	if tournament.admin != user:
-		messages.warning(request, "You are not the admin of this Tournament.")
-	tournament.completed_at = timezone.now()
-	tournament.save()
-	return redirect("tournament:tournament_view", pk=kwargs['pk'])
+	tournament_id = kwargs['pk']
+	try:
+		user = request.user
+		
+		# Verify the admin is performing this action
+		verify_admin(
+			user = user,
+			tournament_id = tournament_id,
+			error_message = "You are not the admin of this Tournament."
+		)
+
+		tournament = Tournament.objects.complete_tournament(user, tournament_id)
+
+		# Calculate the TournamentPlayerResultData for each player. These are saved to db.
+		results = TournamentPlayerResult.objects.build_results_for_tournament(tournament_id)
+	except Exception as e:
+		messages.error(request, e.args[0])
+	
+	return redirect("tournament:tournament_view", pk=tournament_id)
 
 @login_required
 def undo_completed_at(request, *args, **kwargs):
-	user = request.user
-	tournament = Tournament.objects.get_by_id(kwargs['pk'])
-	if tournament.admin != user:
-		messages.warning(request, "You are not the admin of this Tournament.")
-	tournament.completed_at = None
-	tournament.save()
-	return redirect("tournament:tournament_view", pk=kwargs['pk'])
+	tournament_id = kwargs['pk']
+	try:
+		user = request.user
+
+		# Verify the admin is performing this action
+		verify_admin(
+			user = user,
+			tournament_id = tournament_id,
+			error_message = "You are not the admin of this Tournament."
+		)
+
+		Tournament.objects.undo_complete_tournament(
+			user = user,
+			tournament_id = tournament_id
+		)
+	except Exception as e:
+		messages.error(request, e.args[0])
+	return redirect("tournament:tournament_view", pk=tournament_id)
 
 @login_required
 def undo_started_at(request, *args, **kwargs):
-	user = request.user
-	tournament = Tournament.objects.get_by_id(kwargs['pk'])
-	if tournament.admin != user:
-		messages.warning(request, "You are not the admin of this Tournament.")
-	tournament.started_at = None
-	tournament.save()
-	return redirect("tournament:tournament_view", pk=kwargs['pk'])
+	tournament_id = kwargs['pk']
+	try:
+		user = request.user
+		# Verify the admin is performing this action
+		verify_admin(
+			user = user,
+			tournament_id = tournament_id,
+			error_message = "You are not the admin of this Tournament."
+		)
+
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		tournament.started_at = None
+		tournament.save()
+	except Exception as e:
+		messages.error(request, e.args[0])
+	return redirect("tournament:tournament_view", pk=tournament_id)
 
 """
 Join a Tournament given a TournamentInvite.
@@ -105,25 +145,14 @@ def join_tournament(request, *args, **kwargs):
 			messages.error(request, "This invitation wasn't for you.")
 			return redirect("home")
 
-		try:
-			# Create new TournamentPlayer
-			player = TournamentPlayer.objects.create_player_for_tournament(
-				user_id = invite.send_to.id,
-				tournament_id = invite.tournament.id
-			)
-			player.save()
-
-			# Delete the invite
-			invite.delete()
-		except Exception as e:
-			# Delete the invite
-			invite.delete()
-			messages.error(request, e.args[0])
-			return redirect("home")
-		return redirect("tournament:tournament_view", pk=invite.tournament.id)
-	except TournamentInvite.DoesNotExist:
-		messages.error(request, "Tournament does not exist.")
-	return redirect("home")
+		# Create new TournamentPlayer
+		player = TournamentPlayer.objects.create_player_for_tournament(
+			user_id = invite.send_to.id,
+			tournament_id = invite.tournament.id
+		)
+	except Exception as e:
+		messages.error(request, e.args[0])
+	return redirect("tournament:tournament_view", pk=invite.tournament.id)
 
 """
 Uninvite a player from a tournament.
@@ -135,21 +164,13 @@ def uninvite_player_from_tournament(request, *args, **kwargs):
 	player_id = kwargs['player_id']
 	tournament_id = kwargs['tournament_id']
 	try:
-		invite = TournamentInvite.objects.find_pending_invites(
-			send_to_user_id=player_id,
-			tournament_id=tournament_id
+		TournamentInvite.objects.uninvite_player_from_tournament(
+			admin = user,
+			uninvite_user_id = player_id,
+			tournament_id = tournament
 		)
-
-		# Verify the admin is trying to remove the invite
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		if tournament.admin != user:
-			messages.error(request, "Only the admin can remove invites.")
-			return render_tournament_view(request, tournament_id)
-
-		invite.delete()
-	except TournamentInvite.DoesNotExist:
-		error_message = "That player does not have an invite to this tournament."
-		messages.error(request, error_message)
+	except Exception as e:
+		messages.error(request, e.args[0])
 	return render_tournament_view(request, tournament_id)
 	
 
@@ -163,21 +184,13 @@ def remove_player_from_tournament(request, *args, **kwargs):
 	player_id = kwargs['player_id']
 	tournament_id = kwargs['tournament_id']
 	try:
-		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-			user_id=player_id,
+		TournamentPlayer.objects.remove_player_from_tournament(
+			removed_by_user_id= user.id,
+			removed_user_id=player_id,
 			tournament_id=tournament_id
 		)
-
-		# Verify the admin is trying to remove the user OR the authenticated user is removing themself.
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		if tournament.admin != user and user.id != player_id:
-			messages.error(request, "Only the admin can remove players.")
-		else:
-			player.delete()
-
-	except TournamentPlayer.DoesNotExist:
-		error_message = "That player is not part of this tournament."
-		messages.error(request, error_message)
+	except Exception as e:
+		messages.error(request, e.args[0])
 	return render_tournament_view(request, tournament_id)
 
 """
@@ -186,15 +199,17 @@ HTMX request for tournament_view
 """
 @login_required
 def invite_player_to_tournament(request, *args, **kwargs):
-	user = request.user
-	player_id = kwargs['player_id']
-	tournament_id = kwargs['tournament_id']
 	try:
+		user = request.user
+		player_id = kwargs['player_id']
+		tournament_id = kwargs['tournament_id']
+		
 		# Verify the admin is sending the invite
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		if tournament.admin != user:
-			messages.error(request, "Only the admin can invite players.")
-			return render_tournament_view(request, tournament_id)
+		verify_admin(
+			user = user,
+			tournament_id = tournament_id,
+			error_message = "Only the admin can invite players."
+		)
 
 		invite = TournamentInvite.objects.send_invite(
 			sent_from_user_id = user.id,
@@ -208,7 +223,8 @@ def invite_player_to_tournament(request, *args, **kwargs):
 
 """
 Eliminate a player from a tournament.
-HTMX request for tournament_admin_view.
+Returns a generic HttpResponse with a status code representing whether it was successful or not.
+If it was not successful, the user will be redirected to an error page.
 """
 @login_required
 def eliminate_player_from_tournament(request, *args, **kwargs):
@@ -222,12 +238,13 @@ def eliminate_player_from_tournament(request, *args, **kwargs):
 
 		# Tournament id where this is taking place
 		tournament_id = kwargs['tournament_id']
-	
+
 		# Verify the admin is the one eliminating
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		if tournament.admin != user:
-			messages.error(request, "Only the admin can eliminate players.")
-			return render_tournament_admin_view(request, tournament_id)
+		verify_admin(
+			user = request.user,
+			tournament_id = tournament_id,
+			error_message = "Only the admin can eliminate players."
+		)
 
 		# All the validation is performed in the create_elimination function.
 		elimination = TournamentElimination.objects.create_elimination(
@@ -237,7 +254,39 @@ def eliminate_player_from_tournament(request, *args, **kwargs):
 		)
 	except Exception as e:
 		messages.error(request, e.args[0])
-	return render_tournament_admin_view(request, tournament_id)
+		return HttpResponse(content_type='application/json', status=400)
+	return HttpResponse(content_type='application/json', status=200)
+
+"""
+Rebuy for an eliminated player.
+Returns a generic HttpResponse with a status code representing whether it was successful or not.
+If it was not successful, the user will be redirected to an error page.
+"""
+@login_required
+def rebuy_player_in_tournament(request, *args, **kwargs):
+	try:
+		# Who is rebuying
+		player_id = kwargs['player_id']
+
+		# Tournament id where this is taking place
+		tournament_id = kwargs['tournament_id']
+
+		# Verify the tournament admin is executing the rebuy
+		verify_admin(
+			user = request.user,
+			tournament_id = tournament_id,
+			error_message = "Only the admin can execute a rebuy."
+		)
+	
+		# All the validation is performed in the rebuy_by_user_id_and_tournament_id function.
+		elimination = TournamentPlayer.objects.rebuy_by_user_id_and_tournament_id(
+			tournament_id = tournament_id,
+			user_id = player_id,
+		)
+	except Exception as e:
+		messages.error(request, e.args[0])
+		return HttpResponse(content_type='application/json', status=400)
+	return HttpResponse(content_type='application/json', status=200)
 
 """
 Common function shared between tournament_view and htmx requests used in that view.
@@ -270,6 +319,13 @@ def render_tournament_view(request, tournament_id):
 			users = users.exclude(email__iexact=player.user.email)
 		context['users'] = users
 		context['search'] = search
+
+	context['is_bounty_tournament'] = tournament.tournament_structure.bounty_amount != None
+	context['allow_rebuys'] = tournament.tournament_structure.allow_rebuys
+	context['player_tournament_data'] = get_player_tournament_data(tournament_id)
+
+	# If the tournament is completed, send some custom data structures for the results data
+	# if tournament.completed_at != None:
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
 
 """
@@ -381,8 +437,15 @@ def render_tournament_admin_view(request, tournament_id):
 
 	context['tournament_state'] = tournament.get_state()
 	context['tournament'] = tournament
+	context['is_bounty_tournament'] = tournament.tournament_structure.bounty_amount != None
+	context['allow_rebuys'] = tournament.tournament_structure.allow_rebuys
+	context['player_tournament_data'] = get_player_tournament_data(tournament_id)
+	return render(request=request, template_name="tournament/tournament_admin_view.html", context=context)
 
-	# Build the PlayerTournamentData list
+"""
+Builds a list of PlayerTournamentData.
+"""
+def get_player_tournament_data(tournament_id):
 	player_tournament_data = []
 	players = TournamentPlayer.objects.get_tournament_players(tournament_id)
 	for player in players:
@@ -402,12 +465,16 @@ def render_tournament_admin_view(request, tournament_id):
 					is_eliminated = is_eliminated
 				)
 		player_tournament_data.append(data)
-	context['player_tournament_data'] = player_tournament_data
+	return player_tournament_data
 
-	return render(request=request, template_name="tournament/tournament_admin_view.html", context=context)
-
-
-
+"""
+Convenience function for verifying the admin is the one trying to do something.
+If it is not the admin, raise ValidationError using error_message.
+"""
+def verify_admin(user, tournament_id, error_message):
+	tournament = Tournament.objects.get_by_id(tournament_id)
+	if user != tournament.admin:
+		raise ValidationError(error_message)
 
 
 
