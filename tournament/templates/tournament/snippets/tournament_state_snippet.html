@@ -21,7 +21,7 @@
         <p>Need to add/remove players or edit the Tournament Structure?</p>
         <a class="btn btn-warning state-action-button" href="{% url 'tournament:undo_started' pk=tournament.id %}">de-activate</a>
       </div>
-      <a class="btn btn-primary state-action-button" >Complete Tournament</a>
+      <a class="btn btn-primary state-action-button" href="{% url 'tournament:complete' pk=tournament.id %}" >Complete Tournament</a>
     {% endif %}
 
   <!-- INACTIVE -->

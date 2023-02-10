@@ -61,11 +61,12 @@ class TournamentEliminationAdmin(admin.ModelAdmin):
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
 
 class TournamentPlayerResultAdmin(admin.ModelAdmin):
+
     fieldsets = (
         (None, {'fields': ('player', 'tournament', 'net_earnings', 'gross_earnings')}),
     )
 
-    list_display = ('player', 'tournament', 'net_earnings',  'gross_earnings')
+    list_display = ('player', 'tournament', 'net_earnings',  'gross_earnings', 'elimination_ids')
     search_fields = ('player', 'tournament',)
 
 

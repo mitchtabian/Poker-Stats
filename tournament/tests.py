@@ -841,6 +841,37 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 				eliminatee_id = players[0].user.id
 			)
 
+	"""
+	Test cannot eliminate the final player. The Tournament should be completed.
+	"""
+	def test_cannot_eliminate_last_player(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		# -- Create eliminations --
+
+		# Try to eliminate player0
+		eliminate_all_players_except(
+			players = players,
+			except_user = players[0].user,
+			tournament = tournament
+		)
+
+		# At this point everyone is eliminated except player0
+		# Try to eliminate them.
+		with self.assertRaisesMessage(ValidationError, "You can't eliminate any more players. Complete the Tournament."):
+			eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_id = players[8].user.id,
+				eliminatee_id = players[0].user.id
+			)
+
 
 class TournamentTestCase(TransactionTestCase):
 
@@ -1594,7 +1625,6 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		# Build a structure made by cat
 		cat = User.objects.get_by_username("cat")
 
-		# TODO loop this with difference payout percentages?
 		structure = self.build_structure(
 			user = cat,
 			buyin_amount = 100,

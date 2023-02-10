@@ -1,108 +1,27 @@
 {% if tournament.get_state_string == "COMPLETED" %}
 
-<!-- Placements table -->
-<!-- 1st, 2nd, ... -->
-<!-- TODO use new TournamentPlayerData model -->
-<div class="final-placements-table table-responsive">
-  <table class="table ">
-    <thead>
-      <tr>
-        <th scope="col"><div class="placements-table-col">Player</div></th>
-        <th scope="col"><div class="placements-table-col">Placement</div></th>
-        <th scope="col"><div class="placements-table-col">Earnings</div></th>
-      </tr>
-    </thead>
-    <tbody>
-	    <tr>
-	      <td scope="row"><div class="placements-table-row"><div class="placements-table-username">Mitch</div></td>
-	      <td><div class="placements-table-row">1st</div></td>
-	      <td><div class="placements-table-row">$300</div></td>
-	    </tr>
-	    <tr>
-	      <td scope="row"><div class="placements-table-row placements-table-username">Blake</div></td>
-	      <td><div class="placements-table-row">2nd</div></td>
-	      <td><div class="placements-table-row">$150</div></td>
-	    </tr>
-	    <tr>
-	      <td scope="row"><div class="placements-table-row placements-table-username">someonewithareallyreallylongnamethisissostupidbutihavetohandleit</div></td>
-	      <td><div class="placements-table-row">3rd</div></td>
-	      <td><div class="placements-table-row">$60</div></td>
-	    </tr>
-    </tbody>
-  </table>
-</div>
+{% load tournament_extras %}
 
-<!-- Summary (think of better name?) -->
-<!-- Need to think of how to tabulate this on mobile. Hard to fit in a table b/c username can be long -->
-<!-- player, rebuys, bounties, earned, net (total-earned) -->
+{% if results %}
 
+{% include 'tournament/snippets/results_summary_table.html' with results=results tournament=tournament %}
 
-<style type="text/css">
-	@media only screen and (max-width: 500px) {
-		.placements-table-col {
-			font-size: 12px;
-			text-align: left;
-		}
+{% include 'tournament/snippets/net_earnings_summary_table.html' with results=results tournament=tournament %}
 
-		.placements-table-row {
-			font-size: 12px;
-			text-align: left;
-		}
+{% include 'tournament/snippets/eliminations_summary_table.html' with results=results tournament=tournament %}
 
-	    .placements-table-row {
-	      	font-size: 12px;
-	    }
-
-	    .final-placements-table {
-			padding: 4px;
-			background-color: #f2f2f2;
-			border-radius: 8px;
-			margin-top: 8px;
-	    }
-
-		.placements-table-username {
-			overflow: hidden;
-			white-space: nowrap;
-			text-overflow: ellipsis;
-			max-width: 150px;
-			text-align: left;
-		}
-  }
-
-  @media only screen and (min-width: 501px) {
-    .placements-table-col {
-      font-size: 16px;
-      text-align: left;
-    }
-
-    .placements-table-row {
-		text-align: left;
-	}
-
-    .placements-table-row {
-      font-size: 16px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-
-    .final-placements-table {
-      padding: 16px;
-      background-color: #f2f2f2;
-      border-radius: 8px;
-      margin-top: 16px;
-    }
-
-    .placements-table-username {
-		overflow: hidden;
-		white-space: nowrap;
-		text-overflow: ellipsis;
-		max-width: 380px;
-		text-align: left;
-	}
-  }
-</style>
+{% endif %}
 
 {% else %}
 <p>Invalid state: {{tournament.get_state_string}}</p>
 {% endif %}
+
+
+
+
+
+
+
+
+
+

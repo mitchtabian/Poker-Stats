@@ -1,0 +1,144 @@
+{% load tournament_extras %}
+
+{% if results %}
+
+<div class="eliminations-summary-table  table-responsive">
+	<p class="eliminations-summary-table-header">Eliminations</p>
+  <table class="table ">
+    <thead>
+      <tr>
+        <th scope="col"><div class="eliminations-summary-table-col">Player</div></th>
+        <th scope="col"><div class="eliminations-summary-table-col">Eliminations</div></th>
+        {% if tournament.tournament_structure.bounty_amount != None %}
+        <th scope="col">
+        	<div class="eliminations-summary-table-col">
+        		Bounty Earnings
+        		<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" id="id_earnings_info_icon" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Money earned from eliminating players">
+				      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+				      <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+			    </svg>
+        	</div>
+        </th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+    	{% for result in results %}
+	    <tr>
+	      <td scope="row">
+	      	<div class="eliminations-summary-table-row">
+	      		<div class="eliminations-summary-table-username">
+	      			{{result.player.user.username}}
+	      		</div>
+	      	</div>
+      	</td>
+	      <td><div class="eliminations-summary-table-row">{{result.elimination_ids|length|format_table_number}}</div></td>
+	      {% if tournament.tournament_structure.bounty_amount != None %}
+	      <td><div class="eliminations-summary-table-row earnings-row" style="color: {{result.bounty_earnings|format_table_number_color}}; font-weight: {{result.bounty_earnings|format_number_weight}}">{{result.bounty_earnings|format_money}}</div></td>
+	      {% endif %}
+	    </tr>
+	    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script type="text/javascript">
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+</script>
+
+<style type="text/css">
+
+	td {
+		vertical-align: middle;
+	}
+
+	@media only screen and (max-width: 500px) {
+
+		.eliminations-summary-table-header {
+			font-size: 16px;
+			font-weight: 400;
+			margin-left: 8px;
+			margin-bottom: 8px;
+		}
+
+		.eliminations-summary-table-col {
+			font-size: 12px;
+			text-align: left;
+		}
+
+		.eliminations-summary-table-row {
+			font-size: 12px;
+			text-align: left;
+		}
+
+    .eliminations-summary-table {
+			padding: 4px;
+			background-color: #f2f2f2;
+			border-radius: 8px;
+			margin-top: 16px;
+    }
+
+		.eliminations-summary-table-username {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			max-width: 100px;
+			text-align: left;
+			font-weight: 600;
+		}
+
+		.eliminations-summary-string {
+			font-size: 10px;
+			font-weight: 600;
+		}
+  }
+
+  @media only screen and (min-width: 501px) {
+  	.eliminations-summary-table-header {
+			font-size: 20px;
+			font-weight: 400;
+			margin-left: 8px;
+			margin-bottom: 8px;
+		}
+
+    .eliminations-summary-table-col {
+      font-size: 16px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .eliminations-summary-table-row {
+      font-size: 16px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .eliminations-summary-table {
+      padding: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      margin-top: 24px;
+    }
+
+    .eliminations-summary-username {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			max-width: 380px;
+			text-align: left;
+			font-weight: 500;
+			color: #292b2c;
+		}
+
+		.eliminations-summary-string {
+			font-size: 12px;
+			font-weight: 600;
+		}
+  }
+</style>
+
+{% endif %}

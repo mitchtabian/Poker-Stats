@@ -288,6 +288,8 @@ def rebuy_player_in_tournament(request, *args, **kwargs):
 """
 Common function shared between tournament_view and htmx requests used in that view.
 """
+
+from tournament.util import payout_positions
 def render_tournament_view(request, tournament_id):
 	context = {}
 	tournament = Tournament.objects.get_by_id(tournament_id)
@@ -321,8 +323,14 @@ def render_tournament_view(request, tournament_id):
 	context['allow_rebuys'] = tournament.tournament_structure.allow_rebuys
 	context['player_tournament_data'] = get_player_tournament_data(tournament_id)
 
-	# If the tournament is completed, send some custom data structures for the results data
-	# if tournament.completed_at != None:
+	# If the tournament is completed, add the TournamentPlayerResult data to the context
+	if tournament.completed_at != None:
+		results = TournamentPlayerResult.objects.get_results_for_tournament(
+			tournament_id = tournament.id
+		)
+		context['results'] = results.order_by("placement")
+		context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
+
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
 
 """

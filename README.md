@@ -18,18 +18,15 @@ Project for tracking poker stats from tournaments.
 This is a notes section for me personally.
 
 ## Next time
-1. Write one final unit test
-1. tournament_players_completed_state.html
-	1. At this point the tournament is complete so lets build some graphs and summarize the data niceley. Maybe start with tables to get something working but then start thinking about graphs
-	1. Eliminations summary (who elim'd who)
-	1. TODO
-		1. Don't allow admin to complete the tournament before every player except 1 is eliminated
-		1. Future: Need a mechanism for splitting. 
+1. Eliminations summary (who elim'd who)
+1. Analytics for user
+	1. Accessible from profile
+	1. Shows summary across games
+		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
+1. TournamentGroup? Think this through with some diagrams
+1. Analaytics based on TournamentGroup
+	- Basically this would just extend the per-user analytics
 1. Are you sure you want to remove?
-1. Show warning modal on:
-	1. activate: This will delete any pending invites
-	1. complete: Tournament cannot be updated once completed.
-1. Make sure there are no views you can manually visit by entering the url that you shouldn't be able to (tournament stuff depening on TournamentState)
 1. Make new database diagrams using that thing aaron showed you.
 
 

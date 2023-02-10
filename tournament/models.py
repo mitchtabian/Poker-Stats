@@ -11,6 +11,8 @@ from user.models import User
 
 PERCENTAGE_VALIDATOR = [MinValueValidator(0), MaxValueValidator(100)]
 
+from tournament.util import build_placement_string
+
 
 """
 Checks if
@@ -607,6 +609,21 @@ class TournamentEliminationManager(models.Manager):
 		if eliminatee not in tournament_users:
 			raise ValidationError(f"{eliminatee.username} is not part of this tournament.")
 
+		# Verify this is not the last player in the Tournament.
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		num_rebuys = 0
+		if tournament.tournament_structure.allow_rebuys:
+			for player in players:
+				num_rebuys += player.num_rebuys
+		total_buyins = num_rebuys + len(players)
+		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
+			tournament_id = tournament.id
+		)
+		if total_buyins <= (len(eliminations) + 1):
+			raise ValidationError("You can't eliminate any more players. Complete the Tournament.")
+
 		# Verify a multiple-eliminations aren't happening unless they've rebought.
 		is_player_eliminated = self.is_player_eliminated(
 			user_id = eliminatee.id,
@@ -699,7 +716,6 @@ class TournamentPlayerResultManager(models.Manager):
 				tournament_id = tournament_id
 			)
 			results.append(result)
-			# print(f"{player.user.username} placed {result.placement}")
 		return results
 
 	"""
@@ -743,11 +759,9 @@ class TournamentPlayerResultManager(models.Manager):
 				elif elimination.eliminated_at > elimations_dict[elimination.eliminatee.id]:
 					# Only replace the value in the dictionary if the timestamp is newer (more recent)
 					elimations_dict[elimination.eliminatee.id] = elimination.eliminated_at
-			# print(f"Eliminations dict: {elimations_dict}")
 			# Loop through the sorted list. Whatever index this user is in, thats what they placed
 			# sorted_reversed_list = sorted(elimations_dict, key=elimations_dict.get).reverse()
 			sorted_reversed_list = [k for k, v in sorted(elimations_dict.items(), key=lambda p: p[1], reverse=True)]
-			# print(f"Eliminations dict sorted: {sorted_reversed_list}")
 			for i,user_id in enumerate(sorted_reversed_list):
 				if user_id == player.user.id:
 					placement = i + 1 # add 1 b/c person in first won't show up in eliminations lists
@@ -884,6 +898,14 @@ class TournamentPlayerResult(models.Model):
 	def __str__(self):
 		return f"TournamentPlayerResult data for {self.player.user.username}"
 
+	def placement_string(self):
+		return build_placement_string(self.placement)
+
+	"""
+	List of the user_ids of the users who were eliminated.
+	"""
+	def elimination_ids(self):
+		return [f"{elimination.eliminatee.id}" for elimination in self.eliminations.all()]
 
 
 # class TournamentGroup(models.Model):
