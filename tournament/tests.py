@@ -17,7 +17,8 @@ from tournament.test_util import (
 	build_structure,
 	eliminate_players_and_complete_tournament,
 	eliminate_all_players_except,
-	eliminate_player
+	eliminate_player,
+	PlayerPlacementData
 )
 from user.models import User
 from user.test_util import (
@@ -1203,7 +1204,7 @@ class TournamentTestCase(TransactionTestCase):
 	"""
 	Verify undo completion deletes eliminations and rebuys
 	"""
-	def test_undo_completion_deletes_eliminations_and_rebuys(self):
+	def test_undo_completion_deletes_eliminations_rebuys_and_results(self):
 		# Build a structure made by cat
 		cat = User.objects.get_by_username("cat")
 		structure = self.build_structure(
@@ -1275,14 +1276,26 @@ class TournamentTestCase(TransactionTestCase):
 			else:
 				self.assertEqual(player.num_rebuys, 0)
 
+		# verify there are no tournament results
+		tournament_results = TournamentPlayerResult.objects.get_results_for_tournament(tournament.id)
+		self.assertTrue(len(tournament_results) == 0)
+
 		# Complete tournament
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		# verify the tournament results were generated.
+		tournament_results = TournamentPlayerResult.objects.get_results_for_tournament(tournament.id)
+		self.assertTrue(len(tournament_results) != 0)
 
 		# Undo completion
 		Tournament.objects.undo_complete_tournament(
 			user = cat,
 			tournament_id = tournament.id
 		)
+
+		# verify there are no tournament results
+		tournament_results = TournamentPlayerResult.objects.get_results_for_tournament(tournament.id)
+		self.assertTrue(len(tournament_results) == 0)
 
 		# Verify the eliminations are deleted
 		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
@@ -1408,7 +1421,7 @@ class TournamentTestCase(TransactionTestCase):
 		)
 
 		with self.assertRaisesMessage(ValidationError, "Tournament value cannot be calculated until a Tournament is complete."):
-			Tournament.objects.calculate_tournament_value(tournament_id = tournament.id)
+			Tournament.objects.calculate_tournament_value(tournament_id = tournament.id, num_rebuys=0)
 
 
 	"""
@@ -1453,7 +1466,7 @@ class TournamentTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		# Verify the value
-		value = Tournament.objects.calculate_tournament_value(tournament_id = tournament.id)
+		value = Tournament.objects.calculate_tournament_value(tournament_id = tournament.id, num_rebuys=0)
 		expected_value = round(Decimal(1036.80), 2)
 		self.assertEqual(value, expected_value)
 
@@ -1485,13 +1498,717 @@ class TournamentTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		# Verify the value
-		value = Tournament.objects.calculate_tournament_value(tournament_id = tournament.id)
+		value = Tournament.objects.calculate_tournament_value(tournament_id = tournament.id, num_rebuys = 8)
 		expected_value = round(Decimal(1958.40), 2)
 		self.assertEqual(value, expected_value)
 
 
 
-# CONTINUE with TournamentPlayerResult!
+class TournamentPlayerResultTestCase(TransactionTestCase):
+
+	# Reset primary keys after each test function run
+	reset_sequences = True
+	
+	"""
+	bounty_amount: If None, this is not a bounty tournament.
+	"""
+	def build_structure(self, user, buyin_amount, bounty_amount, payout_percentages, allow_rebuys):
+		structure = build_structure(
+			admin = user,
+			buyin_amount = buyin_amount,
+			bounty_amount = bounty_amount,
+			payout_percentages = payout_percentages,
+			allow_rebuys = allow_rebuys
+		)
+		return structure
+	
+	def build_tournament(self, admin, title, structure):
+		tournament = Tournament.objects.create_tournament(
+			title = title,
+			user = admin,
+			tournament_structure = structure
+		)
+		return tournament
+
+	def build_placement_percentages(num_placements):
+		if num_placements > 9:
+			raise ValidationError("Can't build payout_percentages for tournament with more than 9 players.")
+		percentages = []
+		for x in range(1, num_placements):
+			if x == 1:
+				percentages.append(100)
+			elif x == 2:
+				percentages.append(60,40)
+			elif x == 3:
+				percentages.append(50,30,20)
+		return percentages
+
+	"""
+	Builds a dictionary of PlayerPlacementData.
+	Their placement is the key and PlayerPlacementData is the value.
+	This makes it much easier to verify the placements and earnings.
+	"""
+	def build_placement_dict(self, tournament, eliminatee_order, eliminator_order, debug=False):
+		players = TournamentPlayer.objects.get_tournament_players(tournament.id)
+		placement_dict = {}
+
+		for player in players:
+			# This will return a queryset but it should only be length of 1.
+			result = TournamentPlayerResult.objects.get_results_for_user_by_tournament(
+				user_id = player.user.id,
+				tournament_id = tournament.id
+			)[0]
+
+			placement_data = PlayerPlacementData(
+				user_id = result.player.user.id,
+				placement = result.placement,
+				placement_earnings = f"{result.placement_earnings}",
+				investment = f"{result.investment}",
+				eliminations = [value.eliminatee.id for value in result.eliminations.all()],
+				bounty_earnings = f"{result.bounty_earnings}",
+				rebuys = result.rebuys,
+				gross_earnings = f"{result.gross_earnings}",
+				net_earnings = f"{result.net_earnings}"
+			)
+			placement_dict[result.placement] = placement_data
+
+		# For debugging
+		if debug:
+			for place in placement_dict.keys():
+				print(f"{placement_dict[place].user_id} " +
+					f"placed {placement_dict[place].placement} " +
+					f"and earned {placement_dict[place].placement_earnings}.")
+
+		return placement_dict
+
+	def setUp(self):
+		# Build some users for the tests
+		users = create_users(
+			identifiers = ["cat", "dog", "monkey", "bird", "donkey", "elephant", "gator", "insect", "racoon"]
+		)
+
+	"""
+	Verify cannot generate results before tournament is completed.
+	"""
+	def test_cannot_generate_results_before_tournament_complete(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		# TODO loop this with difference payout percentages?
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 100,
+			bounty_amount = None,
+			payout_percentages = [100],
+			allow_rebuys = False
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		with self.assertRaisesMessage(ValidationError, "You cannot build Tournament results until the Tournament is complete."):
+			results = TournamentPlayerResult.objects.build_results_for_tournament(tournament.id)
+
+	"""
+	Verify cannot calculate placement until tournament completed.
+	"""
+	def test_cannot_calculate_placement_until_tournament_completed(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 100,
+			bounty_amount = None,
+			payout_percentages = [100],
+			allow_rebuys = False
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		with self.assertRaisesMessage(ValidationError, "Cannot determine placement until tourment is completed."):
+			results = TournamentPlayerResult.objects.determine_placement(user_id=cat.id, tournament_id=tournament.id)
+
+
+	"""
+	Verify placement is calculated correctly.
+	No rebuys.
+	"""
+	def test_placement_calculation_no_rebuys_scenario1(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 100,
+			bounty_amount = None,
+			payout_percentages = [100],
+			allow_rebuys = False
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Eliminate in a specific order so we can verify. 6 is the winner here.
+		# These arrays are the primary keys of the users.
+		# 5 elim 7, 3 elim 5, 2 elim 3, etc...
+		# So expected placement order is: [6, 4, 8, 9, 1, 2, 3, 5, 7]
+		eliminatee_order = [7, 5, 3, 2, 1, 9, 8, 4]
+		eliminator_order = [5, 3, 2, 1, 9, 8, 4, 6]
+		for index,eliminatee_id in enumerate(eliminatee_order):
+			eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_id = eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
+		# Complete
+		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		placement_dict = self.build_placement_dict(
+			tournament = tournament,
+			eliminatee_order = eliminatee_order,
+			eliminator_order = eliminator_order
+		)
+
+		self.assertEqual(len(placement_dict), 9) # There were only 9 players
+		self.assertEqual(placement_dict[0].user_id, 6)
+		self.assertEqual(placement_dict[1].user_id, 4)
+		self.assertEqual(placement_dict[2].user_id, 8)
+		self.assertEqual(placement_dict[3].user_id, 9)
+		self.assertEqual(placement_dict[4].user_id, 1)
+		self.assertEqual(placement_dict[5].user_id, 2)
+		self.assertEqual(placement_dict[6].user_id, 3)
+		self.assertEqual(placement_dict[7].user_id, 5)
+		self.assertEqual(placement_dict[8].user_id, 7)
+
+	"""
+	Verify placement is calculated correctly.
+	No rebuys.
+	"""
+	def test_placement_calculation_no_rebuys_scenario2(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 100,
+			bounty_amount = None,
+			payout_percentages = [100],
+			allow_rebuys = False
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Eliminate in a specific order so we can verify. 9 is the winner here.
+		# These arrays are the primary keys of the users.
+		# 5 elim 7, 9 elim 5, 9 elim 3, etc...
+		# So expected placement order is: [9, 6, 8, 4, 5, 3, 2, 1, 7]
+		eliminatee_order = [7, 1, 2, 3, 5, 4, 8, 6]
+		eliminator_order = [5, 9, 9, 9, 9, 9, 4, 9]
+		for index,eliminatee_id in enumerate(eliminatee_order):
+			eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_id = eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
+		# Complete
+		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		placement_dict = self.build_placement_dict(
+			tournament = tournament,
+			eliminatee_order = eliminatee_order,
+			eliminator_order = eliminator_order
+		)
+
+		self.assertEqual(len(placement_dict), 9) # There were only 9 players
+		self.assertEqual(placement_dict[0].user_id, 9)
+		self.assertEqual(placement_dict[1].user_id, 6)
+		self.assertEqual(placement_dict[2].user_id, 8)
+		self.assertEqual(placement_dict[3].user_id, 4)
+		self.assertEqual(placement_dict[4].user_id, 5)
+		self.assertEqual(placement_dict[5].user_id, 3)
+		self.assertEqual(placement_dict[6].user_id, 2)
+		self.assertEqual(placement_dict[7].user_id, 1)
+		self.assertEqual(placement_dict[8].user_id, 7)
+
+	"""
+	Verify placement is calculated correctly.
+	With rebuys.
+	"""
+	def test_placement_calculation_with_rebuys_scenario1(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 100,
+			bounty_amount = None,
+			payout_percentages = [100],
+			allow_rebuys = True
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Manunally add some rebuys
+		# These are the user_id's of the players who rebought.
+		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
+		rebuys = [1, 5, 7, 8, 1]
+		for user_id in rebuys:
+			player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+				tournament_id = tournament.id,
+				user_id = user_id
+			)
+			player.num_rebuys += 1
+			player.save()
+
+		# Eliminate in a specific order so we can verify. 9 is the winner here.
+		# These arrays are the primary keys of the users.
+		# 2 elim 1, 5 elim 1, 9 elim 5, 7 elim 2, etc...
+		# So expected placement order is: [9, 7, 8, 1, 5, 6, 4, 3, 2]
+		eliminatee_order = [1, 1, 5, 2, 3, 4, 6, 5, 7, 8, 1, 8, 7]
+		eliminator_order = [2, 5, 9, 7, 8, 1, 1, 9, 8, 1, 9, 7, 9]
+		for index,eliminatee_id in enumerate(eliminatee_order):
+			eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_id = eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
+		# Complete
+		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		placement_dict = self.build_placement_dict(
+			tournament = tournament,
+			eliminatee_order = eliminatee_order,
+			eliminator_order = eliminator_order,
+			debug = False
+		)
+
+		self.assertEqual(len(placement_dict), 9) # There were only 9 players
+		self.assertEqual(placement_dict[0].user_id, 9)
+		self.assertEqual(placement_dict[1].user_id, 7)
+		self.assertEqual(placement_dict[2].user_id, 8)
+		self.assertEqual(placement_dict[3].user_id, 1)
+		self.assertEqual(placement_dict[4].user_id, 5)
+		self.assertEqual(placement_dict[5].user_id, 6)
+		self.assertEqual(placement_dict[6].user_id, 4)
+		self.assertEqual(placement_dict[7].user_id, 3)
+		self.assertEqual(placement_dict[8].user_id, 2)
+
+	"""
+	Verify placement earnings is calculated correctly.
+	No rebuys, no bounties. (60, 30, 20) payout percentages.
+	"""
+	def test_placement_earnings_no_rebuys_no_bounties_60_30_20(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 115.12,
+			bounty_amount = None,
+			payout_percentages = [60, 30, 10],
+			allow_rebuys = False
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Eliminate in a specific order so we can verify. 9 is the winner here.
+		# These arrays are the primary keys of the users.
+		# 5 elim 7, 9 elim 5, 9 elim 3, etc...
+		# So expected placement order is: [9, 6, 8, 4, 5, 3, 2, 1, 7]
+		eliminatee_order = [7, 1, 2, 3, 5, 4, 8, 6]
+		eliminator_order = [5, 9, 9, 9, 9, 9, 4, 9]
+		for index,eliminatee_id in enumerate(eliminatee_order):
+			eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_id = eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
+		# Complete
+		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		placement_dict = self.build_placement_dict(
+			tournament = tournament,
+			eliminatee_order = eliminatee_order,
+			eliminator_order = eliminator_order
+		)
+
+		self.assertEqual(placement_dict[0].placement_earnings, f"{round(Decimal(621.65), 2)}")
+		self.assertEqual(placement_dict[1].placement_earnings, f"{round(Decimal(310.82), 2)}")
+		self.assertEqual(placement_dict[2].placement_earnings, f"{round(Decimal(103.61), 2)}")
+		self.assertEqual(placement_dict[3].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[4].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[5].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[6].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[7].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[8].placement_earnings, "0.00")
+
+	"""
+	Verify placement earnings is calculated correctly.
+	Rebuys enabled, no bounties. (50, 30, 15, 5) payout percentages.
+	"""
+	def test_placement_earnings_no_bounties_50_30_15_5(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 115.12,
+			bounty_amount = None,
+			payout_percentages = [50, 30, 15, 5],
+			allow_rebuys = True
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Manunally add some rebuys
+		# These are the user_id's of the players who rebought.
+		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
+		rebuys = [1, 5, 7, 8, 1]
+		for user_id in rebuys:
+			player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+				tournament_id = tournament.id,
+				user_id = user_id
+			)
+			player.num_rebuys += 1
+			player.save()
+
+		# Eliminate in a specific order so we can verify. 9 is the winner here.
+		# These arrays are the primary keys of the users.
+		# 2 elim 1, 5 elim 1, 9 elim 5, 7 elim 2, etc...
+		# So expected placement order is: [9, 7, 8, 1, 5, 6, 4, 3, 2]
+		eliminatee_order = [1, 1, 5, 2, 3, 4, 6, 5, 7, 8, 1, 8, 7]
+		eliminator_order = [2, 5, 9, 7, 8, 1, 1, 9, 8, 1, 9, 7, 9]
+		for index,eliminatee_id in enumerate(eliminatee_order):
+			eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_id = eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
+		# Complete
+		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		placement_dict = self.build_placement_dict(
+			tournament = tournament,
+			eliminatee_order = eliminatee_order,
+			eliminator_order = eliminator_order,
+			debug = False
+		)
+
+		self.assertEqual(placement_dict[0].placement_earnings, f"{round(Decimal(805.84), 2)}")
+		self.assertEqual(placement_dict[1].placement_earnings, f"{round(Decimal(483.50), 2)}")
+		self.assertEqual(placement_dict[2].placement_earnings, f"{round(Decimal(241.75), 2)}")
+		self.assertEqual(placement_dict[3].placement_earnings, f"{round(Decimal(80.58), 2)}")
+		self.assertEqual(placement_dict[4].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[5].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[6].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[7].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[8].placement_earnings, "0.00")
+
+
+	"""
+	Verify placement earnings is calculated correctly.
+	Rebuys enabled, bounties enabled. (50, 30, 15, 5) payout percentages.
+	"""
+	def test_placement_earnings_rebuys_and_bounty_enabled_50_30_15_5(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 115.12,
+			bounty_amount = 25.69,
+			payout_percentages = [50, 30, 15, 5],
+			allow_rebuys = True
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Manunally add some rebuys
+		# These are the user_id's of the players who rebought.
+		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
+		rebuys = [1, 5, 7, 8, 1]
+		for user_id in rebuys:
+			player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+				tournament_id = tournament.id,
+				user_id = user_id
+			)
+			player.num_rebuys += 1
+			player.save()
+
+		# Eliminate in a specific order so we can verify. 9 is the winner here.
+		# These arrays are the primary keys of the users.
+		# 2 elim 1, 5 elim 1, 9 elim 5, 7 elim 2, etc...
+		# So expected placement order is: [9, 7, 8, 1, 5, 6, 4, 3, 2]
+		eliminatee_order = [1, 1, 5, 2, 3, 4, 6, 5, 7, 8, 1, 8, 7]
+		eliminator_order = [2, 5, 9, 7, 8, 1, 1, 9, 8, 1, 9, 7, 9]
+		for index,eliminatee_id in enumerate(eliminatee_order):
+			eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_id = eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
+		# Complete
+		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		placement_dict = self.build_placement_dict(
+			tournament = tournament,
+			eliminatee_order = eliminatee_order,
+			eliminator_order = eliminator_order,
+			debug = False
+		)
+
+		self.assertEqual(placement_dict[1].placement_earnings, f"{round(Decimal(375.61), 2)}")
+		self.assertEqual(placement_dict[2].placement_earnings, f"{round(Decimal(187.80), 2)}")
+		self.assertEqual(placement_dict[3].placement_earnings, f"{round(Decimal(62.60), 2)}")
+		self.assertEqual(placement_dict[4].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[5].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[6].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[7].placement_earnings, "0.00")
+		self.assertEqual(placement_dict[8].placement_earnings, "0.00")
+
+
+	"""
+	Verify placement earnings is calculated correctly.
+	Rebuys disabled, bounties enabled. (50, 30, 15, 5) payout percentages.
+	"""
+	def test_placement_earnings_rebuys_disabled_and_bounty_enabled_50_30_15_5(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 115.12,
+			bounty_amount = 25.69,
+			payout_percentages = [50, 30, 15, 5],
+			allow_rebuys = False
+		)
+
+		tournament = self.build_tournament(
+			admin = cat,
+			title = "Results tournament",
+			structure= structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Eliminate in a specific order so we can verify. 9 is the winner here.
+		# These arrays are the primary keys of the users.
+		# 5 elim 7, 9 elim 5, 9 elim 3, etc...
+		# So expected placement order is: [9, 6, 8, 4, 5, 3, 2, 1, 7]
+		eliminatee_order = [7, 1, 2, 3, 5, 4, 8, 6]
+		eliminator_order = [5, 9, 9, 9, 9, 9, 4, 9]
+		for index,eliminatee_id in enumerate(eliminatee_order):
+			eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_id = eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
+		# Complete
+		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
+
+		placement_dict = self.build_placement_dict(
+			tournament = tournament,
+			eliminatee_order = eliminatee_order,
+			eliminator_order = eliminator_order
+		)
+
+		# Verify results
+		investment_decimal = Decimal("115.12")
+		for place in placement_dict.keys():
+			self.assertEqual(placement_dict[place].investment, "115.12")
+			self.assertEqual(placement_dict[place].rebuys, 0)
+			if placement_dict[place].user_id == 9:
+				gross_earnings = placement_dict[place].gross_earnings
+				bounty_earnings = Decimal(placement_dict[place].bounty_earnings)
+				placement_earnings = Decimal(placement_dict[place].placement_earnings)
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				self.assertEqual(gross_earnings, f"{round(placement_earnings + bounty_earnings, 2)}")
+				self.assertEqual(placement_dict[place].placement_earnings, f"{round(Decimal(402.44), 2)}")
+				self.assertEqual(place, 0)
+				self.assertEqual(placement_dict[place].bounty_earnings, f"{round(Decimal(154.14), 2)}")
+				self.assertEqual(placement_dict[place].eliminations, [1, 2, 3, 5, 4, 6])
+			elif placement_dict[place].user_id == 8:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				self.assertEqual(placement_dict[place].gross_earnings, placement_dict[place].placement_earnings)
+				self.assertEqual(placement_dict[place].placement_earnings, f"{round(Decimal(120.73), 2)}")
+				self.assertEqual(place, 2)
+				self.assertEqual(gross_earnings, f"{round(Decimal(120.73), 2)}")
+				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
+				self.assertEqual(placement_dict[place].eliminations, [])
+			elif placement_dict[place].user_id == 7:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				self.assertEqual(placement_dict[place].gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
+				self.assertEqual(place, 8)
+				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
+				self.assertEqual(gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].eliminations, [])
+			elif placement_dict[place].user_id == 6:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				self.assertEqual(placement_dict[place].gross_earnings, placement_dict[place].placement_earnings)
+				self.assertEqual(placement_dict[place].placement_earnings, f"{round(Decimal(241.46), 2)}")
+				self.assertEqual(place, 1)
+				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
+				self.assertEqual(gross_earnings, f"{round(Decimal(241.46), 2)}")
+				self.assertEqual(placement_dict[place].eliminations, [])
+			elif placement_dict[place].user_id == 5:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				bounty_earnings = Decimal(placement_dict[place].bounty_earnings)
+				placement_earnings = Decimal(placement_dict[place].placement_earnings)
+				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
+				self.assertEqual(place, 4)
+				self.assertEqual(placement_dict[place].bounty_earnings, f"{round(Decimal(25.69), 2)}")
+				self.assertEqual(gross_earnings, f"{round(Decimal(25.69), 2)}")
+				self.assertEqual(placement_dict[place].eliminations, [7])
+			elif placement_dict[place].user_id == 4:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				bounty_earnings = Decimal(placement_dict[place].bounty_earnings)
+				placement_earnings = Decimal(placement_dict[place].placement_earnings)
+				self.assertEqual(placement_dict[place].gross_earnings, f"{round(placement_earnings + bounty_earnings, 2)}")
+				self.assertEqual(placement_dict[place].placement_earnings, f"{round(Decimal(40.24), 2)}")
+				self.assertEqual(place, 3)
+				self.assertEqual(gross_earnings, f"{round(Decimal(65.93), 2)}")
+				self.assertEqual(placement_dict[place].eliminations, [8])
+			elif placement_dict[place].user_id == 3:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				self.assertEqual(placement_dict[place].gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
+				self.assertEqual(place, 5)
+				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
+				self.assertEqual(gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].eliminations, [])
+			elif placement_dict[place].user_id == 2:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				self.assertEqual(placement_dict[place].gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
+				self.assertEqual(place, 6)
+				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
+				self.assertEqual(gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].eliminations, [])
+			elif placement_dict[place].user_id == 1:
+				gross_earnings = placement_dict[place].gross_earnings
+				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
+				self.assertEqual(placement_dict[place].gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
+				self.assertEqual(place, 7)
+				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
+				self.assertEqual(gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].eliminations, [])
+
+
+# PRobably just need one more test. Basically the same as 
+# test_placement_earnings_rebuys_disabled_and_bounty_enabled_50_30_15_5. But allow rebuys
+
+
+
+
+
 		
 
 		

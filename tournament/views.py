@@ -84,9 +84,6 @@ def complete_tournament(request, *args, **kwargs):
 		)
 
 		tournament = Tournament.objects.complete_tournament(user, tournament_id)
-
-		# Calculate the TournamentPlayerResultData for each player. These are saved to db.
-		results = TournamentPlayerResult.objects.build_results_for_tournament(tournament_id)
 	except Exception as e:
 		messages.error(request, e.args[0])
 	

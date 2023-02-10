@@ -1,5 +1,23 @@
+from dataclasses import dataclass, field
+
 from tournament.models import Tournament, TournamentPlayer, TournamentElimination, TournamentStructure
 from user.models import User
+
+
+"""
+A utility data holder class that makes testing TournamentPlayerResults easier.
+"""
+@dataclass
+class PlayerPlacementData:
+	user_id: int
+	placement: int
+	placement_earnings: str
+	gross_earnings: str
+	investment: str
+	net_earnings: str
+	bounty_earnings: str
+	rebuys: int
+	eliminations: list[int] = field(default_factory=list)
 
 """
 Convenience function for adding players to a tournament in tests.
@@ -84,6 +102,7 @@ def eliminate_all_players_except(players, except_user, tournament):
 			)
 			eliminations.append(elimination)
 	return eliminations
+
 
 
 

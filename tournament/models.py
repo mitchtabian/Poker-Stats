@@ -168,6 +168,10 @@ class TournamentManager(models.Manager):
 
 		tournament.completed_at = timezone.now()
 		tournament.save(using=self._db)
+
+		# Calculate the TournamentPlayerResultData for each player. These are saved to db.
+		results = TournamentPlayerResult.objects.build_results_for_tournament(tournament_id)
+
 		return tournament
 
 	"""
@@ -253,18 +257,16 @@ class TournamentManager(models.Manager):
 	Calculate the total value of a particular Tournament.
 	Value cannot be calculated until a Tournament is complete.
 	"""
-	def calculate_tournament_value(self, tournament_id):
+	def calculate_tournament_value(self, tournament_id, num_rebuys):
 		tournament = Tournament.objects.get_by_id(tournament_id)
 		if tournament.completed_at == None:
 			raise ValidationError("Tournament value cannot be calculated until a Tournament is complete.")
-		players = TournamentPlayer.objects.get_tournament_players(tournament_id)
 		buyin_amount = tournament.tournament_structure.buyin_amount
 		# Sum the initial buyin amounts
+		players = TournamentPlayer.objects.get_tournament_players(tournament_id)
 		total_tournament_value = buyin_amount * len(players)
-		# If rebuys are allowed, sum the rebuy value from each player
-		if tournament.tournament_structure.allow_rebuys:
-			for player in players:
-				total_tournament_value += buyin_amount * player.num_rebuys
+		# Add amount from rebuys
+		total_tournament_value += buyin_amount * num_rebuys
 		return round(Decimal(total_tournament_value), 2)
 
 """
@@ -670,6 +672,14 @@ class TournamentPlayerResultManager(models.Manager):
 		tournament = Tournament.objects.get_by_id(tournament_id)
 		return super().get_queryset().filter(tournament=tournament)
 
+	def get_results_for_user_by_tournament(self, user_id, tournament_id):
+		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament_id,
+			user_id = user_id,
+		)
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		return super().get_queryset().filter(tournament=tournament, player=player)
+
 	def delete_results_for_tournament(self, tournament_id):
 		results = self.get_results_for_tournament(tournament_id)
 		for result in results:
@@ -689,36 +699,25 @@ class TournamentPlayerResultManager(models.Manager):
 				tournament_id = tournament_id
 			)
 			results.append(result)
-			print(f"{player.user.username} placed {result.placement}")
+			# print(f"{player.user.username} placed {result.placement}")
 		return results
 
-	def create_tournament_player_result(self, user_id, tournament_id):
+	"""
+	Determine what a player placed in a tournament.
+	Note: This is -1 indexed! So whoever came first will have placement = 0
+	"""
+	def determine_placement(self, user_id, tournament_id):
 		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
 			user_id = user_id,
 			tournament_id = tournament_id
 		)
 		tournament = Tournament.objects.get_by_id(tournament_id)
 
-		# -- Get eliminations --
-		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
-			tournament_id = tournament_id,
-			eliminator_id = player.user.id
-		)
-
-		# -- Get bounty earnings (if this is a bounty tournament). Otherwise None. --
-		bounty_earnings = None
-		if tournament.tournament_structure.bounty_amount != None:
-			bounty_earnings = len(eliminations) * tournament.tournament_structure.bounty_amount
-
-		# -- Get rebuys --
-		rebuys = player.num_rebuys
-
-		# -- Calculate 'investment' --
-		buyin_amount = tournament.tournament_structure.buyin_amount
-		investment = buyin_amount + (rebuys * buyin_amount)
+		# Verify the tournament is completed
+		if tournament.completed_at == None:
+			raise ValidationError("Cannot determine placement until tourment is completed.")
 
 		# -- Determine placement --
-		# TODO Pull out into common function? Maybe in TournamentPlayer?
 		placement = None
 		# First, figure out if this player came first. They came first if:
 		# (1) They did not get eliminated at all
@@ -729,7 +728,7 @@ class TournamentPlayerResultManager(models.Manager):
 		if len(player_eliminations) == 0:
 			# They were never eliminated
 			placement = 0
-		if len(player_eliminations) < rebuys + 1:
+		if len(player_eliminations) < player.num_rebuys + 1:
 			# The Tournament completed and they still had a rebuy remaining
 			placement = 0
 		if placement == None:
@@ -744,30 +743,88 @@ class TournamentPlayerResultManager(models.Manager):
 				elif elimination.eliminated_at > elimations_dict[elimination.eliminatee.id]:
 					# Only replace the value in the dictionary if the timestamp is newer (more recent)
 					elimations_dict[elimination.eliminatee.id] = elimination.eliminated_at
-			print(f"Eliminations dict: {elimations_dict}")
+			# print(f"Eliminations dict: {elimations_dict}")
 			# Loop through the sorted list. Whatever index this user is in, thats what they placed
 			# sorted_reversed_list = sorted(elimations_dict, key=elimations_dict.get).reverse()
 			sorted_reversed_list = [k for k, v in sorted(elimations_dict.items(), key=lambda p: p[1], reverse=True)]
-			print(f"Eliminations dict sorted: {sorted_reversed_list}")
+			# print(f"Eliminations dict sorted: {sorted_reversed_list}")
 			for i,user_id in enumerate(sorted_reversed_list):
 				if user_id == player.user.id:
 					placement = i + 1 # add 1 b/c person in first won't show up in eliminations lists
 					break
-		print(f"placement for {player.user.id}: {placement}")
+		return placement
 
-		# -- Calculate placement earnings --
+	"""
+	Determine the amount this player made from where they placed in the Tournament.
+	This does not include bounties. This is strictly earnings from how they placed.
+	"""
+	def determine_placement_earnings(self, tournament, placement):
 		placement_earnings = 0
-		total_tournament_value = Tournament.objects.calculate_tournament_value(tournament_id)
+		tournament_id = tournament.id
+		players = TournamentPlayer.objects.get_tournament_players(tournament_id)
+		num_rebuys = 0
+		if tournament.tournament_structure.allow_rebuys:
+			for player in players:
+				num_rebuys += player.num_rebuys
+		total_tournament_value = Tournament.objects.calculate_tournament_value(
+			tournament_id = tournament_id, 
+			num_rebuys = num_rebuys
+		)
 		bounty_amount = tournament.tournament_structure.bounty_amount
 		if bounty_amount != None:
-			players = TournamentPlayer.objects.get_tournament_players(tournament_id)
 			# subtract the bounties from total value
-			total_tournament_value -= len(players) * bounty_amount
-		print(f"total_tournament_value: {total_tournament_value}")
+			total_tournament_value -= Decimal(len(players) * bounty_amount)
+			total_tournament_value -= Decimal(num_rebuys * bounty_amount)
 		# Determine the % paid to this users placement
 		for i,pct in enumerate(tournament.tournament_structure.payout_percentages):
 			if i == placement:
 				placement_earnings = Decimal(float(pct) / float(100.00) * float(total_tournament_value))
+		return round(placement_earnings, 2)
+
+	def create_tournament_player_result(self, user_id, tournament_id):
+		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			user_id = user_id,
+			tournament_id = tournament_id
+		)
+		# Make sure a result doesn't already exist.
+		results = TournamentPlayerResult.objects.get_results_for_user_by_tournament(
+			user_id = user_id,
+			tournament_id = tournament_id
+		)
+		# If any exist, delete them.
+		for result in results:
+			result.delete()
+
+		tournament = Tournament.objects.get_by_id(tournament_id)
+
+		# -- Get eliminations --
+		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+			tournament_id = tournament_id,
+			eliminator_id = player.user.id
+		)
+
+		# -- Get bounty earnings (if this is a bounty tournament). Otherwise 0.00. --
+		bounty_earnings = None
+		if tournament.tournament_structure.bounty_amount != None:
+			bounty_earnings = len(eliminations) * tournament.tournament_structure.bounty_amount
+		else:
+			bounty_earnings = round(Decimal(0.00), 2)
+
+		# -- Get rebuys --
+		rebuys = player.num_rebuys
+
+		# -- Calculate 'investment' --
+		buyin_amount = tournament.tournament_structure.buyin_amount
+		investment = buyin_amount + (rebuys * buyin_amount)
+
+		# -- Calculate placement --
+		placement = self.determine_placement(user_id=player.user.id, tournament_id=tournament_id)
+
+		# -- Calculate placement earnings --
+		placement_earnings = self.determine_placement_earnings(
+			tournament = tournament,
+			placement = placement
+		)
 
 		# -- Calculate 'gross_earnings' --
 		# Sum of placement_earnings + bounty_earnings
@@ -784,7 +841,6 @@ class TournamentPlayerResultManager(models.Manager):
 			investment = investment,
 			placement = placement,
 			placement_earnings = placement_earnings,
-			# eliminations = eliminations,
 			bounty_earnings = bounty_earnings,
 			rebuys = rebuys,
 			gross_earnings = gross_earnings,
@@ -811,7 +867,7 @@ class TournamentPlayerResult(models.Model):
 	# Players who were eliminated by this user.
 	eliminations 				= models.ManyToManyField(TournamentElimination)
 
-	# Earnings from eliminations (if this is a bounty tournament)
+	# Earnings from eliminations (Defaults to 0.00 if not a bounty tournament)
 	bounty_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=True, null=True)
 
 	# Number of times rebought
