@@ -1,0 +1,134 @@
+{% load tournament_extras %}
+
+{% if results %}
+
+<div class="eliminations-detail-table  table-responsive">
+	<p class="eliminations-detail-table-header">Eliminations</p>
+  <table class="table ">
+    <thead>
+      <tr>
+        <th scope="col"><div class="eliminations-detail-table-col">Player</div></th>
+        <th scope="col"><div class="eliminations-detail-table-col">Eliminated</div></th>
+      </tr>
+    </thead>
+    <tbody>
+    	{% for elimination_data in eliminations_data %}
+    	<tr>
+	      <td scope="row">
+	      	<div class="eliminations-detail-table-row">
+	      		{{elimination_data.player_username}}
+	      	</div>
+	    	</td>
+	    	<td>
+	      	<div class="eliminations-detail-table-row d-flex flex-column">
+	      		{% for username in elimination_data.eliminated_player_usernames %}
+	      			<span>{{username}}</span>
+	      		{% endfor %}
+	      	</div>
+	    	</td>
+	    </tr>
+    	{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script type="text/javascript">
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+</script>
+
+<style type="text/css">
+
+	td {
+		vertical-align: middle;
+	}
+
+	@media only screen and (max-width: 500px) {
+
+		.eliminations-detail-table-header {
+			font-size: 16px;
+			font-weight: 400;
+			margin-left: 8px;
+			margin-bottom: 8px;
+		}
+
+		.eliminations-detail-table-col {
+			font-size: 12px;
+			text-align: left;
+		}
+
+		.eliminations-detail-table-row {
+			font-size: 12px;
+			text-align: left;
+		}
+
+    .eliminations-detail-table {
+			padding: 4px;
+			background-color: #f2f2f2;
+			border-radius: 8px;
+			margin-top: 16px;
+    }
+
+		.eliminations-detail-table-username {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			max-width: 100px;
+			text-align: left;
+			font-weight: 600;
+		}
+
+		.eliminations-detail-string {
+			font-size: 10px;
+			font-weight: 600;
+		}
+  }
+
+  @media only screen and (min-width: 501px) {
+  	.eliminations-detail-table-header {
+			font-size: 20px;
+			font-weight: 400;
+			margin-left: 8px;
+			margin-bottom: 8px;
+		}
+
+    .eliminations-detail-table-col {
+      font-size: 16px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .eliminations-detail-table-row {
+      font-size: 16px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .eliminations-detail-table {
+      padding: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      margin-top: 24px;
+    }
+
+    .eliminations-detail-username {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			max-width: 380px;
+			text-align: left;
+			font-weight: 500;
+			color: #292b2c;
+		}
+
+		.eliminations-detail-string {
+			font-size: 12px;
+			font-weight: 600;
+		}
+  }
+</style>
+
+{% endif %}

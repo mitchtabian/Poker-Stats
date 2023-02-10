@@ -10,26 +10,11 @@
 
 <div class="container">
   <div class="row">
-    <div class="offset-lg-2 col-lg-8">
-      <h1 class="mb-3">Tournaments</h1>
-      {% if tournaments %}
-        <ul>
-        {% for tournament in tournaments %}
-        <li>
-          <a href="{% url 'tournament:tournament_view' pk=tournament.id %}">{{tournament.title}}</a>
-          {% if tournament.completed_at %}
-            (completed on {{tournament.completed_at}})
-          {% else %}
-            {% if tournament.started_at %}
-              (started on {{tournament.started_at}})
-            {% endif %}
-          {% endif %}
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-        <p>You haven't created any Tournaments. Create one <a href="{% url 'tournament:create_tournament' %}">here</a>.</p>
-      {% endif %}
+    <div class="offset-lg-3 col-lg-6">
+      <h2 class="mb-3">My Tournaments</h2>
+      <p>These are Tournaments that you're the admin of.</p>
+      <a class="btn btn-primary mb-4" href="{% url 'tournament:create_tournament' %}">Create new Tournament</a>
+      {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=tournaments %}
 	</div>
   </div>
 </div>

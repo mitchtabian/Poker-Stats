@@ -1,10 +1,19 @@
 {% if messages %}
-<ul class="messages">
+<div class="mx-4">
     {% for message in messages %}
-    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
-        {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}Important: {% endif %}
+    {% if message.tags == 'error' %}
+      <div class='alert alert-danger' role="alert">
         {{ message }}
-    </li>
+      </div>
+    {% elif message.tags == 'success' %}
+      <div class='alert alert-success' role="alert">
+        {{ message }}
+      </div>
+    {% else %}
+      <div class='alert alert-primary' role="alert">
+        {{ message }}
+      </div>
+    {% endif %}
     {% endfor %}
-</ul>
+</div>
 {% endif %}

@@ -1,0 +1,29 @@
+{% if tournament.get_state_string == "COMPLETED" %}
+
+{% load tournament_extras %}
+
+{% if results %}
+
+{% include 'tournament/snippets/results_summary_table.html' with results=results tournament=tournament %}
+
+{% include 'tournament/snippets/net_earnings_summary_table.html' with results=results tournament=tournament %}
+
+{% include 'tournament/snippets/eliminations_summary_table.html' with results=results tournament=tournament %}
+
+{% include 'tournament/snippets/eliminations_detail_table.html' with results=results tournament=tournament eliminations_data=eliminations_data %}
+
+{% endif %}
+
+{% else %}
+<p>Invalid state: {{tournament.get_state_string}}</p>
+{% endif %}
+
+
+
+
+
+
+
+
+
+

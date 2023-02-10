@@ -1,0 +1,96 @@
+<!-- Modal -->
+{% for modal_player_data in player_tournament_data %}
+  <div class="modal fade" id="id_eliminate_modal_{{modal_player_data.user_id}}" tabindex="-1" aria-labelledby="{{modal_player_data.username}} Elimination Modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="id_elimination_modal_title">
+            Who eliminated {{modal_player_data.username}}?
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body d-flex flex-column">
+          <select class="form-select" aria-label="Who eliminated this player?" id="id_eliminator_selector_{{modal_player_data.user_id}}" onchange="onEliminatorSelected('id_eliminator_selector_{{modal_player_data.user_id}}')">
+          <option value="-1">---------</option>
+          {% for player_data in player_tournament_data %}
+            {% if player_data.user_id != modal_player_data.user_id and player_data.is_eliminated != True %}
+              <option value="{{player_data.user_id}}">{{player_data.username}}</option>
+            {% endif %}
+          {% endfor %}
+          </select>
+          <div class="d-none mt-2 mb-2 text-danger" id="id_eliminate_modal_error_{{modal_player_data.user_id}}">
+            You must select a player.
+          </div>
+        </div>
+        <div class="modal-footer" id="id_elim_model_button_container">
+          <button class="btn btn-danger" onclick="eliminatePlayer('{{modal_player_data.user_id}}')">Eliminate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+<script type="text/javascript">
+
+  // "-1" means no eliminator is selected
+  var eliminator_id = "-1"
+
+  function setEliminatorId(id) {
+    eliminator_id = id
+  }
+
+  function onEliminatorSelected(selector_id) {
+    var options = document.getElementById(selector_id).querySelectorAll("option");
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].selected) {
+        setEliminatorId(options[index].value)
+        break
+      }
+    }
+  }
+
+  function eliminatePlayer(user_id) {
+    if (eliminator_id == "-1") {
+      var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + user_id)
+      if (modalErrorElement.classList.contains("d-none")) {
+        modalErrorElement.classList.remove("d-none")
+      }
+    } else {
+      // Hide the modal that was in view
+      const modal_id = "#id_eliminate_modal_" + user_id
+      const modalElement = document.querySelector(modal_id)
+      const modal = bootstrap.Modal.getOrCreateInstance(modalElement)
+      modal.hide()
+      // Reset the selector in that modal to the default value "-------"
+      const selector = document.querySelector("#id_eliminator_selector_" + user_id)
+      selector.value = "-1"
+
+      // Perform the elimination
+      const elimination_url = "/tournament/eliminate_player/{{tournament.id}}/" + eliminator_id + "/" + user_id
+      fetch(elimination_url, {
+       headers: {
+          'Accept': 'application/json'
+       }}
+      ).then(function(data) {
+        if (data.status == 200) {
+          document.location.reload()
+        } else {
+          window.location.replace("{% url 'error' error_message='Elimination failed.' %}");
+        }
+      }).catch(function(error) {
+        // Redirect to error page
+        window.location.replace("{% url 'error' error_message='Elimination failed.' %}");
+      })
+    }
+  }
+
+  function eliminationModalClicked(modal_user_id) {
+    var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + modal_user_id)
+    if (!modalErrorElement.classList.contains("d-none")) {
+      modalErrorElement.classList.add("d-none")
+    }
+    eliminator_id = "-1"
+  }
+
+</script>
+

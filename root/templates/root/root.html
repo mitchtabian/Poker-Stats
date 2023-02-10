@@ -25,8 +25,44 @@
 			<li><a href="{% url 'tournament:tournament_list' pk=request.user.pk %}">Tournament list</a></li>
 			{% endif %}
 		</ul>
+
+		{% if invites %}
+		<div class="mt-4">
+			<h2>Tournament invites</h2>
+			<ul class="mt-3 list-group">
+			{% for invite in invites %}
+				{% if invite.tournament.get_state_string != "COMPLETED" %}
+				<div class="d-flex justify-content-between list-group-item">
+					<span>{{invite.tournament.title}}</span>
+					<a class="btn btn-primary btn-sm" href="{% url 'tournament:join_tournament' pk=invite.id %}">join</a>
+				</div>
+				{% endif %}
+			{% endfor %}
+			</ul>
+		</div>
+		{% endif %}
+
+		{% if tournaments %}
+		<div class="mt-4">
+			<h2 class="mb-3">Joined Tournaments</h2>
+			{% include 'tournament/snippets/tournaments_list_snippet.html' with tournament=tournaments %}
+		</div>
+		{% endif %}
 	</div>
   </div>
 </div>
 
 {% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+

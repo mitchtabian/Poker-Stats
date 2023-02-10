@@ -1,0 +1,153 @@
+{% load tournament_extras %}
+
+{% if results %}
+
+<div class="net-earnings-table table-responsive">
+	<p class="net-earnings-table-header">Net Earnings</p>
+  <table class="table ">
+    <thead>
+      <tr>
+        <th scope="col"><div class="net-earnings-table-col">Player</div></th>
+        {% if tournament.tournament_structure.allow_rebuys == True %}
+        <th scope="col"><div class="net-earnings-table-col">Rebuys</div></th>
+        {% endif %}
+      	<th scope="col">
+      		<div class="net-earnings-table-col d-flex flex-row">
+	      		<div style="margin-right: 4px;">Investment</div>
+	      		<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Initial buyin + rebuys">
+					      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+					      <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+				    </svg>
+	      	</div>
+      	</th>
+        <th scope="col">
+        	<div class="net-earnings-table-col d-flex flex-row">
+        		<div style="margin-right: 4px;">Net</div>
+        		<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Earnings - Investment">
+				      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+				      <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+			    </svg>
+        	</div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+    	{% for result in results %}
+	    <tr>
+	      <td scope="row">
+	      	<div class="net-earnings-table-row">
+	      		<div class="d-flex flex-column">
+			      	<span class="net-earnings-table-username ">{{result.player.user.username}}</span>
+			    	</div>
+	    	</td>
+	    	{% if tournament.tournament_structure.allow_rebuys == True %}
+	    	<td><div class="net-earnings-table-row">{{result.rebuys|format_table_number}}</div></td>
+	    	{% endif %}
+      	<td><div class="net-earnings-table-row text-danger">-{{result.investment|format_money}}</div></td>
+	      <td><div class="net-earnings-table-row earnings-row" style="color: {{result.net_earnings|format_table_number_color}}; font-weight: {{result.net_earnings|format_number_weight}}">{{result.net_earnings|format_money}}</div></td>
+	    </tr>
+	    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script type="text/javascript">
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+</script>
+
+<style type="text/css">
+
+	td {
+		vertical-align: middle;
+	}
+
+	@media only screen and (max-width: 500px) {
+
+		.net-earnings-table-header {
+			font-size: 16px;
+			font-weight: 400;
+			margin-left: 8px;
+			margin-bottom: 8px;
+		}
+
+		.net-earnings-table-col {
+			font-size: 12px;
+			text-align: left;
+		}
+
+		.net-earnings-table-row {
+			font-size: 12px;
+			text-align: left;
+		}
+
+    .net-earnings-table {
+			padding: 4px;
+			background-color: #f2f2f2;
+			border-radius: 8px;
+			margin-top: 16px;
+    }
+
+		.net-earnings-table-username {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			max-width: 100px;
+			text-align: left;
+			font-weight: 600;
+		}
+
+		.net-earnings-string {
+			font-size: 10px;
+			font-weight: 600;
+		}
+  }
+
+  @media only screen and (min-width: 501px) {
+  	.net-earnings-table-header {
+			font-size: 20px;
+			font-weight: 400;
+			margin-left: 8px;
+			margin-bottom: 8px;
+		}
+
+    .net-earnings-table-col {
+      font-size: 16px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .net-earnings-table-row {
+      font-size: 16px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .net-earnings-table {
+      padding: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      margin-top: 24px;
+    }
+
+    .net-earnings-table-username {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			max-width: 380px;
+			text-align: left;
+			font-weight: 500;
+			color: #292b2c;
+		}
+
+		.net-earnings-string {
+			font-size: 12px;
+			font-weight: 600;
+		}
+  }
+</style>
+
+{% endif %}

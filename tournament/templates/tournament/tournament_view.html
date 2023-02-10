@@ -4,27 +4,151 @@
 
 {% block content %}
 
-{% load bootstrap5 %}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
-
-<div class="container">
+<div class="container" id="parent">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
-      <h1 class="mb-3">{{tournament.title}}</h1>
-      {% if tournament.completed_at %}
-        <p>Completed on {{tournament.completed_at}}</p>
-        <p>Need to edit the Tournament? You'll need to mark it as "incomplete". <a href="{% url 'tournament:undo_complete' pk=tournament.id %}">Mark as incomplete</a>.</p>
-      {% else %}
-        {% if tournament.started_at %}
-          <p>Started on: {{tournament.started_at}}</p>
-          <p>Is this tournament done? <a href="{% url 'tournament:complete' pk=tournament.id %}">Complete Tournament</a>.</p>
-        {% else %}
-          <a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-primary">Start Tournament</a>
+
+      <!-- title -->
+      <h2>
+        <div class="d-flex justify-content-between">
+          <span class="tournament-title">{{tournament.title}}</span>
+          {% if request.user == tournament.admin and tournament.get_state_string == "INACTIVE" %}
+          <a href="{% url 'tournament:tournament_edit' pk=tournament.id %}">
+            <svg id="id_edit_tournament_structure" xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+              <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+            </svg>
+          </a>
+          {% endif %}
+        </div>
+      </h2>
+      <div class="tournament-state-header-container">
+        {% include 'tournament/snippets/tournament_state_text_snippet.html' with tournament=tournament tournament_state=tournament_state %}
+      </div>
+
+
+      <!-- Admin -->
+      {% if request.user == tournament.admin %}
+      {% if tournament.get_state_string == 'ACTIVE' or tournament.get_state_string == 'INACTIVE' %}
+      <h5>Admin</h5>
+      <hr>
+      <div class="tournament-details-group">
+        {% if tournament.get_state_string == 'ACTIVE' %}
+        <a class="mt-2 btn btn-primary admin-btn" href="{% url 'tournament:tournament_admin_view' pk=tournament.id %}">Admin view</a>
+        {% elif tournament.get_state_string == 'INACTIVE' %}
+          <span>The admin view is only available if a Tournament is ACTIVE.</span>
         {% endif %}
+      </div>
       {% endif %}
-	</div>
+      {% endif %}
+
+      <!-- Players -->
+      <h5>
+        {% if tournament.completed_at != None %}
+          Results
+        {% else %}
+          Players
+        {% endif %}
+      </h5>
+      <hr>
+      <div class="tournament-details-group">
+        {% if tournament.get_state_string == "INACTIVE" %}
+        {% include 'tournament/snippets/tournament_players_inactive_state.html' with players=players invites=invites %}
+        {% elif tournament.get_state_string == "ACTIVE" %}
+        {% include 'tournament/snippets/tournament_players_active_state.html' with player_tournament_data=player_tournament_data allow_rebuys=allow_rebuys is_bounty_tournament=is_bounty_tournament %}
+        {% else %}
+        {% include 'tournament/snippets/tournament_players_completed_state.html' with players=players %}
+        {% endif %}
+
+        {% if request.user == tournament.admin and tournament.get_state_string == "INACTIVE" %}
+          <div class="mt-4">
+            <h6>Invite Players</h6>
+            <input hx-get="{% url 'tournament:tournament_view' pk=tournament.id %}" hx-target="#parent" hx-swap="innerHTML" hx-trigger="input delay:0.3s" type="text" name="search" id="id_search" class="form-control mt-3" placeholder="Add players" aria-label="Add players" value="{{search}}">
+            {% include 'tournament/snippets/user_search_results.html' %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Tournament Structure -->
+      <h5>Structure</h5>
+      <hr>
+      <div class="tournament-details-group">
+        {% include 'tournament/snippets/tournament_structure_table.html' with tournament_structure=tournament.tournament_structure %}
+      </div>
+
+
+      <!-- Tournament state -->
+      <h5>State</h5>
+      <hr>
+      <div class="tournament-details-group">
+        {% include 'tournament/snippets/tournament_state_snippet.html' with tournament=tournament tournament_state=tournament_state %}
+      </div>
+	 </div>
   </div>
 </div>
 
+<style type="text/css">
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  @media only screen and (max-width: 500px) {
+    .tournament-details-group {
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+
+    .admin-btn {
+      font-size: 12px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .tournament-details-group {
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+  }
+
+
+  #id_edit_tournament_structure:hover {
+    background: #cccccc;
+    cursor: pointer;
+  }
+
+  #id_edit_tournament_structure {
+    color: #0275d8;
+  }
+
+  .tournament-title {
+    max-width: 90%;
+  }
+
+  .tournament-state-header-container {
+    font-size: 12px;
+    margin-bottom: 20px;
+  }
+</style>
+
+<script src="https://unpkg.com/htmx.org@1.8.5"></script>
+
+<script type="text/javascript">
+
+  document.body.addEventListener('htmx:configRequest', (event) => {
+    event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+  })
+
+
+</script>
+
 {% endblock content %}
+
+
+
+
+
+

@@ -1,0 +1,116 @@
+<div class="tournament-state-container">
+  <!-- COMPLETED -->
+  {% if tournament_state.value == 2 %}
+
+    {% include 'tournament/snippets/tournament_state_text_snippet.html' with tournament=tournament tournament_state=tournament_state %}
+    <p class="mt-2">Completed on {{tournament.completed_at}}</p>
+    {% if request.user == tournament.admin %}
+    <div class="reopen-container">
+      <p>Need to edit the Tournament? Undo completion to make changes.</p>
+      <button class="btn btn-warning state-action-button" data-bs-toggle="modal" data-bs-target="#id_undo_completion_confirm">Undo completion</button>
+    </div>
+    {% endif %}
+
+
+  <!-- ACTIVE -->
+  {% elif tournament_state.value == 1 %}
+    {% include 'tournament/snippets/tournament_state_text_snippet.html' with tournament=tournament tournament_state=tournament_state %}
+    <p class="mt-2">Started on: {{tournament.started_at}}</p>
+    {% if request.user == tournament.admin %}
+      <div class="reopen-container mb-4">
+        <p>Need to add/remove players or edit the Tournament Structure?</p>
+        <a class="btn btn-warning state-action-button" href="{% url 'tournament:undo_started' pk=tournament.id %}">de-activate</a>
+      </div>
+      <a class="btn btn-primary state-action-button" href="{% url 'tournament:complete' pk=tournament.id %}" >Complete Tournament</a>
+    {% endif %}
+
+  <!-- INACTIVE -->
+  {% else %}
+    {% include 'tournament/snippets/tournament_state_text_snippet.html' with tournament=tournament tournament_state=tournament_state %}
+    {% if request.user == tournament.admin %}
+    <button class="mt-3 btn btn-warning state-action-button" data-bs-toggle="modal" data-bs-target="#id_activate_confirm">Activate Tournament</button>
+    {% endif %}
+  {% endif %}
+</div>
+
+<!-- Undo completion confirm modal -->
+<div class="modal fade" id="id_undo_completion_confirm" tabindex="-1" aria-labelledby="Undo Completion Modal" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Undo Completion
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body d-flex flex-column">
+        <p>Are you sure?</p>
+        <p class="text-danger" style="font-weight: bold;">All the eliminations & rebuys data will be lost!</p>
+      </div>
+      <div class="modal-footer" id="id_elim_model_button_container">
+        <a href="{% url 'tournament:undo_complete' pk=tournament.id %}" class="btn btn-warning">Undo Completion</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Activate confirm modal -->
+<div class="modal fade" id="id_activate_confirm" tabindex="-1" aria-labelledby="Activate Tournament Modal" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Activate
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body d-flex flex-column">
+        <p>Are you sure?</p>
+        <p class="text-danger" style="font-weight: bold;">All the pending invites will be removed.</p>
+      </div>
+      <div class="modal-footer" id="id_elim_model_button_container">
+        <a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-warning">Activate</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+  @media only screen and (max-width: 500px) {
+    .reopen-container {
+      padding-top: 8px;
+      padding-bottom: 8px;
+      padding-left: 12px;
+      padding-right: 12px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+    }
+
+    .state-action-button {
+      font-size: 12px;
+    }
+
+    .tournament-state-container {
+      font-size: 12px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .reopen-container {
+      padding-top: 16px;
+      padding-bottom: 16px;
+      padding-left: 32px;
+      padding-right: 32px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+    }
+  }
+
+</style>
+
+<script type="text/javascript">
+
+</script>
+
+
+

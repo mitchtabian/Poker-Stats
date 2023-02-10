@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination
+from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination, TournamentInvite, TournamentPlayerResult
 
 
 class TournamentStructureAdmin(admin.ModelAdmin):
@@ -8,7 +8,7 @@ class TournamentStructureAdmin(admin.ModelAdmin):
         (None, {'fields': ('title', 'user', 'buyin_amount', 'bounty_amount', 'payout_percentages', 'allow_rebuys')}),
     )
 
-    list_display = ('title', 'user', 'buyin_amount')
+    list_display = ('pk', 'title', 'user', 'buyin_amount')
     search_fields = ('title', 'user')
 
 
@@ -38,16 +38,39 @@ class TournamentPlayerAdmin(admin.ModelAdmin):
 
 admin.site.register(TournamentPlayer, TournamentPlayerAdmin)
 
-class TournamentEliminationAdmin(admin.ModelAdmin):
+class TournamentInviteAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('tournament', 'eliminator', 'eliminatee')}),
+        (None, {'fields': ('send_to', 'tournament')}),
     )
 
-    list_display = ('tournament', 'eliminator', 'eliminatee')
+    list_display = ('send_to', 'tournament')
+    search_fields = ('send_to', 'tournament' )
+
+
+admin.site.register(TournamentInvite, TournamentInviteAdmin)
+
+class TournamentEliminationAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('tournament', 'eliminator', 'eliminatee', 'eliminated_at')}),
+    )
+
+    list_display = ('tournament', 'eliminator', 'eliminatee', 'eliminated_at')
     search_fields = ('tournament', 'eliminator', 'eliminatee', )
 
 
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
+
+class TournamentPlayerResultAdmin(admin.ModelAdmin):
+
+    fieldsets = (
+        (None, {'fields': ('player', 'tournament', 'net_earnings', 'gross_earnings')}),
+    )
+
+    list_display = ('player', 'tournament', 'net_earnings',  'gross_earnings', 'elimination_ids')
+    search_fields = ('player', 'tournament',)
+
+
+admin.site.register(TournamentPlayerResult, TournamentPlayerResultAdmin)
 
 
 

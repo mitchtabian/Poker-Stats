@@ -1,0 +1,52 @@
+<!-- Modal -->
+{% for modal_player_data in player_tournament_data %}
+  <div class="modal fade" id="id_rebuy_modal_{{modal_player_data.user_id}}" tabindex="-1" aria-labelledby="{{modal_player_data.username}} Elimination Modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="id_elimination_modal_title">
+            Confirm rebuy for {{modal_player_data.username}}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body d-flex flex-column">
+          Are you sure? This can't be undone.
+        </div>
+        <div class="modal-footer" id="id_elim_model_button_container">
+          <button class="btn btn-success" onclick="rebuy('{{modal_player_data.user_id}}')">Rebuy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+<script type="text/javascript">
+
+  function rebuy(user_id) {
+    // Hide the modal that was in view
+    const modal_id = "#id_eliminate_modal_" + user_id
+    const modalElement = document.querySelector(modal_id)
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement)
+    modal.hide()
+
+    // Perform the rebuy
+    const rebuy_url = "/tournament/player_rebuy/" + user_id + "/{{tournament.id}}"
+    fetch(rebuy_url, {
+     headers: {
+        'Accept': 'application/json'
+     }}
+    ).then(function(data) {
+      if (data.status == 200) {
+        document.location.reload()
+      } else {
+        window.location.replace("{% url 'error' error_message='Elimination failed.' %}");
+      }
+    }).catch(function(error) {
+      // Redirect to error page
+      window.location.replace("{% url 'error' error_message='Elimination failed.' %}");
+    })
+  }
+
+
+</script>
+

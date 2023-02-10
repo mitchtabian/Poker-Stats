@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block head_title %}Edit Tournament{% endblock %}
+
+{% block content %}
+
+<div class="container" id="parent">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+      <form method="POST">
+        {% csrf_token %}
+
+        <!-- Title -->
+        <h5>Title</h5>
+        <hr>
+        <div class="tournament-details-group">
+          <input type="text" name="title" class="form-control tournament-title" placeholder="Title" required id="id_title" value="{{form.title.value}}">
+        </div>
+
+        <!-- Tournament Structure -->
+        <h5>Structure</h5>
+        <hr>
+
+        <div class="tournament-details-group">
+          <select name="tournament_structure" id="id_tournament_structure" class="form-select mb-3 mt-3" aria-label="Select Tournament Structure">
+            {% for structure in form.tournament_structure.field.queryset.all %}
+              {% if structure == initial_selected_structure %}
+              <option value="{{structure.pk}}" selected>{{structure}}</option>
+              {% else %}
+              <option value="{{structure.pk}}">{{structure}}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+
+          <!-- Add all the tables for Tournament Structures, but hide them. They get revealed if they are selected from the selector above -->
+          {% for structure in tournament_structures %}
+            <div class="d-none" id="id_tournament_structure_table_{{structure.pk}}">
+              {% include 'tournament/snippets/tournament_structure_table.html' with tournament_structure=structure %}
+            </div>
+          {% endfor %}
+
+
+          <div class="mt-3">
+            <a href="{% url 'tournament:create_tournament_structure' %}?next=/tournament/tournament_edit/{{tournament_pk}}/">Create new Tournament Structure</a>
+          </div>
+        </div>
+
+        <button id="id_submit_button" class="btn btn-primary" type="submit">Save</button>
+    </form>
+	 </div>
+  </div>
+</div>
+
+<style type="text/css">
+
+  @media only screen and (max-width: 500px) {
+    .select-container {
+      width: 100%;
+    }
+
+    .tournament-title {
+      margin-top: 16px;
+    }
+
+    #id_save_tournament:hover {
+      background: #cccccc;
+      cursor: pointer;
+    }
+
+    #id_save_tournament {
+      color: #0275d8;
+      margin: auto;
+    }
+
+    .tournament-details-group {
+      margin-bottom: 24px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .tournament-title {
+      margin-top: 16px;
+    }
+
+    #id_save_tournament:hover {
+      background: #cccccc;
+      cursor: pointer;
+    }
+
+    #id_save_tournament {
+      color: #0275d8;
+      margin: auto;
+    }
+
+    .tournament-details-group {
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+    }
+  }
+
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+
+</style>
+
+<script type="text/javascript">
+  var structureSelector = document.getElementById("id_tournament_structure")
+
+  structureSelector.addEventListener("change", function() {
+    var options = structureSelector.querySelectorAll("option");
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].selected) {
+        showTournamentStructureTable(options[index].value)
+      } else {
+        hideTournamentStructureTable(options[index].value)
+      }
+    }
+  })
+
+  function showTournamentStructureTable(tournament_structure_pk) {
+    // Find the table that matches the primary key of this TournamentStructure and make it visible.
+    var table = document.getElementById("id_tournament_structure_table_" + tournament_structure_pk)
+    table.classList.remove("d-none")
+  }
+
+  function hideTournamentStructureTable(tournament_structure_pk) {
+    // Find the table that matches the primary key of this TournamentStructure and make it invisible.
+    var table = document.getElementById("id_tournament_structure_table_" + tournament_structure_pk)
+    if (!table.classList.contains("d-none")) {
+      table.classList.add("d-none")
+    }
+  }
+
+  showTournamentStructureTable("{{initial_selected_structure.pk}}")
+
+</script>
+
+{% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -18,18 +18,30 @@ Project for tracking poker stats from tournaments.
 This is a notes section for me personally.
 
 ## Next time
-1. Add Players to tournament? This should be a request-based system
+1. Eliminations summary (who elim'd who)
+1. Analytics for user
+	1. Accessible from profile
+	1. Shows summary across games
+		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
+1. TournamentGroup? Think this through with some diagrams
+1. Analaytics based on TournamentGroup
+	- Basically this would just extend the per-user analytics
+1. Are you sure you want to remove?
+1. Make new database diagrams using that thing aaron showed you.
 
 
 ## TODO (after app is fully functional)
-1. Messages UI
+1. Optimize everything for mobile. 
+	- 99% of the time this is going to be used from a phone.
+1. Remove CDNs
 1. Add recaptcha to registration/login https://pypi.org/project/django-recaptcha/
 	- Or maybe just delete accounts after X days if they have not be verified?
-1. Improve UI. It looks like shit
 1. UNIT TESTS!!!
 1. Screenshot tests?
 1. Figure out how to make the website timezone aware
 	- Probably just need to save the timezone of the user in their profile data and then do a conversion in every view that uses a date.
+1. Make admin not automatically join a tournament when they create it.
+1. Add splitting feature
 
 # Resources
 1. django-allauth
