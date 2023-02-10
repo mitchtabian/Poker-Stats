@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm, EditTournamentForm
 from tournament.models import Tournament, TournamentStructure, TournamentState, TournamentInvite, TournamentPlayer, TournamentElimination, TournamentPlayerResult
-from tournament.util import PlayerTournamentData
+from tournament.util import PlayerTournamentData, payout_positions, PlayerEliminationsData, build_player_eliminations_data_from_eliminations
 from user.models import User
 
 @login_required
@@ -288,8 +288,6 @@ def rebuy_player_in_tournament(request, *args, **kwargs):
 """
 Common function shared between tournament_view and htmx requests used in that view.
 """
-
-from tournament.util import payout_positions
 def render_tournament_view(request, tournament_id):
 	context = {}
 	tournament = Tournament.objects.get_by_id(tournament_id)
@@ -331,7 +329,25 @@ def render_tournament_view(request, tournament_id):
 		context['results'] = results.order_by("placement")
 		context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
 
+		# Build PlayerEliminationsData for each player
+		eliminations_data = []
+		for result in results:
+			# Determine who they eliminated in this tournament.
+			eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+				tournament_id = tournament.id,
+				eliminator_id = result.player.user.id
+			)
+			data = build_player_eliminations_data_from_eliminations(
+				eliminator = result.player,
+				eliminations = eliminations
+			)
+			if data != None:
+				eliminations_data.append(data)
+		context['eliminations_data'] = eliminations_data
+
+
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
+
 
 """
 Retrieve a TournamentStructure and serialize to Json.

@@ -65,7 +65,7 @@ def format_table_number_color(number):
 		return "#292b2c"
 
 """
-..
+Format the font-weight.
 """
 @register.filter(name='format_number_weight')
 @stringfilter
