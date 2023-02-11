@@ -47,5 +47,9 @@ jobs:
         DEBUG_MODE: False
         TIME_ZONE: US/Pacific
         CACHE_KEY_PREFIX: Halo
+        GOOGLE_AUTH_CLIENT_ID: whocares
+        GOOGLE_AUTH_CLIENT_SECRET: whocares2
+        EMAIL_ID: dunno
+        EMAIL_PASSWORD: dunno2
       run: |
         python manage.py test
