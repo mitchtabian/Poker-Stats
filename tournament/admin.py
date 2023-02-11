@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination, TournamentInvite, TournamentPlayerResult
+from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination, TournamentInvite, TournamentPlayerResult, TournamentRebuy
 
 
 class TournamentStructureAdmin(admin.ModelAdmin):
@@ -59,6 +59,18 @@ class TournamentEliminationAdmin(admin.ModelAdmin):
 
 
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
+
+class TournamentRebuyAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('tournament', 'user', 'timestamp')}),
+    )
+    readonly_fields = ['timestamp']
+
+    list_display = ('tournament', 'user', 'timestamp')
+    search_fields = ('tournament', 'user')
+
+
+admin.site.register(TournamentRebuy, TournamentRebuyAdmin)
 
 class TournamentPlayerResultAdmin(admin.ModelAdmin):
 
