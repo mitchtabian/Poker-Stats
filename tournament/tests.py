@@ -266,7 +266,7 @@ class TournamentInvitesTestCase(TransactionTestCase):
 		dog = User.objects.get_by_username("dog")
 		with self.assertRaisesMessage(ValidationError, "That player does not have an invition to this tournament."):
 			TournamentInvite.objects.uninvite_player_from_tournament(
-				admin = admin.id,
+				admin_id = admin.id,
 				uninvite_user_id = dog.id,
 				tournament_id = tournament.id
 			)
@@ -297,7 +297,7 @@ class TournamentInvitesTestCase(TransactionTestCase):
 		# Uninvite everyone
 		for invite in invites:
 			TournamentInvite.objects.uninvite_player_from_tournament(
-				admin = admin.id,
+				admin_id = admin.id,
 				uninvite_user_id = invite.send_to.id,
 				tournament_id = tournament.id
 			)
