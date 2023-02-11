@@ -18,6 +18,7 @@ Project for tracking poker stats from tournaments.
 This is a notes section for me personally.
 
 ## Next time
+1. Add CI that runs unit tests before merging.
 1. Eliminations summary (who elim'd who)
 1. Analytics for user
 	1. Accessible from profile
@@ -28,7 +29,8 @@ This is a notes section for me personally.
 	- Basically this would just extend the per-user analytics
 1. Are you sure you want to remove?
 1. Make new database diagrams using that thing aaron showed you.
-
+1. "Guest" feature.
+	- If someone wanted to track their analytics and the people they were playing with do not use the site.
 
 ## TODO (after app is fully functional)
 1. Optimize everything for mobile. 

@@ -162,9 +162,9 @@ def uninvite_player_from_tournament(request, *args, **kwargs):
 	tournament_id = kwargs['tournament_id']
 	try:
 		TournamentInvite.objects.uninvite_player_from_tournament(
-			admin = user,
+			admin_id = user.id,
 			uninvite_user_id = player_id,
-			tournament_id = tournament
+			tournament_id = tournament_id
 		)
 	except Exception as e:
 		messages.error(request, e.args[0])

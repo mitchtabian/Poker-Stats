@@ -519,8 +519,8 @@ class TournamentInviteManager(models.Manager):
 		except User.DoesNotExist:
 			raise ValidationError("The user you're inviting doesn't exist.")
 
-	def uninvite_player_from_tournament(self, admin, uninvite_user_id, tournament_id):
-		admin = User.objects.get_by_id(admin)
+	def uninvite_player_from_tournament(self, admin_id, uninvite_user_id, tournament_id):
+		admin = User.objects.get_by_id(admin_id)
 		uninvite_user = User.objects.get_by_id(uninvite_user_id)
 		tournament = Tournament.objects.get_by_id(tournament_id)
 
