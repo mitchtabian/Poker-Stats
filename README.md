@@ -17,6 +17,7 @@ Project for tracking poker stats from tournaments.
 # TODO
 This is a notes section for me personally.
 
+ci test
 ## Next time
 1. Add CI that runs unit tests before merging.
 1. Eliminations summary (who elim'd who)
