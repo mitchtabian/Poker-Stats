@@ -29,10 +29,10 @@ admin.site.register(Tournament, TournamentAdmin)
 
 class TournamentPlayerAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('user', 'tournament', 'num_rebuys')}),
+        (None, {'fields': ('user', 'tournament')}),
     )
 
-    list_display = ('user', 'tournament', 'num_rebuys')
+    list_display = ('user', 'tournament')
     search_fields = ('user', 'tournament')
 
 

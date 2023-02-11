@@ -1,3 +1,5 @@
+{% load tournament_extras %}
+
 {% if tournament.get_state_string == "ACTIVE" %}
 
 {% if player_tournament_data %}
@@ -37,13 +39,13 @@
         </td>
         <td>
           <div class="player-table-row">
-            {{player_data.bounties}}
+            {{player_data.bounties|format_table_number}}
           </div>
         </td>
         {% if allow_rebuys %}
           <td>
             <div class="player-table-row">
-              {{player_data.rebuys}}
+              {{player_data.rebuys|format_table_number}}
             </div>
           </td>
         {% endif %}

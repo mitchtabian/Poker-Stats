@@ -193,10 +193,9 @@ class TournamentManager(models.Manager):
 			elimination.delete()
 
 		# Delete all the rebuy data
-		players = TournamentPlayer.objects.get_tournament_players(tournament_id)
-		for player in players:
-			player.num_rebuys = 0
-			player.save(using=self._db)
+		TournamentRebuy.objects.delete_tournament_rebuys(
+			tournament_id = tournament.id
+		)
 
 		tournament.completed_at = None
 		tournament.save(using=self._db)
@@ -242,10 +241,10 @@ class TournamentManager(models.Manager):
 		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament_id)
 
 		# sum buyins + rebuys
-		total_buyins = 0
-		for player in players:
-			total_buyins += 1
-			total_buyins += player.num_rebuys
+		rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
+			tournament_id = tournament.id
+		)
+		total_buyins = len(rebuys) + len(players)
 
 		# Find the number of eliminations
 		total_eliminations = len(eliminations)
@@ -417,49 +416,12 @@ class TournamentPlayerManager(models.Manager):
 		players = super().get_queryset().filter(user=user)
 		return players
 
-	"""
-	A player has re-bought.
-	Increment num_rebuys.
-
-	Make sure not to increment num_rebuys if they're not out of rebuys.
-	Basically don't let them rebuy unless they're eliminated.
-	"""
-	def rebuy_by_user_id_and_tournament_id(self, user_id, tournament_id):
-		user = User.objects.get_by_id(user_id)
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		tournament_player = TournamentPlayer.objects.get_tournament_player_by_user_id(user_id, tournament_id)
-
-		# Verify the tournament allows rebuys
-		if not tournament.tournament_structure.allow_rebuys:
-			raise ValidationError("This tournament does not allow rebuys. Update the Tournament Structure.")
-
-		# Verify they're out of rebuys.
-		num_eliminations = len(
-			TournamentElimination.objects.get_eliminations_by_tournament(
-				tournament_id
-			).filter(eliminatee=user)
-		)
-		if num_eliminations <= tournament_player.num_rebuys:
-			raise ValidationError(
-				f"{tournament_player.user.username} still has an active rebuy. Eliminate them before adding another rebuy."
-			)
-		tournament_player.num_rebuys += 1
-		tournament_player.save(using=self._db)
-		return tournament_player
-
 """
 A player associated with specific tournament.
 """
 class TournamentPlayer(models.Model):
 	user					= models.ForeignKey(User, on_delete=models.CASCADE)	
 	tournament				= models.ForeignKey(Tournament, on_delete=models.CASCADE)
-	num_rebuys				= models.IntegerField(
-								default=0,
-								validators=[
-									MaxValueValidator(100),
-									MinValueValidator(0)
-								]
-							)
 	
 	objects = TournamentPlayerManager()
 
@@ -615,8 +577,10 @@ class TournamentEliminationManager(models.Manager):
 		)
 		num_rebuys = 0
 		if tournament.tournament_structure.allow_rebuys:
-			for player in players:
-				num_rebuys += player.num_rebuys
+			tournament_rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
+				tournament_id = tournament.id
+			)
+			num_rebuys += len(tournament_rebuys)
 		total_buyins = num_rebuys + len(players)
 		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
 			tournament_id = tournament.id
@@ -657,7 +621,11 @@ class TournamentEliminationManager(models.Manager):
 			if elimination.eliminatee.id == user_id:
 				player_eliminations += 1
 			if player_eliminations > 0:
-				if player_eliminations > tournament_player.num_rebuys:
+				rebuys = TournamentRebuy.objects.get_rebuys_for_user(
+					tournament_id = tournament_id,
+					user_id = user_id
+				)
+				if player_eliminations > len(rebuys):
 					return True
 		return False
 
@@ -681,6 +649,100 @@ class TournamentElimination(models.Model):
 
 	def __str__(self):
 		return f"{self.eliminator.username} eliminated {self.eliminatee.username}."
+
+
+class TournamentRebuyManager(models.Manager):
+
+	def rebuy(self, tournament_id, user_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		user = User.objects.get_by_id(user_id)
+		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = user.id
+		)
+
+		# Verify the user is a player in this tournament
+		if player == None:
+			raise ValidationError(f"{user.username} is not part of that tournament.")
+
+		# Verify the tournament allows rebuys
+		if not tournament.tournament_structure.allow_rebuys:
+			raise ValidationError("This tournament does not allow rebuys. Update the Tournament Structure.")
+
+		# Verify Tournament is active
+		if tournament.get_state() != TournamentState.ACTIVE:
+			raise ValidationError("Cannot rebuy if Tournament is not active.")
+
+		# Verify they're out of rebuys.
+		num_eliminations = len(
+			TournamentElimination.objects.get_eliminations_by_tournament(
+				tournament.id
+			).filter(eliminatee=user)
+		)
+		rebuys = self.get_rebuys_for_user(
+			tournament_id = tournament.id,
+			user_id = user.id
+		)
+		if num_eliminations <= len(rebuys):
+			raise ValidationError(
+				f"{player.user.username} has not been eliminated. Eliminate them before adding another rebuy."
+			)
+		tournament_rebuy = self.model(
+			tournament = tournament,
+			user = user,
+		)
+		tournament_rebuy.save(using=self._db)
+		return tournament_rebuy
+
+	def get_rebuys_for_user(self, tournament_id, user_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		user = User.objects.get_by_id(user_id)
+		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = user.id
+		)
+
+		# Verify the user is a player in this tournament
+		if player == None:
+			raise ValidationError(f"{user.username} is not part of that tournament.")
+
+		rebuys = super().get_queryset().filter(
+			tournament = tournament,
+			user = user,
+		)
+
+		return rebuys
+
+	def get_rebuys_for_tournament(self, tournament_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		rebuys = super().get_queryset().filter(
+			tournament = tournament,
+		)
+		return rebuys
+
+	"""
+	Delete all the rebuy data for a Tournament.
+	"""
+	def delete_tournament_rebuys(self, tournament_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		rebuys = super().get_queryset().filter(
+			tournament = tournament,
+		)
+		for rebuy in rebuys:
+			rebuy.delete()
+
+"""
+Denotes a "Rebuy" event for a particular user in a particular tournament.
+"""
+class TournamentRebuy(models.Model):
+	tournament				= models.ForeignKey(Tournament, on_delete=models.CASCADE)
+	user					= models.ForeignKey(User, related_name="user", on_delete=models.CASCADE)	
+	timestamp				= models.DateTimeField(auto_now_add=True)
+	
+	objects = TournamentRebuyManager()
+
+	def __str__(self):
+		return f"{self.user.username} rebought at {self.timestamp}."
 
 
 class TournamentPlayerResultManager(models.Manager):
@@ -741,10 +803,14 @@ class TournamentPlayerResultManager(models.Manager):
 		player_eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament_id).filter(
 			eliminatee_id = player.user.id
 		)
+		rebuys = TournamentRebuy.objects.get_rebuys_for_user(
+			tournament_id = tournament.id,
+			user_id = player.user.id
+		)
 		if len(player_eliminations) == 0:
 			# They were never eliminated
 			placement = 0
-		if len(player_eliminations) < player.num_rebuys + 1:
+		if len(player_eliminations) < len(rebuys) + 1:
 			# The Tournament completed and they still had a rebuy remaining
 			placement = 0
 		if placement == None:
@@ -776,10 +842,10 @@ class TournamentPlayerResultManager(models.Manager):
 		placement_earnings = 0
 		tournament_id = tournament.id
 		players = TournamentPlayer.objects.get_tournament_players(tournament_id)
-		num_rebuys = 0
-		if tournament.tournament_structure.allow_rebuys:
-			for player in players:
-				num_rebuys += player.num_rebuys
+		rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
+			tournament_id = tournament_id,
+		)
+		num_rebuys = len(rebuys)
 		total_tournament_value = Tournament.objects.calculate_tournament_value(
 			tournament_id = tournament_id, 
 			num_rebuys = num_rebuys
@@ -825,11 +891,14 @@ class TournamentPlayerResultManager(models.Manager):
 			bounty_earnings = round(Decimal(0.00), 2)
 
 		# -- Get rebuys --
-		rebuys = player.num_rebuys
+		rebuys = TournamentRebuy.objects.get_rebuys_for_user(
+			tournament_id = tournament.id,
+			user_id = player.user.id
+		)
 
 		# -- Calculate 'investment' --
 		buyin_amount = tournament.tournament_structure.buyin_amount
-		investment = buyin_amount + (rebuys * buyin_amount)
+		investment = buyin_amount + (len(rebuys) * buyin_amount)
 
 		# -- Calculate placement --
 		placement = self.determine_placement(user_id=player.user.id, tournament_id=tournament_id)
@@ -846,7 +915,7 @@ class TournamentPlayerResultManager(models.Manager):
 
 		# -- Calculate 'net_earnings' --
 		# Difference of gross_earnings - investment
-		investment = buyin_amount + (rebuys * buyin_amount)
+		investment = buyin_amount + (len(rebuys) * buyin_amount)
 		net_earnings = gross_earnings - investment
 
 		result = self.model(
@@ -856,12 +925,12 @@ class TournamentPlayerResultManager(models.Manager):
 			placement = placement,
 			placement_earnings = placement_earnings,
 			bounty_earnings = bounty_earnings,
-			rebuys = rebuys,
 			gross_earnings = gross_earnings,
 			net_earnings = net_earnings
 		)
 		result.save(using=self._db)
 		result.eliminations.add(*eliminations)
+		result.rebuys.add(*rebuys)
 		result.save()
 		return result
 
@@ -885,7 +954,7 @@ class TournamentPlayerResult(models.Model):
 	bounty_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=True, null=True)
 
 	# Number of times rebought
-	rebuys 						= models.IntegerField()
+	rebuys 						= models.ManyToManyField(TournamentRebuy)
 
 	# bounty_earnings + placement_earnings
 	gross_earnings 				= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
@@ -906,6 +975,12 @@ class TournamentPlayerResult(models.Model):
 	"""
 	def elimination_ids(self):
 		return [f"{elimination.eliminatee.id}" for elimination in self.eliminations.all()]
+
+	"""
+	List the timestamps for each rebuy.
+	"""
+	def rebuy_timestamps(self):
+		return [f"{rebuy.timestamp}" for rebuy in self.rebuys.all()]
 
 
 # class TournamentGroup(models.Model):

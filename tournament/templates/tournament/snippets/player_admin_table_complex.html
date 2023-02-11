@@ -3,6 +3,8 @@ This is used if the tournament is a bounty tournament OR rebuys are allowed.
 Otherwise use player_admin_table_simple.html
  -->
 
+{% load tournament_extras %}
+
 <!-- Elimination Modals -->
 {% include 'tournament/snippets/player_admin_elimination_modals.html' with player_tournament_data=player_tournament_data %}
 
@@ -40,10 +42,10 @@ Otherwise use player_admin_table_simple.html
         <tbody>
           <tr>
             {% if is_bounty_tournament %}
-            <td scope="row" class="table-row">{{player_data.bounties}}</td>
+            <td scope="row" class="table-row">{{player_data.bounties|format_table_number}}</td>
             {% endif %}
             {% if allow_rebuys %}
-            <td class="table-row">{{player_data.rebuys}}</td>
+            <td class="table-row">{{player_data.rebuys|format_table_number}}</td>
             {% endif %}
           </tr>
         </tbody>
