@@ -10,6 +10,18 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: github_actions
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
     strategy:
       max-parallel: 4
       matrix:
@@ -28,9 +40,9 @@ jobs:
     - name: Run Tests'
       env:
         SECRET_KEY: 69tgugtg%^fgJO&*&
-        DB_NAME: mydb
-        DB_USER: userdb
-        DB_PASSWORD: password
+        DB_NAME: github_actions
+        DB_USER: postgres
+        DB_PASSWORD: postgres
         DJANGO_ALLOWED_HOSTS: localhost 127.0.0.1 [::1]
         DEBUG_MODE: False
         TIME_ZONE: US/Pacific
