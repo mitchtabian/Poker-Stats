@@ -30,7 +30,8 @@ This is a notes section for me personally.
 1. "Guest" feature.
 	- If someone wanted to track their analytics and the people they were playing with do not use the site.
 	- Also for backfilling, not everyone may have registered or something
-	- Also need some kind of mechanism for going back into a completed Tournament and assigning a user to a guest. Like if you finished a tournament with a guest you could go back and assign a real user to it.
+	- Also need some kind of mechanism for going back into a completed Tournament and assigning a user to a guest. Like if you finished a tournament with a guest you could go back and assign a real user to it
+1. Update diagrams to include TournamentRebuy
 
 ## TODO (after app is fully functional)
 1. Optimize everything for mobile. (I think this is already done, but confirm)

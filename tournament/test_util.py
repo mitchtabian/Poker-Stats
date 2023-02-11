@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from tournament.models import Tournament, TournamentPlayer, TournamentElimination, TournamentStructure
+from tournament.models import Tournament, TournamentPlayer, TournamentElimination, TournamentStructure, TournamentRebuy
 from user.models import User
 
 
@@ -16,7 +16,7 @@ class PlayerPlacementData:
 	investment: str
 	net_earnings: str
 	bounty_earnings: str
-	rebuys: int
+	rebuys: list[int] = field(default_factory=list)
 	eliminations: list[int] = field(default_factory=list)
 
 """
@@ -104,7 +104,32 @@ def eliminate_all_players_except(players, except_user, tournament):
 	return eliminations
 
 
+"""
+Force a rebuy. This ignores some validation logic so be careful how you use this in tests.
+Absolutely do not use in production code.
+"""
+def rebuy_for_test(tournament_id, user_id):
+	tournament = Tournament.objects.get_by_id(tournament_id)
+	user = User.objects.get_by_id(user_id)
+	player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+		tournament_id = tournament.id,
+		user_id = user.id
+	)
 
+	# Verify the user is a player in this tournament
+	if player == None:
+		raise ValidationError(f"{user.username} is not part of that tournament.")
+
+	# Verify the tournament allows rebuys
+	if not tournament.tournament_structure.allow_rebuys:
+		raise ValidationError("This tournament does not allow rebuys. Update the Tournament Structure.")
+
+	tournament_rebuy = TournamentRebuy(
+		tournament = tournament,
+		user = user,
+	)
+	tournament_rebuy.save()
+	return tournament_rebuy
 
 
 

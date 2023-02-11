@@ -8,7 +8,16 @@ from django.urls import reverse
 from django.utils import timezone
 
 from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm, EditTournamentForm
-from tournament.models import Tournament, TournamentStructure, TournamentState, TournamentInvite, TournamentPlayer, TournamentElimination, TournamentPlayerResult
+from tournament.models import (
+	Tournament,
+	TournamentStructure,
+	TournamentState,
+	TournamentInvite,
+	TournamentPlayer,
+	TournamentElimination,
+	TournamentPlayerResult,
+	TournamentRebuy
+)
 from tournament.util import PlayerTournamentData, payout_positions, PlayerEliminationsData, build_player_eliminations_data_from_eliminations
 from user.models import User
 
@@ -275,10 +284,10 @@ def rebuy_player_in_tournament(request, *args, **kwargs):
 			error_message = "Only the admin can execute a rebuy."
 		)
 	
-		# All the validation is performed in the rebuy_by_user_id_and_tournament_id function.
-		elimination = TournamentPlayer.objects.rebuy_by_user_id_and_tournament_id(
+		# All the validation is performed in the rebuy function.
+		TournamentRebuy.objects.rebuy(
 			tournament_id = tournament_id,
-			user_id = player_id,
+			user_id = player_id
 		)
 	except Exception as e:
 		messages.error(request, e.args[0])
@@ -478,10 +487,16 @@ def get_player_tournament_data(tournament_id):
 			user_id = player.user.id,
 			tournament_id = tournament_id
 		)
+
+		rebuys = TournamentRebuy.objects.get_rebuys_for_user(
+			tournament_id = tournament_id,
+			user_id = player.user.id
+		)
+
 		data = PlayerTournamentData(
 					user_id = player.user.id,
 					username = player.user.username,
-					rebuys = player.num_rebuys,
+					rebuys = len(rebuys),
 					bounties = len(eliminations),
 					is_eliminated = is_eliminated
 				)
