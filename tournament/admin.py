@@ -51,12 +51,15 @@ admin.site.register(TournamentInvite, TournamentInviteAdmin)
 
 class TournamentEliminationAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('tournament', 'eliminator', 'eliminatee', 'eliminated_at')}),
+        (None, {'fields': ('get_tournament', 'eliminator', 'eliminatee', 'eliminated_at')}),
     )
 
-    list_display = ('tournament', 'eliminator', 'eliminatee', 'eliminated_at')
-    search_fields = ('tournament', 'eliminator', 'eliminatee', )
+    list_display = ('get_tournament', 'eliminator', 'eliminatee', 'eliminated_at')
+    search_fields = ('get_tournament', 'eliminator', 'eliminatee', )
 
+    @admin.display(description='Tournament')
+    def get_tournament(self, elimination):
+        return elimination.tournament.title
 
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
 
