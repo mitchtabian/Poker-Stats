@@ -37,7 +37,7 @@ Otherwise use player_admin_table_complex.html
         <td>
           <div class="player-table-row">
             {% if player_data.is_eliminated != True %}
-              <button class="btn btn-danger player-action-btn" onclick="eliminationModalClicked('{{player_data.user_id}}')" data-bs-toggle="modal" data-bs-target="#id_eliminate_modal_{{player_data.user_id}}">Eliminate</button>
+              <button class="btn btn-danger player-action-btn" onclick="eliminationModalClicked('{{player_data.player_id}}')" data-bs-toggle="modal" data-bs-target="#id_eliminate_modal_{{player_data.player_id}}">Eliminate</button>
             {% else %}
               N/A
             {% endif %}

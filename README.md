@@ -16,8 +16,7 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Add timestamps to rebuys. Will need new TournamentRebuy model
-1. Add ability to backfill data. Need to think carefully about this. When backfilling data the eliminations and rebuys won't have valid timestamps, so you won't be able to use them for analytics with respect to timelines. Might have to add a special flag to a Tournament that was created to backfill. So that when building the analytics we'll know not to use that data for certain things.
+1. Backfilling data?...
 1. Analytics for user
 	1. Accessible from profile
 	1. Shows summary across games
@@ -31,7 +30,9 @@ This is a notes section for me personally.
 	- If someone wanted to track their analytics and the people they were playing with do not use the site.
 	- Also for backfilling, not everyone may have registered or something
 	- Also need some kind of mechanism for going back into a completed Tournament and assigning a user to a guest. Like if you finished a tournament with a guest you could go back and assign a real user to it
+	- Ability to give the Guest a temporary name. Just a string.
 1. Update diagrams to include TournamentRebuy
+1. Setup bugsnag
 
 ## TODO (after app is fully functional)
 1. Optimize everything for mobile. (I think this is already done, but confirm)
@@ -45,6 +46,7 @@ This is a notes section for me personally.
 1. Make admin not automatically join a tournament when they create it.
 1. Add splitting feature
 1. Shareable invite link to a tournament? If user has no registered then they are prompted to before joining.
+1. Create Jira project with an email from whatever domain I end up using.
 
 # Resources
 1. django-allauth

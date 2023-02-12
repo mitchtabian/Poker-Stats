@@ -2,10 +2,11 @@ from dataclasses import dataclass
 
 """
 A utility data holder class for modeling information used in complex views like tournament_admin_view.
+player_id: TournamentPlayer pk
 """
 @dataclass
 class PlayerTournamentData:
-	user_id: int
+	player_id: int
 	username: str
 	rebuys: int
 	bounties: int
@@ -59,10 +60,10 @@ Return None if they did not eliminate anyone.
 def build_player_eliminations_data_from_eliminations(eliminator, eliminations):
 	eliminated_usernames = []
 	for elimination in eliminations:
-		eliminated_usernames.append(elimination.eliminatee.username)
+		eliminated_usernames.append(elimination.eliminatee.user.username)
 	if len(eliminated_usernames) > 0:
 		data = PlayerEliminationsData(
-			player_id = eliminator.user.id,
+			player_id = eliminator.id,
 			player_username = eliminator.user.username,
 			eliminated_player_usernames = eliminated_usernames
 		)

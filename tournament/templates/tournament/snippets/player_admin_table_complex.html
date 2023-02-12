@@ -17,9 +17,9 @@ Otherwise use player_admin_table_simple.html
       <p class="player-table-username">{{player_data.username}}</p>
       <div class="">
         {% if player_data.is_eliminated == True %}
-        <button class="btn btn-success player-action-button" data-bs-toggle="modal" data-bs-target="#id_rebuy_modal_{{player_data.user_id}}">Rebuy</button>
+        <button class="btn btn-success player-action-button" data-bs-toggle="modal" data-bs-target="#id_rebuy_modal_{{player_data.player_id}}">Rebuy</button>
         {% else %}
-          <button class="btn btn-danger player-action-button" onclick="eliminationModalClicked('{{player_data.user_id}}')" data-bs-toggle="modal" data-bs-target="#id_eliminate_modal_{{player_data.user_id}}">Eliminate</button>
+          <button class="btn btn-danger player-action-button" onclick="eliminationModalClicked('{{player_data.player_id}}')" data-bs-toggle="modal" data-bs-target="#id_eliminate_modal_{{player_data.player_id}}">Eliminate</button>
         {% endif %}
       </div>
     </div>

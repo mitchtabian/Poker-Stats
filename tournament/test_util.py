@@ -45,8 +45,8 @@ def eliminate_players_and_complete_tournament(admin, tournament):
 	for i in range(1, len(players), 1):
 		TournamentElimination.objects.create_elimination(
 			tournament_id = tournament.id,
-			eliminator_id = players[0].user.id,
-			eliminatee_id = players[i].user.id
+			eliminator_id = players[0].id,
+			eliminatee_id = players[i].id
 		)
 	# Complete the tournament
 	Tournament.objects.complete_tournament(user = admin, tournament_id = tournament.id)
@@ -90,15 +90,15 @@ def eliminate_player(tournament_id, eliminator_id, eliminatee_id):
 				)
 	return elimination
 
-def eliminate_all_players_except(players, except_user, tournament):
+def eliminate_all_players_except(players, except_player, tournament):
 	# Eliminate all the players except 1 (except_user)
 	eliminations = []
 	for player in players:
-		if player.user.username != except_user.username:
+		if player != except_player:
 			elimination = eliminate_player(
 				tournament_id = tournament.id,
-				eliminator_id = except_user.id,
-				eliminatee_id = player.user.id
+				eliminator_id = except_player.id,
+				eliminatee_id = player.id
 			)
 			eliminations.append(elimination)
 	return eliminations
@@ -108,25 +108,20 @@ def eliminate_all_players_except(players, except_user, tournament):
 Force a rebuy. This ignores some validation logic so be careful how you use this in tests.
 Absolutely do not use in production code.
 """
-def rebuy_for_test(tournament_id, user_id):
+def rebuy_for_test(tournament_id, player_id):
 	tournament = Tournament.objects.get_by_id(tournament_id)
-	user = User.objects.get_by_id(user_id)
-	player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-		tournament_id = tournament.id,
-		user_id = user.id
-	)
+	player = TournamentPlayer.objects.get_by_id(player_id)
 
 	# Verify the user is a player in this tournament
-	if player == None:
-		raise ValidationError(f"{user.username} is not part of that tournament.")
+	if player.tournament != tournament:
+		raise ValidationError(f"{player.user.username} is not part of that tournament.")
 
 	# Verify the tournament allows rebuys
 	if not tournament.tournament_structure.allow_rebuys:
 		raise ValidationError("This tournament does not allow rebuys. Update the Tournament Structure.")
 
 	tournament_rebuy = TournamentRebuy(
-		tournament = tournament,
-		user = user,
+		player = player
 	)
 	tournament_rebuy.save()
 	return tournament_rebuy

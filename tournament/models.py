@@ -409,12 +409,22 @@ class TournamentPlayerManager(models.Manager):
 		return players
 
 	"""
-	Get all the TournamentPlayers for this player.
+	Get all the TournamentPlayers for this user.
 	"""
 	def get_all_tournament_players_by_user_id(self, user_id):
 		user = User.objects.get_by_id(user_id)
 		players = super().get_queryset().filter(user=user)
 		return players
+
+	"""
+	Get TournamentPlayer by pk.
+	"""
+	def get_by_id(self, pk):
+		try:
+			player = self.get(id=pk)
+			return player
+		except TournamentPlayer.DoesNotExist:
+			return None
 
 """
 A player associated with specific tournament.
@@ -535,41 +545,64 @@ class TournamentInvite(models.Model):
 class TournamentEliminationManager(models.Manager):
 	def get_eliminations_by_tournament(self, tournament_id):
 		tournament = Tournament.objects.get_by_id(tournament_id)
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		eliminations = []
+		for player in players:
+			eliminations_for_player = self.get_eliminations_by_eliminatee(
+				player_id = player.id
+			)
+			for elimination in eliminations_for_player:
+				eliminations.append(elimination)
+		return eliminations
+
+	def get_eliminations_by_eliminator(self, player_id):
+		player = TournamentPlayer.objects.get_by_id(
+			pk = player_id
+		)
+		# Eliminations where this player was the eliminator.
 		eliminations = super().get_queryset().filter(
-			tournament=tournament,
+			eliminator=player,
 		)
 		return eliminations
 
-	def get_eliminations_by_eliminator(self, tournament_id, eliminator_id):
-		eliminator = User.objects.get_by_id(eliminator_id)
-		tournament = Tournament.objects.get_by_id(tournament_id)
+	def get_eliminations_by_eliminatee(self, player_id):
+		player = TournamentPlayer.objects.get_by_id(
+			pk = player_id
+		)
+		# Eliminations where this player was the eliminatee.
 		eliminations = super().get_queryset().filter(
-			tournament=tournament,
-			eliminator=eliminator,
+			eliminatee=player,
 		)
 		return eliminations
 
+	"""
+	eliminator_id: id of the TournamentPlayer doing the eliminating.
+	eliminatee_id: id of the TournamentPlayer being eliminated.
+	"""
 	def create_elimination(self, tournament_id, eliminator_id, eliminatee_id):
 		tournament = Tournament.objects.get_by_id(tournament_id)
-		eliminator = User.objects.get_by_id(eliminator_id)
-		eliminatee = User.objects.get_by_id(eliminatee_id)
+		eliminator_player = TournamentPlayer.objects.get_by_id(
+			pk = eliminator_id
+		)
+		eliminatee_player = TournamentPlayer.objects.get_by_id(
+			pk = eliminatee_id
+		)
+
+		if eliminator_player == None:
+			raise ValidationError("Eliminator is not part of that Tournament.")
+
+		if eliminatee_player == None:
+			raise ValidationError("Eliminatee is not part of that Tournament.")
 
 		# Verify the Tournament has started
 		if tournament.get_state() != TournamentState.ACTIVE:
 			raise ValidationError("You can only eliminate players if the Tournament is Active.")
 		
 		# Make sure a player isn't trying to eliminate themself.
-		if eliminator == eliminatee:
-			raise ValueError(f"{eliminator.username} can't eliminate themselves!")
-
-		# Verify these players are part of this tournament.
-		tournament_users = list(
-			map(lambda tp: tp.user, TournamentPlayer.objects.get_tournament_players(tournament_id))
-		)
-		if eliminator not in tournament_users:
-			raise ValidationError(f"{eliminator.username} is not part of this tournament.")
-		if eliminatee not in tournament_users:
-			raise ValidationError(f"{eliminatee.username} is not part of this tournament.")
+		if eliminator_player == eliminatee_player:
+			raise ValueError(f"{eliminator_player.user.username} can't eliminate themselves!")
 
 		# Verify this is not the last player in the Tournament.
 		players = TournamentPlayer.objects.get_tournament_players(
@@ -590,16 +623,14 @@ class TournamentEliminationManager(models.Manager):
 
 		# Verify a multiple-eliminations aren't happening unless they've rebought.
 		is_player_eliminated = self.is_player_eliminated(
-			user_id = eliminatee.id,
-			tournament_id = tournament_id
+			player_id = eliminatee_player.id
 		)
 		if is_player_eliminated:
-			raise ValidationError(f"{eliminatee.username} has already been eliminated and has no more re-buys.")
+			raise ValidationError(f"{eliminatee_player.user.username} has already been eliminated and has no more re-buys.")
 
 		elimination = self.model(
-			tournament=tournament,
-			eliminator=eliminator,
-			eliminatee=eliminatee
+			eliminator=eliminator_player,
+			eliminatee=eliminatee_player
 		)
 		elimination.save(using=self._db)
 		return elimination
@@ -610,23 +641,14 @@ class TournamentEliminationManager(models.Manager):
 	Compare the number of times they've been eliminated against the number of rebuys.
 	Remember: If they've rebought once they will have one existing elimination.
 	"""
-	def is_player_eliminated(self, user_id, tournament_id):
-		existing_eliminations = self.get_eliminations_by_tournament(tournament_id)
-		player_eliminations = 0
-		tournament_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-			user_id=user_id,
-			tournament_id=tournament_id,
-		)
-		for elimination in existing_eliminations:
-			if elimination.eliminatee.id == user_id:
-				player_eliminations += 1
-			if player_eliminations > 0:
-				rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-					tournament_id = tournament_id,
-					user_id = user_id
+	def is_player_eliminated(self, player_id):
+		player = TournamentPlayer.objects.get_by_id(pk = player_id)
+		eliminations = self.get_eliminations_by_eliminatee(player_id = player.id)
+		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+					player = player
 				)
-				if player_eliminations > len(rebuys):
-					return True
+		if len(eliminations) > len(rebuys):
+			return True
 		return False
 
 
@@ -640,30 +662,28 @@ eliminatee: Person who got eliminated.
 eliminated_at: When they were eliminated. This is used to calculate placements.
 """
 class TournamentElimination(models.Model):
-	tournament				= models.ForeignKey(Tournament, on_delete=models.CASCADE)
-	eliminator				= models.ForeignKey(User, related_name="Eliminator", on_delete=models.CASCADE)	
-	eliminatee				= models.ForeignKey(User, related_name="Eliminatee", on_delete=models.CASCADE)
+	eliminator				= models.ForeignKey(TournamentPlayer, related_name="Eliminator", on_delete=models.CASCADE)	
+	eliminatee				= models.ForeignKey(TournamentPlayer, related_name="Eliminatee", on_delete=models.CASCADE)
 	eliminated_at			= models.DateTimeField(auto_now_add=True)
 	
 	objects = TournamentEliminationManager()
 
 	def __str__(self):
-		return f"{self.eliminator.username} eliminated {self.eliminatee.username}."
+		return f"{self.eliminator.user.username} eliminated {self.eliminatee.user.username}."
+
+	def get_tournament_title(self):
+		return self.eliminator.tournament.title
 
 
 class TournamentRebuyManager(models.Manager):
 
-	def rebuy(self, tournament_id, user_id):
+	def rebuy(self, tournament_id, player_id):
 		tournament = Tournament.objects.get_by_id(tournament_id)
-		user = User.objects.get_by_id(user_id)
-		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-			tournament_id = tournament.id,
-			user_id = user.id
-		)
+		player = TournamentPlayer.objects.get_by_id(player_id)
 
-		# Verify the user is a player in this tournament
-		if player == None:
-			raise ValidationError(f"{user.username} is not part of that tournament.")
+		# Verify this player is in this tournament
+		if player == None or player.tournament != tournament:
+			raise ValidationError("That player is not part of this tournament.")
 
 		# Verify the tournament allows rebuys
 		if not tournament.tournament_structure.allow_rebuys:
@@ -675,74 +695,69 @@ class TournamentRebuyManager(models.Manager):
 
 		# Verify they're out of rebuys.
 		num_eliminations = len(
-			TournamentElimination.objects.get_eliminations_by_tournament(
-				tournament.id
-			).filter(eliminatee=user)
+			TournamentElimination.objects.get_eliminations_by_eliminatee(
+				player_id = player.id
+			)
 		)
-		rebuys = self.get_rebuys_for_user(
-			tournament_id = tournament.id,
-			user_id = user.id
+		rebuys = self.get_rebuys_for_player(
+			player = player
 		)
 		if num_eliminations <= len(rebuys):
 			raise ValidationError(
 				f"{player.user.username} has not been eliminated. Eliminate them before adding another rebuy."
 			)
 		tournament_rebuy = self.model(
-			tournament = tournament,
-			user = user,
+			player = player
 		)
 		tournament_rebuy.save(using=self._db)
 		return tournament_rebuy
 
-	def get_rebuys_for_user(self, tournament_id, user_id):
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		user = User.objects.get_by_id(user_id)
-		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-			tournament_id = tournament.id,
-			user_id = user.id
-		)
-
-		# Verify the user is a player in this tournament
-		if player == None:
-			raise ValidationError(f"{user.username} is not part of that tournament.")
-
+	def get_rebuys_for_player(self, player):
 		rebuys = super().get_queryset().filter(
-			tournament = tournament,
-			user = user,
+			player = player
 		)
-
 		return rebuys
 
 	def get_rebuys_for_tournament(self, tournament_id):
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		rebuys = super().get_queryset().filter(
-			tournament = tournament,
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament_id
 		)
+		rebuys = []
+		for player in players:
+			rebuys_for_player = self.get_rebuys_for_player(
+				player = player
+			)
+			for rebuy in rebuys_for_player:
+				rebuys.append(rebuy)
 		return rebuys
 
 	"""
 	Delete all the rebuy data for a Tournament.
 	"""
 	def delete_tournament_rebuys(self, tournament_id):
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		rebuys = super().get_queryset().filter(
-			tournament = tournament,
-		)
+		rebuys = self.get_rebuys_for_tournament(tournament_id)
 		for rebuy in rebuys:
 			rebuy.delete()
 
 """
-Denotes a "Rebuy" event for a particular user in a particular tournament.
+Denotes a "Rebuy" event for a particular TournamentPlayer.
 """
+# from tournament.models import TournamentPlayer
+# tournament.models.TournamentPlayer.objects.create_player_for_tournament(user_id=1, tourament_id=1)
 class TournamentRebuy(models.Model):
-	tournament				= models.ForeignKey(Tournament, on_delete=models.CASCADE)
-	user					= models.ForeignKey(User, related_name="user", on_delete=models.CASCADE)	
+	player					= models.ForeignKey(TournamentPlayer, related_name="player", on_delete=models.CASCADE)	
 	timestamp				= models.DateTimeField(auto_now_add=True)
 	
 	objects = TournamentRebuyManager()
 
 	def __str__(self):
-		return f"{self.user.username} rebought at {self.timestamp}."
+		return f"{self.player.user.username} rebought at {self.timestamp}."
+
+	def get_tournament_title(self):
+		return self.player.tournament.title
+
+	def get_player_username(self):
+		return self.player.user.username
 
 
 class TournamentPlayerResultManager(models.Manager):
@@ -800,12 +815,11 @@ class TournamentPlayerResultManager(models.Manager):
 		# First, figure out if this player came first. They came first if:
 		# (1) They did not get eliminated at all
 		# (2) OR the number of rebuys exceeds the number of times they were eliminated.
-		player_eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament_id).filter(
-			eliminatee_id = player.user.id
+		player_eliminations = TournamentElimination.objects.get_eliminations_by_eliminatee(
+			player_id = player.id
 		)
-		rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-			tournament_id = tournament.id,
-			user_id = player.user.id
+		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+			player = player
 		)
 		if len(player_eliminations) == 0:
 			# They were never eliminated
@@ -825,11 +839,10 @@ class TournamentPlayerResultManager(models.Manager):
 				elif elimination.eliminated_at > elimations_dict[elimination.eliminatee.id]:
 					# Only replace the value in the dictionary if the timestamp is newer (more recent)
 					elimations_dict[elimination.eliminatee.id] = elimination.eliminated_at
-			# Loop through the sorted list. Whatever index this user is in, thats what they placed
-			# sorted_reversed_list = sorted(elimations_dict, key=elimations_dict.get).reverse()
+			# Loop through the sorted list. Whatever index this player is in, thats what they placed
 			sorted_reversed_list = [k for k, v in sorted(elimations_dict.items(), key=lambda p: p[1], reverse=True)]
-			for i,user_id in enumerate(sorted_reversed_list):
-				if user_id == player.user.id:
+			for i,player_id in enumerate(sorted_reversed_list):
+				if player_id == player.id:
 					placement = i + 1 # add 1 b/c person in first won't show up in eliminations lists
 					break
 		return placement
@@ -879,8 +892,7 @@ class TournamentPlayerResultManager(models.Manager):
 
 		# -- Get eliminations --
 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
-			tournament_id = tournament_id,
-			eliminator_id = player.user.id
+			player_id = player.id
 		)
 
 		# -- Get bounty earnings (if this is a bounty tournament). Otherwise 0.00. --
@@ -891,9 +903,8 @@ class TournamentPlayerResultManager(models.Manager):
 			bounty_earnings = round(Decimal(0.00), 2)
 
 		# -- Get rebuys --
-		rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-			tournament_id = tournament.id,
-			user_id = player.user.id
+		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+			player = player
 		)
 
 		# -- Calculate 'investment' --
