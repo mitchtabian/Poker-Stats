@@ -28,18 +28,12 @@
 
 
       <!-- Admin -->
-      {% if request.user == tournament.admin %}
-      {% if tournament.get_state_string == 'ACTIVE' or tournament.get_state_string == 'INACTIVE' %}
+      {% if request.user == tournament.admin and tournament.get_state_string == 'ACTIVE' %}
       <h5>Admin</h5>
       <hr>
       <div class="tournament-details-group">
-        {% if tournament.get_state_string == 'ACTIVE' %}
         <a class="mt-2 btn btn-primary admin-btn" href="{% url 'tournament:tournament_admin_view' pk=tournament.id %}">Admin view</a>
-        {% elif tournament.get_state_string == 'INACTIVE' %}
-          <span>The admin view is only available if a Tournament is ACTIVE.</span>
-        {% endif %}
       </div>
-      {% endif %}
       {% endif %}
 
       <!-- Players -->
