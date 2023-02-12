@@ -1,6 +1,6 @@
 <!-- Modal -->
 {% for modal_player_data in player_tournament_data %}
-  <div class="modal fade" id="id_eliminate_modal_{{modal_player_data.user_id}}" tabindex="-1" aria-labelledby="{{modal_player_data.username}} Elimination Modal" aria-hidden="true">
+  <div class="modal fade" id="id_eliminate_modal_{{modal_player_data.player_id}}" tabindex="-1" aria-labelledby="{{modal_player_data.username}} Elimination Modal" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -10,20 +10,20 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body d-flex flex-column">
-          <select class="form-select" aria-label="Who eliminated this player?" id="id_eliminator_selector_{{modal_player_data.user_id}}" onchange="onEliminatorSelected('id_eliminator_selector_{{modal_player_data.user_id}}')">
+          <select class="form-select" aria-label="Who eliminated this player?" id="id_eliminator_selector_{{modal_player_data.player_id}}" onchange="onEliminatorSelected('id_eliminator_selector_{{modal_player_data.player_id}}')">
           <option value="-1">---------</option>
           {% for player_data in player_tournament_data %}
-            {% if player_data.user_id != modal_player_data.user_id and player_data.is_eliminated != True %}
-              <option value="{{player_data.user_id}}">{{player_data.username}}</option>
+            {% if player_data.player_id != modal_player_data.player_id and player_data.is_eliminated != True %}
+              <option value="{{player_data.player_id}}">{{player_data.username}}</option>
             {% endif %}
           {% endfor %}
           </select>
-          <div class="d-none mt-2 mb-2 text-danger" id="id_eliminate_modal_error_{{modal_player_data.user_id}}">
+          <div class="d-none mt-2 mb-2 text-danger" id="id_eliminate_modal_error_{{modal_player_data.player_id}}">
             You must select a player.
           </div>
         </div>
         <div class="modal-footer" id="id_elim_model_button_container">
-          <button class="btn btn-danger" onclick="eliminatePlayer('{{modal_player_data.user_id}}')">Eliminate</button>
+          <button class="btn btn-danger" onclick="eliminatePlayer('{{modal_player_data.player_id}}')">Eliminate</button>
         </div>
       </div>
     </div>
@@ -49,24 +49,24 @@
     }
   }
 
-  function eliminatePlayer(user_id) {
+  function eliminatePlayer(player_id) {
     if (eliminator_id == "-1") {
-      var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + user_id)
+      var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + player_id)
       if (modalErrorElement.classList.contains("d-none")) {
         modalErrorElement.classList.remove("d-none")
       }
     } else {
       // Hide the modal that was in view
-      const modal_id = "#id_eliminate_modal_" + user_id
+      const modal_id = "#id_eliminate_modal_" + player_id
       const modalElement = document.querySelector(modal_id)
       const modal = bootstrap.Modal.getOrCreateInstance(modalElement)
       modal.hide()
       // Reset the selector in that modal to the default value "-------"
-      const selector = document.querySelector("#id_eliminator_selector_" + user_id)
+      const selector = document.querySelector("#id_eliminator_selector_" + player_id)
       selector.value = "-1"
 
       // Perform the elimination
-      const elimination_url = "/tournament/eliminate_player/{{tournament.id}}/" + eliminator_id + "/" + user_id
+      const elimination_url = "/tournament/eliminate_player/{{tournament.id}}/" + eliminator_id + "/" + player_id
       fetch(elimination_url, {
        headers: {
           'Accept': 'application/json'
@@ -84,8 +84,8 @@
     }
   }
 
-  function eliminationModalClicked(modal_user_id) {
-    var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + modal_user_id)
+  function eliminationModalClicked(modal_player_id) {
+    var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + modal_player_id)
     if (!modalErrorElement.classList.contains("d-none")) {
       modalErrorElement.classList.add("d-none")
     }

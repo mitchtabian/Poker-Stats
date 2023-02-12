@@ -283,11 +283,13 @@ def rebuy_player_in_tournament(request, *args, **kwargs):
 			tournament_id = tournament_id,
 			error_message = "Only the admin can execute a rebuy."
 		)
-	
+
+		player = TournamentPlayer.objects.get_by_id(player_id)
+
 		# All the validation is performed in the rebuy function.
 		TournamentRebuy.objects.rebuy(
 			tournament_id = tournament_id,
-			user_id = player_id
+			user_id = player.user.id
 		)
 	except Exception as e:
 		messages.error(request, e.args[0])
@@ -343,8 +345,7 @@ def render_tournament_view(request, tournament_id):
 		for result in results:
 			# Determine who they eliminated in this tournament.
 			eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
-				tournament_id = tournament.id,
-				eliminator_id = result.player.user.id
+				player_id = result.player.id
 			)
 			data = build_player_eliminations_data_from_eliminations(
 				eliminator = result.player,
@@ -480,12 +481,10 @@ def get_player_tournament_data(tournament_id):
 	players = TournamentPlayer.objects.get_tournament_players(tournament_id)
 	for player in players:
 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
-			tournament_id = tournament_id,
-			eliminator_id = player.user.id
+			player_id = player.id
 		)
 		is_eliminated = TournamentElimination.objects.is_player_eliminated(
-			user_id = player.user.id,
-			tournament_id = tournament_id
+			player_id = player.id
 		)
 
 		rebuys = TournamentRebuy.objects.get_rebuys_for_user(
@@ -494,7 +493,7 @@ def get_player_tournament_data(tournament_id):
 		)
 
 		data = PlayerTournamentData(
-					user_id = player.user.id,
+					player_id = player.id,
 					username = player.user.username,
 					rebuys = len(rebuys),
 					bounties = len(eliminations),

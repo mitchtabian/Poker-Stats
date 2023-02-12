@@ -497,13 +497,18 @@ class TournamentRebuysTestCase(TransactionTestCase):
 		# Activate
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Go through the players and eliminate
 		for player in players:
-			if player.user.username != "cat":
+			if player != cat_player:
 				eliminate_player(
 					tournament_id = tournament.id,
-					eliminator_id = cat.id,
-					eliminatee_id = player.user.id
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
 				)
 
 		# Deactivate the tournament
@@ -579,13 +584,18 @@ class TournamentRebuysTestCase(TransactionTestCase):
 		# Activate
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Go through the players and eliminate, then rebuy
 		for player in players:
-			if player.user.username != "cat":
+			if player != cat_player:
 				eliminate_player(
 					tournament_id = tournament.id,
-					eliminator_id = cat.id,
-					eliminatee_id = player.user.id
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
@@ -640,13 +650,18 @@ class TournamentRebuysTestCase(TransactionTestCase):
 			)
 			self.assertEqual(len(rebuys), 0)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Eliminate players and rebuy on everyone except cat.
 		for player in players:
 			if player.user.username != "cat":
 				eliminate_player(
 					tournament_id = tournament.id,
-					eliminator_id = cat.id,
-					eliminatee_id = player.user.id
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
@@ -690,13 +705,18 @@ class TournamentRebuysTestCase(TransactionTestCase):
 		)
 		self.assertEqual(len(rebuys), 0)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Eliminate players and rebuy on everyone except cat.
 		for player in players:
 			if player.user.username != "cat":
 				eliminate_player(
 					tournament_id = tournament.id,
-					eliminator_id = cat.id,
-					eliminatee_id = player.user.id
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
@@ -728,13 +748,18 @@ class TournamentRebuysTestCase(TransactionTestCase):
 		# Activate
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Eliminate players and rebuy on everyone except cat.
 		for player in players:
-			if player.user.username != "cat":
+			if player != cat_player:
 				eliminate_player(
 					tournament_id = tournament.id,
-					eliminator_id = cat.id,
-					eliminatee_id = player.user.id
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
@@ -808,36 +833,36 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 		# player0 eliminates player1
 		eliminate_player(
 			tournament_id = tournament_id,
-			eliminator_id = players[0].user.id,
-			eliminatee_id = players[1].user.id
+			eliminator_id = players[0].id,
+			eliminatee_id = players[1].id
 		)
 
 		# player2 eliminates player3
 		eliminate_player(
 			tournament_id = tournament_id,
-			eliminator_id = players[2].user.id,
-			eliminatee_id = players[3].user.id
+			eliminator_id = players[2].id,
+			eliminatee_id = players[3].id
 		)
 
 		# player4 eliminates player5
 		eliminate_player(
 			tournament_id = tournament_id,
-			eliminator_id = players[4].user.id,
-			eliminatee_id = players[5].user.id
+			eliminator_id = players[4].id,
+			eliminatee_id = players[5].id
 		)
 
 		# player6 eliminates player7
 		eliminate_player(
 			tournament_id = tournament_id,
-			eliminator_id = players[6].user.id,
-			eliminatee_id = players[7].user.id
+			eliminator_id = players[6].id,
+			eliminatee_id = players[7].id
 		)
 
 		# player0 eliminates player8
 		eliminate_player(
 			tournament_id = tournament_id,
-			eliminator_id = players[0].user.id,
-			eliminatee_id = players[8].user.id
+			eliminator_id = players[0].id,
+			eliminatee_id = players[8].id
 		)
 
 		# At this point everyone is eliminated except player0
@@ -846,42 +871,23 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 
 		# Verify the eliminations by player0
 		eliminations0 = TournamentElimination.objects.get_eliminations_by_eliminator(
-			tournament_id = tournament_id,
-			eliminator_id = players[0].user.id
+			player_id = players[0].id
 		)
-		self.assertEqual(eliminations0[0].tournament, tournament)
+		self.assertEqual(eliminations0[0].eliminatee.tournament, tournament)
+		self.assertEqual(eliminations0[0].eliminator.tournament, tournament)
+		self.assertEqual(eliminations0[1].eliminatee.tournament, tournament)
+		self.assertEqual(eliminations0[1].eliminator.tournament, tournament)
 		self.assertEqual(len(eliminations0), 2)
 		# player0 eliminated player1
-		self.assertEqual(eliminations0[0].eliminator, players[0].user)
-		self.assertEqual(eliminations0[0].eliminatee, players[1].user)
+		self.assertEqual(eliminations0[0].eliminator, players[0])
+		self.assertEqual(eliminations0[0].eliminatee, players[1])
 		# player0 eliminated player8
-		self.assertEqual(eliminations0[1].eliminator, players[0].user)
-		self.assertEqual(eliminations0[1].eliminatee, players[8].user)
+		self.assertEqual(eliminations0[1].eliminator, players[0])
+		self.assertEqual(eliminations0[1].eliminatee, players[8])
 
 	"""
-	Cannot eliminate a player who is not part of the tournament.
-	"""
-	def test_cannot_eliminate_user_who_has_not_joined_tournament(self):
-		tournament = Tournament.objects.get_by_id(1)
-		tournament_id = tournament.id
-		new_user = create_users(['horse'])[0]
-
-		players = TournamentPlayer.objects.get_tournament_players(
-			tournament_id = tournament.id
-		)
-
-		# Start
-		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
-
-		with self.assertRaisesMessage(ValidationError, f"{new_user.username} is not part of this tournament."):
-			eliminate_player(
-				tournament_id = tournament_id,
-				eliminator_id = players[0].user.id,
-				eliminatee_id = new_user.id
-			)
-
-	"""
-	A User who is not part of the tournament cannot eliminate someone.
+	Cannot eliminate a player who is not part of the tournament and cannot perform an elimination if the eliminator
+	is not part of the tournment.
 	"""
 	def test_cannot_eliminate_user_who_has_not_joined_tournament(self):
 		tournament = Tournament.objects.get_by_id(1)
@@ -895,11 +901,18 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 		# Start
 		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
 
-		with self.assertRaisesMessage(ValidationError, f"{new_user.username} is not part of this tournament."):
+		with self.assertRaisesMessage(ValidationError, "Eliminatee is not part of that Tournament."):
 			eliminate_player(
 				tournament_id = tournament_id,
-				eliminator_id = new_user.id,
-				eliminatee_id = players[0].user.id
+				eliminator_id = players[0].user.id,
+				eliminatee_id = new_user.id # This will fail b/c its not a TournamentPlayer
+			)
+
+		with self.assertRaisesMessage(ValidationError, "Eliminator is not part of that Tournament."):
+			eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_id = new_user.id, # This will fail b/c its not a TournamentPlayer
+				eliminatee_id = players[0].user.id 
 			)
 
 	"""
@@ -916,21 +929,25 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 		# Start
 		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
 
+		admin_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = tournament.admin.id
+		)
+
 		# eliminate player0
 		eliminate_player(
-			tournament_id = tournament_id,
-			eliminator_id = tournament.admin.id,
-			eliminatee_id = players[0].user.id
+			tournament_id = tournament.id,
+			eliminator_id = admin_player.id,
+			eliminatee_id = players[0].id
 		)
 
 		# Confirm only player0 is eliminated
 		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament_id)
 		for elimination in eliminations:
 			is_eliminated = TournamentElimination.objects.is_player_eliminated(
-				user_id=elimination.eliminatee.id,
-				tournament_id = tournament_id
+				player_id=elimination.eliminatee.id,
 			)
-			if elimination.eliminatee.id == players[0].user.id:
+			if elimination.eliminatee.id == players[0].id:
 				self.assertEqual(is_eliminated, True)
 			else:
 				self.assertEqual(is_eliminated, False)
@@ -950,15 +967,15 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 		# eliminate player0
 		eliminate_player(
 			tournament_id = tournament_id,
-			eliminator_id = players[1].user.id,
-			eliminatee_id = players[0].user.id
+			eliminator_id = players[1].id,
+			eliminatee_id = players[0].id
 		)
 		# Try to eliminate again. This will fail because they have already been eliminated and have no more rebuys.
 		with self.assertRaisesMessage(ValidationError, f"{players[0].user.username} has already been eliminated and has no more re-buys."):
 			eliminate_player(
 				tournament_id = tournament_id,
-				eliminator_id = players[1].user.id,
-				eliminatee_id = players[0].user.id
+				eliminator_id = players[1].id,
+				eliminatee_id = players[0].id
 			)
 
 	"""
@@ -975,8 +992,8 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 		with self.assertRaisesMessage(ValidationError, "You can only eliminate players if the Tournament is Active."):
 			eliminate_player(
 				tournament_id = tournament_id,
-				eliminator_id = players[1].user.id,
-				eliminatee_id = players[0].user.id
+				eliminator_id = players[1].id,
+				eliminatee_id = players[0].id
 			)
 
 	"""
@@ -994,10 +1011,10 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 
 		# -- Create eliminations --
 
-		# Try to eliminate player0
+		# Eliminate all players except player0
 		eliminate_all_players_except(
 			players = players,
-			except_user = players[0].user,
+			except_player = players[0],
 			tournament = tournament
 		)
 
@@ -1006,8 +1023,8 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 		with self.assertRaisesMessage(ValidationError, "You can't eliminate any more players. Complete the Tournament."):
 			eliminate_player(
 				tournament_id = tournament_id,
-				eliminator_id = players[8].user.id,
-				eliminatee_id = players[0].user.id
+				eliminator_id = players[8].id,
+				eliminatee_id = players[0].id
 			)
 
 
@@ -1166,13 +1183,18 @@ class TournamentTestCase(TransactionTestCase):
 		# Start
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Eliminate every player except cat and dog.
 		for player in players:
-			if player.user.username != "cat" and player.user.username != "dog": 
+			if player != cat_player and player.user.username != "dog": 
 				eliminate_player(
 					tournament_id = tournament.id,
-					eliminator_id = cat.id,
-					eliminatee_id = player.user.id
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
 				)
 
 		# is_completable will raise at this point b/c 2 players remain
@@ -1189,8 +1211,8 @@ class TournamentTestCase(TransactionTestCase):
 			if player.user.username == "dog":
 				eliminate_player(
 					tournament_id = tournament.id,
-					eliminator_id = cat.id,
-					eliminatee_id = player.user.id
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
 				)
 
 		# is_completable will succeed now
@@ -1227,13 +1249,18 @@ class TournamentTestCase(TransactionTestCase):
 			tournament = tournament
 		)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Start
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
 		# Eliminate all the players except 1 (cat)
 		eliminate_all_players_except(
 			players = players,
-			except_user = cat,
+			except_player = cat_player,
 			tournament = tournament
 		)
 
@@ -1397,19 +1424,24 @@ class TournamentTestCase(TransactionTestCase):
 			tournament = tournament
 		)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
 		# Start
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
 		# Eliminate all the players except 1 (cat)
 		eliminate_all_players_except(
 			players = players,
-			except_user = cat,
+			except_player = cat_player,
 			tournament = tournament
 		)
 
 		# Rebuy on all players (except admin)
 		for player in players:
-			if player.user.username != "cat":
+			if player != cat_player:
 				rebuy_for_test(
 					tournament_id = tournament.id,
 					user_id = player.user.id
@@ -1418,7 +1450,7 @@ class TournamentTestCase(TransactionTestCase):
 		# Eliminate everyone again (Except admin)
 		eliminate_all_players_except(
 			players = players,
-			except_user = cat,
+			except_player = cat_player,
 			tournament = tournament
 		)
 
@@ -1432,7 +1464,7 @@ class TournamentTestCase(TransactionTestCase):
 				elim_dict[elimination.eliminatee.id] = elim_dict[elimination.eliminatee.id] + 1
 			else:
 				elim_dict[elimination.eliminatee.id] = 1
-		self.assertFalse(cat.id in elim_dict)
+		self.assertFalse(cat_player.id in elim_dict)
 		for key in elim_dict.keys():
 			self.assertEqual(elim_dict[key], 2)
 
@@ -1445,7 +1477,7 @@ class TournamentTestCase(TransactionTestCase):
 				tournament_id = tournament.id,
 				user_id = player.user.id
 			)
-			if player.user.username != "cat":
+			if player != cat_player:
 				self.assertEqual(len(num_rebuys), 1)
 			else:
 				self.assertEqual(len(num_rebuys), 0)
@@ -1633,10 +1665,14 @@ class TournamentTestCase(TransactionTestCase):
 		# Start
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
 		# Eliminate all the players except 1 (cat)
 		eliminate_all_players_except(
 			players = players,
-			except_user = cat,
+			except_player = cat_player,
 			tournament = tournament
 		)
 
@@ -1654,7 +1690,7 @@ class TournamentTestCase(TransactionTestCase):
 		# Eliminate all the players except 1 (cat)
 		eliminate_all_players_except(
 			players = players,
-			except_user = cat,
+			except_player= cat_player,
 			tournament = tournament
 		)
 
@@ -1668,7 +1704,7 @@ class TournamentTestCase(TransactionTestCase):
 		# Eliminate everyone again (Except admin)
 		eliminate_all_players_except(
 			players = players,
-			except_user = cat,
+			except_player = cat_player,
 			tournament = tournament
 		)
 
