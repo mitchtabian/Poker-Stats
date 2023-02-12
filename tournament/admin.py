@@ -59,7 +59,7 @@ class TournamentEliminationAdmin(admin.ModelAdmin):
 
     @admin.display(description='Tournament')
     def get_tournament(self, elimination):
-        return elimination.tournament.title
+        return elimination.eliminator.tournament.title
 
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
 

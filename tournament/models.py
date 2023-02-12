@@ -670,7 +670,7 @@ class TournamentElimination(models.Model):
 	objects = TournamentEliminationManager()
 
 	def __str__(self):
-		return f"{self.eliminator.username} eliminated {self.eliminatee.username}."
+		return f"{self.eliminator.user.username} eliminated {self.eliminatee.user.username}."
 
 
 class TournamentRebuyManager(models.Manager):
