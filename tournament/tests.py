@@ -475,10 +475,10 @@ class TournamentRebuysTestCase(TransactionTestCase):
 			allow_rebuys = True
 		)
 		new_user = create_users(['horse'])[0]
-		with self.assertRaisesMessage(ValidationError, f"{new_user.username} is not part of that tournament."):
+		with self.assertRaisesMessage(ValidationError, "That player is not part of this tournament."):
 			TournamentRebuy.objects.rebuy(
 				tournament_id = tournament.id,
-				user_id = new_user.id
+				player_id = new_user.id
 			)
 
 	"""
@@ -517,11 +517,11 @@ class TournamentRebuysTestCase(TransactionTestCase):
 
 		# Go through the players and try to rebuy
 		for player in players:
-			if player.user.username != "cat":
+			if player != cat_player:
 				with self.assertRaisesMessage(ValidationError, "Cannot rebuy if Tournament is not active."):
 					TournamentRebuy.objects.rebuy(
 						tournament_id = tournament.id,
-						user_id = player.user.id
+						player_id = player.id
 					)
 
 	"""
@@ -540,7 +540,7 @@ class TournamentRebuysTestCase(TransactionTestCase):
 			with self.assertRaisesMessage(ValidationError, "This tournament does not allow rebuys. Update the Tournament Structure."):
 				TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
 
 	"""
@@ -564,7 +564,7 @@ class TournamentRebuysTestCase(TransactionTestCase):
 			with self.assertRaisesMessage(ValidationError, f"{player.user.username} has not been eliminated. Eliminate them before adding another rebuy."):
 				TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
 
 	"""
@@ -599,31 +599,11 @@ class TournamentRebuysTestCase(TransactionTestCase):
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
-				self.assertEqual(rebuy.tournament, tournament)
-				self.assertEqual(rebuy.user, player.user)
-
-	"""
-	get_rebuys_for_user: player is not part of tournament.
-	"""
-	def test_rebuys_for_user_error_player_not_part_of_tournament(self):
-		tournament = self.setup_tournament(
-			allow_rebuys = True
-		)
-
-		players = TournamentPlayer.objects.get_tournament_players(
-			tournament_id = tournament.id
-		)
-
-		new_user = create_users(['horse'])[0]
-
-		with self.assertRaisesMessage(ValidationError, f"{new_user.username} is not part of that tournament."):
-			TournamentRebuy.objects.get_rebuys_for_user(
-				tournament_id = tournament.id,
-				user_id = new_user.id
-			)
-
+				self.assertEqual(rebuy.player.tournament, tournament)
+				self.assertEqual(rebuy.player.user, player.user)
+				self.assertEqual(rebuy.player, player)
 
 	"""
 	get_rebuys_for_user: success.
@@ -644,9 +624,8 @@ class TournamentRebuysTestCase(TransactionTestCase):
 
 		# Go through the players and invoke get_rebuys_for_user. They should all be 0.
 		for player in players:
-			rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-				tournament_id = tournament.id,
-				user_id = player.user.id
+			rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
 			)
 			self.assertEqual(len(rebuys), 0)
 
@@ -665,18 +644,18 @@ class TournamentRebuysTestCase(TransactionTestCase):
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
-				self.assertEqual(rebuy.tournament, tournament)
-				self.assertEqual(rebuy.user, player.user)
+				self.assertEqual(rebuy.player.tournament, tournament)
+				self.assertEqual(rebuy.player, player)
+				self.assertEqual(rebuy.player.user, player.user)
 
 		# Go through the players and invoke get_rebuys_for_user. They should all be 1 except cat.
 		for player in players:
-			rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-				tournament_id = tournament.id,
-				user_id = player.user.id
+			rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
 			)
-			if player.user.username == "cat":
+			if player == cat_player:
 				self.assertEqual(len(rebuys), 0)
 			else:
 				self.assertEqual(len(rebuys), 1)
@@ -720,10 +699,11 @@ class TournamentRebuysTestCase(TransactionTestCase):
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
-				self.assertEqual(rebuy.tournament, tournament)
-				self.assertEqual(rebuy.user, player.user)
+				self.assertEqual(rebuy.player.tournament, tournament)
+				self.assertEqual(rebuy.player, player)
+				self.assertEqual(rebuy.player.user, player.user)
 
 		# Get rebuys for tournament. Everyone rebought except cat, so rebuys should be 8.
 		rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
@@ -763,10 +743,11 @@ class TournamentRebuysTestCase(TransactionTestCase):
 				)
 				rebuy = TournamentRebuy.objects.rebuy(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
-				self.assertEqual(rebuy.tournament, tournament)
-				self.assertEqual(rebuy.user, player.user)
+				self.assertEqual(rebuy.player.tournament, tournament)
+				self.assertEqual(rebuy.player.user, player.user)
+				self.assertEqual(rebuy.player, player)
 
 		# Get rebuys for tournament. Everyone rebought except cat, so rebuys should be 8.
 		rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
@@ -1444,7 +1425,7 @@ class TournamentTestCase(TransactionTestCase):
 			if player != cat_player:
 				rebuy_for_test(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
 
 		# Eliminate everyone again (Except admin)
@@ -1473,9 +1454,8 @@ class TournamentTestCase(TransactionTestCase):
 			tournament_id = tournament.id
 		)
 		for player in players:
-			num_rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-				tournament_id = tournament.id,
-				user_id = player.user.id
+			num_rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
 			)
 			if player != cat_player:
 				self.assertEqual(len(num_rebuys), 1)
@@ -1514,9 +1494,8 @@ class TournamentTestCase(TransactionTestCase):
 			tournament_id = tournament.id
 		)
 		for player in players:
-			num_rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-				tournament_id = tournament.id,
-				user_id = player.user.id
+			num_rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
 			)
 			self.assertEqual(len(num_rebuys), 0)
 
@@ -1699,7 +1678,7 @@ class TournamentTestCase(TransactionTestCase):
 			if player.user.username != "cat":
 				rebuy_for_test(
 					tournament_id = tournament.id,
-					user_id = player.user.id
+					player_id = player.id
 				)
 		# Eliminate everyone again (Except admin)
 		eliminate_all_players_except(
@@ -2010,13 +1989,13 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
 		# Manunally add some rebuys
-		# These are the user_id's of the players who rebought.
+		# These are the player_id's of the players who rebought.
 		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
 		rebuys = [1, 5, 7, 8, 1]
-		for user_id in rebuys:
+		for player_id in rebuys:
 			rebuy_for_test(
 				tournament_id = tournament.id,
-				user_id = user_id
+				player_id = player_id
 			)
 
 		# Eliminate in a specific order so we can verify. 9 is the winner here.
@@ -2148,13 +2127,13 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
 		# Manunally add some rebuys
-		# These are the user_id's of the players who rebought.
+		# These are the player_id's of the players who rebought.
 		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
 		rebuys = [1, 5, 7, 8, 1]
-		for user_id in rebuys:
+		for player_id in rebuys:
 			rebuy_for_test(
 				tournament_id = tournament.id,
-				user_id = user_id
+				player_id = player_id
 			)
 
 		# Eliminate in a specific order so we can verify. 9 is the winner here.
@@ -2223,13 +2202,13 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
 		# Manunally add some rebuys
-		# These are the user_id's of the players who rebought.
+		# These are the player_id's of the players who rebought.
 		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
 		rebuys = [1, 5, 7, 8, 1]
-		for user_id in rebuys:
+		for player_id in rebuys:
 			rebuy_for_test(
 				tournament_id = tournament.id,
-				user_id = user_id
+				player_id = player_id
 			)
 
 		# Eliminate in a specific order so we can verify. 9 is the winner here.
@@ -2441,17 +2420,21 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
 		# Manunally add some rebuys
-		# These are the user_id's of the players who rebought.
+		# These are the player_id's of the players who rebought.
 		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
 		rebuys = [1, 5, 7, 8, 1]
-		for user_id in rebuys:
+		for player_id in rebuys:
 			rebuy_for_test(
 				tournament_id = tournament.id,
-				user_id = user_id
+				player_id = player_id
 			)
 
+		tournament_rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
+			tournament_id = tournament.id
+		)
+
 		# Eliminate in a specific order so we can verify. 9 is the winner here.
-		# These arrays are the primary keys of the users.
+		# These arrays are the primary keys of the players.
 		# 2 elim 1, 5 elim 1, 9 elim 5, 7 elim 2, etc...
 		# So expected placement order is: [9, 7, 8, 1, 5, 6, 4, 3, 2]
 		eliminatee_order = [1, 1, 5, 2, 3, 4, 6, 5, 7, 8, 1, 8, 7]
@@ -2499,7 +2482,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(placement_dict[place].eliminations, [3, 7])
 				self.assertEqual(placement_dict[place].investment, expected_investment)
 				self.assertEqual(len(placement_dict[place].rebuys), 1)
-				self.assertEqual(placement_dict[place].rebuys[0].user.id, 8)
+				self.assertEqual(placement_dict[place].rebuys[0].player.id, 8)
 			elif placement_dict[place].user_id == 7:
 				expected_investment = "230.24"
 				gross_earnings = placement_dict[place].gross_earnings
@@ -2511,7 +2494,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(placement_dict[place].eliminations, [2, 8])
 				self.assertEqual(placement_dict[place].investment, expected_investment)
 				self.assertEqual(len(placement_dict[place].rebuys), 1)
-				self.assertEqual(placement_dict[place].rebuys[0].user.id, 7)
+				self.assertEqual(placement_dict[place].rebuys[0].player.id, 7)
 			elif placement_dict[place].user_id == 6:
 				expected_investment = "115.12"
 				gross_earnings = placement_dict[place].gross_earnings
@@ -2537,7 +2520,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(placement_dict[place].eliminations, [1])
 				self.assertEqual(placement_dict[place].investment, expected_investment)
 				self.assertEqual(len(placement_dict[place].rebuys), 1)
-				self.assertEqual(placement_dict[place].rebuys[0].user.id, 5)
+				self.assertEqual(placement_dict[place].rebuys[0].player.id, 5)
 			elif placement_dict[place].user_id == 4:
 				expected_investment = "115.12"
 				gross_earnings = placement_dict[place].gross_earnings
@@ -2585,7 +2568,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(placement_dict[place].eliminations, [4, 6, 8])
 				self.assertEqual(placement_dict[place].investment, expected_investment)
 				self.assertEqual(len(placement_dict[place].rebuys), 2)
-				self.assertEqual(placement_dict[place].rebuys[0].user.id, 1)
+				self.assertEqual(placement_dict[place].rebuys[0].player.id, 1)
 
 
 

@@ -51,26 +51,34 @@ admin.site.register(TournamentInvite, TournamentInviteAdmin)
 
 class TournamentEliminationAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('get_tournament', 'eliminator', 'eliminatee', 'eliminated_at')}),
+        (None, {'fields': ('get_tournament_title', 'eliminator', 'eliminatee', 'eliminated_at')}),
     )
-
+    readonly_fields = ['eliminated_at', 'get_tournament_title', 'eliminator', 'eliminatee',]
     list_display = ('get_tournament', 'eliminator', 'eliminatee', 'eliminated_at')
     search_fields = ('get_tournament', 'eliminator', 'eliminatee', )
 
     @admin.display(description='Tournament')
     def get_tournament(self, elimination):
-        return elimination.eliminator.tournament.title
+        return elimination.get_tournament_title()
 
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
 
 class TournamentRebuyAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('tournament', 'user', 'timestamp')}),
+        (None, {'fields': ('get_tournament', 'get_player_username','timestamp')}),
     )
-    readonly_fields = ['timestamp']
+    readonly_fields = ['get_tournament', 'get_player_username', 'timestamp']
 
-    list_display = ('tournament', 'user', 'timestamp')
-    search_fields = ('tournament', 'user')
+    list_display = ('get_tournament', 'get_player_username', 'timestamp')
+    search_fields = ('get_tournament', 'get_player_username')
+
+    @admin.display(description='Tournament')
+    def get_tournament(self, rebuy):
+        return rebuy.get_tournament_title()
+
+    @admin.display(description='Username')
+    def get_username(self, rebuy):
+        return rebuy.get_player_username()
 
 
 admin.site.register(TournamentRebuy, TournamentRebuyAdmin)

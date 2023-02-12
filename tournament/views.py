@@ -289,7 +289,7 @@ def rebuy_player_in_tournament(request, *args, **kwargs):
 		# All the validation is performed in the rebuy function.
 		TournamentRebuy.objects.rebuy(
 			tournament_id = tournament_id,
-			user_id = player.user.id
+			player_id = player.id
 		)
 	except Exception as e:
 		messages.error(request, e.args[0])
@@ -487,9 +487,8 @@ def get_player_tournament_data(tournament_id):
 			player_id = player.id
 		)
 
-		rebuys = TournamentRebuy.objects.get_rebuys_for_user(
-			tournament_id = tournament_id,
-			user_id = player.user.id
+		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+			player = player
 		)
 
 		data = PlayerTournamentData(
