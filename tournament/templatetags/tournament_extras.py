@@ -2,6 +2,9 @@ from decimal import Decimal
 from django import template
 from django.template.defaultfilters import stringfilter
 
+from tournament.models import TournamentPlayer
+from tournament.util import build_placement_string
+
 register = template.Library()
 
 """
@@ -76,6 +79,61 @@ def format_number_weight(number):
 		return 550
 	else: 
 		return 400
+
+"""
+Format placement position.
+"""
+@register.filter(name='format_placement')
+def format_placement(placement):
+	return build_placement_string(placement)
+
+"""
+Return True if a player has joined the tournament. 
+"""
+@register.filter(name='has_player_joined_tournament')
+@stringfilter
+def has_player_joined_tournament(player_id, tournament_id):
+	has_joined = TournamentPlayer.objects.has_player_joined_tournament(
+		player_id = player_id,
+		tournament_id = tournament_id
+	)
+	return has_joined
+
+"""
+Format the "join status" color.
+"""
+@register.filter(name='format_joined_status_color')
+def format_joined_status_color(has_joined):
+	if has_joined:
+		return "#5cb85c"
+	else:
+		return "#f0ad4e"
+
+"""
+..
+"""
+@register.filter
+def keyvalue(dictionary, key):
+	try:
+		return dictionary[f'{key}']
+	except KeyError:
+		return ''
+
+"""
+..
+"""
+@register.filter
+def does_value_exist_in_list(data_list, value):
+	print(f"data_list? {data_list}")
+	print(f"value? {value}")
+	print(f"does exist? {value in data_list}")
+	return value in data_list
+
+
+
+
+
+
 
 
 

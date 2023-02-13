@@ -18,7 +18,15 @@ from tournament.models import (
 	TournamentPlayerResult,
 	TournamentRebuy
 )
-from tournament.util import PlayerTournamentData, payout_positions, PlayerEliminationsData, build_player_eliminations_data_from_eliminations
+from tournament.util import (
+	PlayerTournamentData,
+	payout_positions,
+	PlayerEliminationsData,
+	build_player_eliminations_data_from_eliminations,
+	build_placement_string,
+	PlayerTournamentPlacement,
+	DID_NOT_PLACE_VALUE
+)
 from user.models import User
 
 @login_required
@@ -70,11 +78,6 @@ def start_tournament(request, *args, **kwargs):
 		)
 
 		tournament = Tournament.objects.start_tournament(user=user, tournament_id=tournament_id)
-
-		# Delete all the pending invites
-		invites = TournamentInvite.objects.find_pending_invites_for_tournament(tournament.id)
-		for invite in invites:
-			invite.delete()
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return redirect("tournament:tournament_view", pk=tournament_id)
@@ -151,11 +154,21 @@ def join_tournament(request, *args, **kwargs):
 			messages.error(request, "This invitation wasn't for you.")
 			return redirect("home")
 
-		# Create new TournamentPlayer
-		player = TournamentPlayer.objects.create_player_for_tournament(
-			user_id = invite.send_to.id,
-			tournament_id = invite.tournament.id
+		# # Create new TournamentPlayer
+		# player = TournamentPlayer.objects.create_player_for_tournament(
+		# 	user_id = invite.send_to.id,
+		# 	tournament_id = invite.tournament.id
+		# )
+
+		# Get the player and join the Tournament.
+		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = invite.tournament,
+			user_id = invite.send_to
 		)
+		TournamentPlayer.objects.join_tournament(
+			player = player
+		)
+
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return redirect("tournament:tournament_view", pk=invite.tournament.id)
@@ -347,14 +360,20 @@ def render_tournament_view(request, tournament_id):
 			eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
 				player_id = result.player.id
 			)
-			data = build_player_eliminations_data_from_eliminations(
-				eliminator = result.player,
-				eliminations = eliminations
-			)
-			if data != None:
-				eliminations_data.append(data)
+			if len(eliminations) > 0:
+				data = build_player_eliminations_data_from_eliminations(
+					eliminator = result.player,
+					eliminations = eliminations
+				)
+				if data != None:
+					eliminations_data.append(data)
 		context['eliminations_data'] = eliminations_data
 
+		# Add a "Warning" section if not all TournamentPlayers have joined the Tournament.
+		has_all_joined = Tournament.objects.have_all_players_joined_tournament(
+			tournament_id = tournament.id
+		)
+		context['have_all_players_joined_tournament'] = has_all_joined
 
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
 
@@ -509,6 +528,91 @@ def verify_admin(user, tournament_id, error_message):
 	tournament = Tournament.objects.get_by_id(tournament_id)
 	if user != tournament.admin:
 		raise ValidationError(error_message)
+
+@login_required
+def tournament_backfill_view(request, *args, **kwargs):
+	context = {}
+	tournament = Tournament.objects.get_by_id(kwargs['pk'])
+	error = None
+	try:
+		if request.user != tournament.admin:
+			error = "Only the Tournment admin can backfill data."
+		if tournament.get_state() != TournamentState.INACTIVE:
+			error = "You can't backfill a Tournment that is ACTIVE or COMPLETED."
+		if error != None:
+			messages.error(request, error)
+			return redirect("tournament:tournament_view", pk=tournament.id)
+		context['tournament'] = tournament
+		context['players'] = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		if request.method == "POST":
+			player_tournament_placements = {}
+			# Populate data for positions who are getting paid
+			for index,placement in enumerate(tournament.tournament_structure.payout_percentages):
+				player_id = request.POST.get(f"{index}_player_id_input")
+				player = TournamentPlayer.objects.get_by_id(player_id)
+				# Check for duplicates. Cannot assign the same player multiple placements
+				if player_id in player_tournament_placements.keys():
+					raise ValidationError(f"Cannot assign multiple placements to {player.user.username}.")
+				player_tournament_placement = PlayerTournamentPlacement(
+					player_id = player_id,
+					placement = index
+				)
+				player_tournament_placements[player_id] = player_tournament_placement
+
+			# Find players who did not place
+			players = TournamentPlayer.objects.get_tournament_players(
+				tournament_id = tournament.id
+			)
+			for player in players:
+				if f"{player.id}" not in player_tournament_placements.keys():
+					player_tournament_placement = PlayerTournamentPlacement(
+						player_id = player.id,
+						placement = DID_NOT_PLACE_VALUE # assign 999999999 to players who did not place
+	 				)
+					player_tournament_placements[f"{player.id}"] = player_tournament_placement
+			# Complete the backfilled Tournament
+			Tournament.objects.complete_tournament_for_backfill(
+				user = request.user,
+				tournament_id = tournament.id,
+				player_tournament_placements = player_tournament_placements.values()
+			)
+
+			return redirect("tournament:tournament_view", pk=tournament.id)
+			
+		# --- Update Eliminations with htmx ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		context['players'] = players
+		player_eliminations = []
+		if request.method == "GET":
+			elimination_json = request.GET.get('elimination_json')
+			print(f"elimination_json {elimination_json}")
+			if elimination_json != None:
+				json_dict = json.loads(elimination_json)
+				# Return the json dictionary to the view. That is the source of truth.
+				context['json_dict'] = elimination_json
+				elim_dict = {}
+				for data in json_dict['data']:
+					eliminator_id = int(data['eliminator_id'])
+					eliminatee_id = int(data['eliminatee_id'])
+					player = TournamentPlayer.objects.get_by_id(eliminatee_id)
+					if eliminator_id in elim_dict:
+						current_values = elim_dict[eliminator_id]
+						current_values.append(player)
+						elim_dict[eliminator_id] = current_values
+					else:
+						elim_dict[eliminator_id] = [player]
+				context['elim_dict'] = elim_dict
+			
+	except Exception as e:
+		messages.error(request, e.args[0])
+	return render(request=request, template_name="tournament/tournament_backfill.html", context=context)
+
+
+
 
 
 

@@ -1,3 +1,5 @@
+{% load tournament_extras %}
+
 {% if tournament.get_state_string == "INACTIVE" %}
 {% if players or invites %}
 <div class="mt-3 players-container table-responsive" id="id_players_container">
@@ -14,6 +16,7 @@
   <tbody>
 
       {% for player in players %}
+      {% if player.id|has_player_joined_tournament:tournament.id == True %}
       <tr>
         <td scope="row" class="player-row">{{player.user.username}}</td>
         <td class="player-row">Joined</td>
@@ -27,6 +30,7 @@
           {% endif %}
         </td>
       </tr>
+      {% endif %}
       {% endfor %}
       {% for invite in invites %}
       <tr>

@@ -11,7 +11,7 @@ from user.models import User
 
 PERCENTAGE_VALIDATOR = [MinValueValidator(0), MaxValueValidator(100)]
 
-from tournament.util import build_placement_string
+from tournament.util import build_placement_string, PlayerTournamentPlacement, DID_NOT_PLACE_VALUE
 
 
 """
@@ -155,7 +155,6 @@ class TournamentManager(models.Manager):
 
 		return tournament
 
-	# Tournament.objects.complete_tournament(user, 1)
 	def complete_tournament(self, user, tournament_id):
 		tournament = self.get(pk=tournament_id)
 		if tournament.admin != user:
@@ -173,6 +172,29 @@ class TournamentManager(models.Manager):
 
 		# Calculate the TournamentPlayerResultData for each player. These are saved to db.
 		results = TournamentPlayerResult.objects.build_results_for_tournament(tournament_id)
+
+		return tournament
+
+	def complete_tournament_for_backfill(self, user, tournament_id, player_tournament_placements):
+		tournament = self.get(pk=tournament_id)
+		if tournament.admin != user:
+			raise ValidationError("You cannot update a Tournament if you're not the admin.")
+		if tournament.started_at is not None:
+			raise ValidationError("You can't backfill an active Tournment.")
+		if tournament.completed_at is not None:
+			raise ValidationError("You can't backfill a completed Tournment.")
+
+		tournament.started_at = timezone.now()
+		tournament.save(using=self._db)
+
+		tournament.completed_at = timezone.now()
+		tournament.save(using=self._db)
+
+		# Calculate the TournamentPlayerResultData for each player. These are saved to db.
+		results = TournamentPlayerResult.objects.build_results_for_backfilled_tournament(
+			player_tournament_placements = player_tournament_placements,
+			tournament_id = tournament_id
+		)
 
 		return tournament
 
@@ -205,13 +227,24 @@ class TournamentManager(models.Manager):
 
 		return tournament
 
-	# Tournament.objects.start_tournament(user, 1)
 	def start_tournament(self, user, tournament_id):
 		tournament = self.get(pk=tournament_id)
 		if tournament.admin != user:
 			raise ValidationError("You cannot update a Tournament if you're not the admin.")
 		if tournament.completed_at is not None:
 			raise ValidationError("You can't start a Tournament that has already been completed.")
+
+		# Delete all the pending invites
+		invites = TournamentInvite.objects.find_pending_invites_for_tournament(tournament.id)
+		for invite in invites:
+			invite.delete()
+			# Delete TournamentPlayer that is associated with the pending invite.
+			TournamentPlayer.objects.remove_player_from_tournament(
+				removed_by_user_id = tournament.admin.id,
+				removed_user_id = invite.send_to.id,
+				tournament_id = tournament.id
+			)
+
 		tournament.started_at = timezone.now()
 		tournament.save(using=self._db)
 		return tournament
@@ -270,6 +303,22 @@ class TournamentManager(models.Manager):
 		total_tournament_value += buyin_amount * num_rebuys
 		return round(Decimal(total_tournament_value), 2)
 
+	"""
+	Return True if all TournamentPlayers have joined.
+	Return False if there are any pending invites.
+	"""
+	def have_all_players_joined_tournament(self, tournament_id):
+		tournament = self.get_by_id(tournament_id)
+		players = TournamentPlayer.objects.get_tournament_players(tournament.id)
+		for player in players:
+			has_joined = TournamentPlayer.objects.has_player_joined_tournament(
+				player_id = player.id,
+				tournament_id = tournament.id
+			)
+			if not has_joined:
+				return False
+		return True
+
 """
 The states a tournament can be in.
 INACTIVE: started_at == None and completed_at == None.
@@ -315,8 +364,18 @@ class Tournament(models.Model):
 
 class TournamentPlayerManager(models.Manager):
 
-	# from tournament.models import TournamentPlayer
-	# TournamentPlayer.objects.create_player_for_tournament(user.id, tourament.id)
+	def join_tournament(self, player):
+		# Delete the invite. Now the player will be considered as "joined" in the tournament.
+		invites = TournamentInvite.objects.find_pending_invites(
+			send_to_user_id = player.user.id,
+			tournament_id = tournament.id
+		)
+		# There should only be one invite but delete them all since its a queryset
+		for invite in invites:
+			invite.delete()
+
+		return player
+
 	def create_player_for_tournament(self, user_id, tournament_id):
 		added_user = User.objects.get_by_id(user_id)
 		tournament = Tournament.objects.get_by_id(tournament_id)
@@ -340,14 +399,15 @@ class TournamentPlayerManager(models.Manager):
 		)
 		player.save(using=self._db)
 
-		# Delete the invite
-		invites = TournamentInvite.objects.find_pending_invites(
-			send_to_user_id = added_user.id,
-			tournament_id = tournament.id
-		)
-		# There should only be one invite but delete them all since its a queryset
-		for invite in invites:
-			invite.delete()
+		# TODO remove
+		# # Delete the invite. Now the player will be considered as "joined" in the tournament.
+		# invites = TournamentInvite.objects.find_pending_invites(
+		# 	send_to_user_id = added_user.id,
+		# 	tournament_id = tournament.id
+		# )
+		# # There should only be one invite but delete them all since its a queryset
+		# for invite in invites:
+		# 	invite.delete()
 
 		return player
 
@@ -426,6 +486,26 @@ class TournamentPlayerManager(models.Manager):
 		except TournamentPlayer.DoesNotExist:
 			return None
 
+	"""
+	Returns True if a player has joined a tournament. They are considered as "joined" if they TournamentInvite does not exist.
+	"""
+	def has_player_joined_tournament(self, tournament_id, player_id):
+		try:
+			player = self.get(id=player_id)
+			tournament = Tournament.objects.get_by_id(tournament_id)
+			if player.tournament != tournament:
+				raise ValidationError("That play is not part of this tournament.")
+			invites = TournamentInvite.objects.find_pending_invites(
+				send_to_user_id = player.user.id,
+				tournament_id = tournament_id
+			)
+			if len(invites) == 0:
+				return True
+			else:
+				return False
+		except TournamentPlayer.DoesNotExist:
+			pass
+		return False
 """
 A player associated with specific tournament.
 """
@@ -485,6 +565,13 @@ class TournamentInviteManager(models.Manager):
 					tournament=tournament
 				)
 				invite.save(using=self._db)
+
+				# Create a TournamentPlayer. Note: The player won't be considered as "Joined" until they accept the invitation.
+				TournamentPlayer.objects.create_player_for_tournament(
+					user_id = send_to.id,
+					tournament_id = tournament.id
+				)
+
 				return invite
 			except Tournament.DoesNotExist:
 				raise ValidationError("The tournament you're inviting to doesn't exist.")
@@ -660,11 +747,15 @@ eliminator: Person who did the eliminating.
 eliminatee: Person who got eliminated.
 
 eliminated_at: When they were eliminated. This is used to calculate placements.
+
+is_backfill: Is this elimination the result of a Tournament backfill? If it is, this TournamentElimination should be
+exluded from any timeline related analytics.
 """
 class TournamentElimination(models.Model):
 	eliminator				= models.ForeignKey(TournamentPlayer, related_name="Eliminator", on_delete=models.CASCADE)	
 	eliminatee				= models.ForeignKey(TournamentPlayer, related_name="Eliminatee", on_delete=models.CASCADE)
 	eliminated_at			= models.DateTimeField(auto_now_add=True)
+	is_backfill 			= models.BooleanField(default=False)
 	
 	objects = TournamentEliminationManager()
 
@@ -741,12 +832,14 @@ class TournamentRebuyManager(models.Manager):
 
 """
 Denotes a "Rebuy" event for a particular TournamentPlayer.
+
+is_backfill: Is this Rebuy the result of a Tournament backfill? If it is, this TournamentRebuy should be
+exluded from any timeline related analytics.
 """
-# from tournament.models import TournamentPlayer
-# tournament.models.TournamentPlayer.objects.create_player_for_tournament(user_id=1, tourament_id=1)
 class TournamentRebuy(models.Model):
 	player					= models.ForeignKey(TournamentPlayer, related_name="player", on_delete=models.CASCADE)	
 	timestamp				= models.DateTimeField(auto_now_add=True)
+	is_backfill 			= models.BooleanField(default=False)
 	
 	objects = TournamentRebuyManager()
 
@@ -778,6 +871,35 @@ class TournamentPlayerResultManager(models.Manager):
 		results = self.get_results_for_tournament(tournament_id)
 		for result in results:
 			result.delete()
+
+	"""
+	Build TournamentPlayerResult's for each player in the Tournament. This is different from
+	build_results_for_tournament because this is used for Tournament backfills. In otherwords,
+	Tournaments that were completed at some point in the past and the admin is just now filling
+	in the data.
+	"""
+	def build_results_for_backfilled_tournament(self, tournament_id, player_tournament_placements):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		if tournament.completed_at == None:
+			raise ValidationError("You cannot build Tournament results until the Tournament is complete.")
+		# First, make sure all these players are part of this tournament.
+		for player_placement in player_tournament_placements:
+			player = TournamentPlayer.objects.get_by_id(player_placement.player_id)
+			if player.tournament != tournament:
+				raise ValidationError(f"{player.user.username} is not part of tournament: {tournament.title}.")
+		
+		# Build the results
+		results = []
+		for player_placement in player_tournament_placements:
+			player = TournamentPlayer.objects.get_by_id(player_placement.player_id)
+			placement = player_placement.placement
+			result = self.create_tournament_backfill_player_result(
+				player = player,
+				placement = placement
+			)
+			results.append(result)
+		return results
+
 
 	def build_results_for_tournament(self, tournament_id):
 		tournament = Tournament.objects.get_by_id(tournament_id)
@@ -874,6 +996,57 @@ class TournamentPlayerResultManager(models.Manager):
 				placement_earnings = Decimal(float(pct) / float(100.00) * float(total_tournament_value))
 		return round(placement_earnings, 2)
 
+	def create_tournament_backfill_player_result(self, player, placement):
+		tournament = player.tournament
+		# Make sure a result doesn't already exist.
+		results = TournamentPlayerResult.objects.get_results_for_user_by_tournament(
+			user_id = player.user.id,
+			tournament_id = tournament.id
+		)
+		# If any exist, delete them.
+		for result in results:
+			result.delete()
+
+		# -- Calculate 'investment' --
+		buyin_amount = tournament.tournament_structure.buyin_amount
+		investment = buyin_amount
+
+		# -- Calculate placement earnings --
+		placement_earnings = 0
+		if placement != DID_NOT_PLACE_VALUE:
+			placement_earnings = self.determine_placement_earnings(
+				tournament = tournament,
+				placement = placement
+			)
+
+		# -- Calculate 'gross_earnings' --
+		# Sum of placement_earnings + bounty_earnings
+		gross_earnings = placement_earnings
+
+		# -- Calculate 'net_earnings' --
+		# Difference of gross_earnings - investment
+		net_earnings = gross_earnings - investment
+
+		print(f"player: {player.user.username}")
+		print(f"placement: {placement}")
+		print(f"placement_earnings: {placement_earnings}")
+		print(f"investment: {investment}")
+		print(f"gross_earnings: {gross_earnings}")
+		print(f"net_earnings: {net_earnings}")
+
+		result = self.model(
+			player = player,
+			tournament = tournament,
+			investment = investment,
+			placement = placement,
+			placement_earnings = placement_earnings,
+			bounty_earnings = round(Decimal(0.00), 2),
+			gross_earnings = gross_earnings,
+			net_earnings = net_earnings
+		)
+		result.save(using=self._db)
+		return result
+
 	def create_tournament_player_result(self, user_id, tournament_id):
 		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
 			user_id = user_id,
@@ -926,7 +1099,7 @@ class TournamentPlayerResultManager(models.Manager):
 
 		# -- Calculate 'net_earnings' --
 		# Difference of gross_earnings - investment
-		investment = buyin_amount + (len(rebuys) * buyin_amount)
+		investment = buyin_amount + (len(rebuys) * buyin_amount) # TODO remove this? Its declared above
 		net_earnings = gross_earnings - investment
 
 		result = self.model(
@@ -952,19 +1125,20 @@ class TournamentPlayerResult(models.Model):
 	# Total amount invested into this tournament. Initial buyin + rebuys
 	investment 					= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
-	# Placement in the tournament (1st, 2nd, etc)
-	placement 					= models.IntegerField()
+	# Placement in the tournament (1st, 2nd, etc). Nullable for backfill Tournaments where it's possible only the paid 
+	# placements show.
+	placement 					= models.IntegerField(blank=True, null=True)
 
 	# Earnings strictle from placement
 	placement_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
-	# Players who were eliminated by this user.
+	# Players who were eliminated by this user. TODO forgot to remove in refactor
 	eliminations 				= models.ManyToManyField(TournamentElimination)
 
 	# Earnings from eliminations (Defaults to 0.00 if not a bounty tournament)
 	bounty_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=True, null=True)
 
-	# Number of times rebought
+	# Number of times rebought TODO forgot to remove in refactor
 	rebuys 						= models.ManyToManyField(TournamentRebuy)
 
 	# bounty_earnings + placement_earnings
@@ -983,6 +1157,7 @@ class TournamentPlayerResult(models.Model):
 
 	"""
 	List of the user_ids of the users who were eliminated.
+	TODO forgot to remove in refactor
 	"""
 	def elimination_ids(self):
 		return [f"{elimination.eliminatee.id}" for elimination in self.eliminations.all()]

@@ -29,6 +29,7 @@
     {% include 'tournament/snippets/tournament_state_text_snippet.html' with tournament=tournament tournament_state=tournament_state %}
     {% if request.user == tournament.admin %}
     <button class="mt-3 btn btn-warning state-action-button" data-bs-toggle="modal" data-bs-target="#id_activate_confirm">Activate Tournament</button>
+    <a class="mt-3 btn btn-primary state-action-button" href="{% url 'tournament:tournament_backfill' pk=tournament.id %}">Backfill Tournament</a>
     {% endif %}
   {% endif %}
 </div>

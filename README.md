@@ -13,7 +13,6 @@ Project for tracking poker stats from tournaments.
 1. Personalized game statistics
 1. TODO... more stuff
 
-
 # TODO
 This is a notes section for me personally.
 1. Backfilling data?...

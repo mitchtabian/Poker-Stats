@@ -1,6 +1,6 @@
 {% load tournament_extras %}
 
-{% if results %}
+{% if results and eliminations_data|length > 0 %}
 
 <div class="eliminations-summary-table  table-responsive">
 	<p class="eliminations-summary-table-header">Elimination Summary</p>
