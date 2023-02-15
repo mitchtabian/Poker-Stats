@@ -157,23 +157,35 @@ class TournamentManager(models.Manager):
 
 	def complete_tournament(self, user, tournament_id):
 		tournament = self.get(pk=tournament_id)
-		if tournament.admin != user:
-			raise ValidationError("You cannot update a Tournament if you're not the admin.")
-		if tournament.started_at is None:
-			raise ValidationError("You can't complete a Tournament that has not been started.")
-		if tournament.completed_at is not None:
-			raise ValidationError("This tournament is already completed.")
+		try:
+			if tournament.admin != user:
+				raise ValidationError("You cannot update a Tournament if you're not the admin.")
+			if tournament.started_at is None:
+				raise ValidationError("You can't complete a Tournament that has not been started.")
+			if tournament.completed_at is not None:
+				raise ValidationError("This tournament is already completed.")
 
-		# Verify every player except 1 has been eliminated. This will raise if false.
-		self.is_completable(tournament_id)
+			# Verify every player except 1 has been eliminated. This will raise if false.
+			self.is_completable(tournament_id)
 
-		tournament.completed_at = timezone.now()
-		tournament.save(using=self._db)
+			tournament.completed_at = timezone.now()
+			tournament.save(using=self._db)
 
-		# Calculate the TournamentPlayerResultData for each player. These are saved to db.
-		results = TournamentPlayerResult.objects.build_results_for_tournament(tournament_id)
+			# Calculate the TournamentPlayerResultData for each player. These are saved to db.
+			results = TournamentPlayerResult.objects.build_results_for_tournament(tournament_id)
 
-		return tournament
+			return tournament
+		except Exception as e:
+			# If anything goes wrong we need to reset the Tournament back into the active state.
+			tournament.completed_at = None
+			tournament.save(using=self._db)
+			# Also delete any results that were generated.
+			results = TournamentPlayerResult.objects.get_results_for_tournament(
+				tournament_id = tournament.id
+			)
+			for result in results:
+				result.delete()
+			raise e
 
 	"""
 	Complete a Tournament that was create via a the backfill process (see tournament.views.tournament_backfill_view).
@@ -1265,9 +1277,6 @@ class TournamentPlayerResultManager(models.Manager):
 			is_backfill = is_backfill
 		)
 		result.save(using=self._db)
-		result.eliminations.add(*eliminations)
-		result.rebuys.add(*rebuys)
-		result.save()
 		return result
 
 class TournamentPlayerResult(models.Model):
@@ -1284,14 +1293,8 @@ class TournamentPlayerResult(models.Model):
 	# Earnings strictle from placement
 	placement_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
-	# Players who were eliminated by this user. TODO forgot to remove in refactor
-	eliminations 				= models.ManyToManyField(TournamentElimination)
-
 	# Earnings from eliminations (Defaults to 0.00 if not a bounty tournament)
 	bounty_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=True, null=True)
-
-	# Number of times rebought TODO forgot to remove in refactor
-	rebuys 						= models.ManyToManyField(TournamentRebuy)
 
 	# bounty_earnings + placement_earnings
 	gross_earnings 				= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
@@ -1310,44 +1313,6 @@ class TournamentPlayerResult(models.Model):
 	def placement_string(self):
 		return build_placement_string(self.placement)
 
-	"""
-	List of the user_ids of the users who were eliminated.
-	TODO forgot to remove in refactor
-	"""
-	def elimination_ids(self):
-		return [f"{elimination.eliminatee.id}" for elimination in self.eliminations.all()]
-
-	"""
-	List the timestamps for each rebuy.
-	"""
-	def rebuy_timestamps(self):
-		return [f"{rebuy.timestamp}" for rebuy in self.rebuys.all()]
-
-
-# class TournamentGroup(models.Model):
-# 	owner					= models.ForeignKey(User, on_delete=models.CASCADE)
-# 	title 					= models.CharField(max_length=254, blank=False, null=False)
-# 	tournaments
-
-
-
-"""
-TESTING...
-from tournament.models import TournamentPlayer
-from tournament.models import Tournament
-from tournament.models import TournamentElimination
-from tournament.models import TournamentStructure
-from user.models import User
-user=User.objects.get_by_email("mitch@tabian.ca")
-user2=User.objects.get_by_email("pokerstats.db@gmail.com")
-user3=User.objects.get_by_email("mitchtabian17@gmail.com")
-tournament=Tournament.objects.get_by_id(1)
-TournamentStructure.objects.create_tournament_struture_test("pokerstats tourny structure", "pokerstats.db@gmail.com", 80, 20, (80,10,10), True)
-Tournament.objects.create_tournament_test("Pokerstats tourny", "pokerstats.db@gmail.com")
-TournamentPlayer.objects.create_player_for_tournament(user.id, tournament.id)
-TournamentElimination.objects.create_elimination(tournament.id,user.id, user2.id)
-TournamentPlayer.objects.rebuy_by_user_id_and_tournament_id(user2.id, tournament.id)
-"""
 
 
 
