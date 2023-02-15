@@ -151,21 +151,22 @@ def join_tournament(request, *args, **kwargs):
 	try:
 		invite = TournamentInvite.objects.get(pk=kwargs['pk'])
 		if invite.send_to != user:
-			messages.error(request, "This invitation wasn't for you.")
+			messages.error(request, "That invitation wasn't for you.")
 			return redirect("home")
 
 		# Get the player and join the Tournament.
 		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-			tournament_id = invite.tournament,
-			user_id = invite.send_to
+			tournament_id = invite.tournament.id,
+			user_id = invite.send_to.id
 		)
 		TournamentPlayer.objects.join_tournament(
 			player = player
 		)
+		return redirect("tournament:tournament_view", pk=invite.tournament.id)
 
 	except Exception as e:
 		messages.error(request, e.args[0])
-	return redirect("tournament:tournament_view", pk=invite.tournament.id)
+	return redirect("home")
 
 """
 Uninvite a player from a tournament.
