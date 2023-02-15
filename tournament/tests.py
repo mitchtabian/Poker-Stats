@@ -1140,7 +1140,7 @@ class TournamentTestCase(TransactionTestCase):
 	"""
 	bounty_amount can be None if not a bounty tournament.
 	"""
-	def verify_result(self, result, placement_string, placement_earnings, rebuy_count, eliminations_count, buyin_amount, bounty_amount):
+	def verify_result(self, result, is_backfill, placement_string, placement_earnings, rebuy_count, eliminations_count, buyin_amount, bounty_amount):
 		if bounty_amount == None:
 			bounty_amount = 0
 		expected_investment = round(buyin_amount + (buyin_amount * rebuy_count), 2)
@@ -1163,6 +1163,7 @@ class TournamentTestCase(TransactionTestCase):
 		self.assertEqual(len(result.eliminations.all()), eliminations_count)
 		self.assertEqual(len(eliminations), eliminations_count)
 		self.assertEqual(result.net_earnings, round(expected_gross_earnings - Decimal(expected_investment), 2))
+		self.assertEqual(result.is_backfill, is_backfill)
 
 	def setUp(self):
 		# Build some users for the tests
@@ -1923,6 +1924,7 @@ class TournamentTestCase(TransactionTestCase):
 			if result.player.id == 9:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "2nd",
 					placement_earnings = Decimal("465.75"),
 					rebuy_count = 1,
@@ -1933,6 +1935,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 8:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -1943,6 +1946,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 7:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 1,
@@ -1953,6 +1957,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 6:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "3rd",
 					placement_earnings = Decimal("310.50"),
 					rebuy_count = 1,
@@ -1963,6 +1968,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 5:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -1973,6 +1979,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 4:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 1,
@@ -1983,6 +1990,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 3:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -1993,6 +2001,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 2:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2003,6 +2012,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 1:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "1st",
 					placement_earnings = Decimal("776.25"),
 					rebuy_count = 2,
@@ -2111,6 +2121,7 @@ class TournamentTestCase(TransactionTestCase):
 			if result.player.id == 9:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "2nd",
 					placement_earnings = Decimal("518.40"),
 					rebuy_count = 1,
@@ -2121,6 +2132,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 8:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2131,6 +2143,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 7:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 1,
@@ -2141,6 +2154,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 6:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "3rd",
 					placement_earnings = Decimal("345.60"),
 					rebuy_count = 1,
@@ -2151,6 +2165,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 5:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2161,6 +2176,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 4:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 1,
@@ -2171,6 +2187,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 3:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2181,6 +2198,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 2:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2191,6 +2209,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 1:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "1st",
 					placement_earnings = Decimal("864"),
 					rebuy_count = 2,
@@ -2288,6 +2307,7 @@ class TournamentTestCase(TransactionTestCase):
 			if result.player.id == 9:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "2nd",
 					placement_earnings = Decimal("311.04"),
 					rebuy_count = 0,
@@ -2298,6 +2318,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 8:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2308,6 +2329,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 7:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2318,6 +2340,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 6:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "3rd",
 					placement_earnings = Decimal("207.36"),
 					rebuy_count = 0,
@@ -2328,6 +2351,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 5:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2338,6 +2362,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 4:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2348,6 +2373,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 3:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2358,6 +2384,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 2:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
@@ -2368,6 +2395,7 @@ class TournamentTestCase(TransactionTestCase):
 			elif result.player.id == 1:
 				self.verify_result(
 					result = result,
+					is_backfill = True,
 					placement_string = "1st",
 					placement_earnings = Decimal("518.40"),
 					rebuy_count = 0,
@@ -2679,7 +2707,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 	Their placement is the key and PlayerPlacementData is the value.
 	This makes it much easier to verify the placements and earnings.
 	"""
-	def build_placement_dict(self, tournament, eliminatee_order, eliminator_order, debug=False):
+	def build_placement_dict(self, is_backfill, tournament, eliminatee_order, eliminator_order, debug=False):
 		players = TournamentPlayer.objects.get_tournament_players(tournament.id)
 		placement_dict = {}
 
@@ -2689,6 +2717,8 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				user_id = player.user.id,
 				tournament_id = tournament.id
 			)[0]
+
+			self.assertEqual(result.is_backfill, is_backfill)
 
 			placement_data = PlayerPlacementData(
 				user_id = result.player.user.id,
@@ -2815,6 +2845,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order
@@ -2879,6 +2910,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order
@@ -2953,6 +2985,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order,
@@ -3018,6 +3051,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order
@@ -3091,6 +3125,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order,
@@ -3166,6 +3201,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order,
@@ -3231,6 +3267,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order
@@ -3388,6 +3425,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		Tournament.objects.complete_tournament(user = cat, tournament_id = tournament.id)
 
 		placement_dict = self.build_placement_dict(
+			is_backfill = False,
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order,
