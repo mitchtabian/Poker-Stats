@@ -18,7 +18,7 @@
       </h2>
 
       <!-- Description -->
-      <div class="mt-4">
+      <div class="mt-4 backfill-description">
         <p>Backfilling data for a tournament that's already completed.</p>
       </div>
 
@@ -27,7 +27,8 @@
       <hr>
       <div class="backfill-display-group">
         {% for position in num_payout_positions_iterator %}
-        <p class="mb-2 mt-4">{{forloop.counter0|format_placement}}</p>
+        <div class="backfill-placement-container {% if forloop.counter0 > 0 %}mt-3{% endif %}">
+        <p class="placement-header">{{forloop.counter0|format_placement}}</p>
         <select class="form-select" aria-label="Who came in {{forloop.counter0|format_placement}}" id="id_player_placement_selector_{{forloop.counter0}}"  onchange="onPlacementChanged('{{forloop.counter0}}')">
           <option value="-1">---------</option>
           {% for player in players %}
@@ -38,7 +39,7 @@
             {% endif %}
           {% endfor %}
         </select>
-
+        </div>
         {% endfor %}
       </div>
 
@@ -48,8 +49,8 @@
       <hr>
       <div class="backfill-display-group">
         {% for player in players %}
-        <div class="player-eliminations-header d-flex flex-row mt-4">
-          <span class="player-eliminations-header-username d-flex">{{player.user.username}}</span>
+        <div class="player-eliminations-header d-flex flex-row {% if forloop.counter0 > 0 %}mt-3{% endif %}">
+          <div class="player-eliminations-header-username">{{player.user.username}}</div>
           {% for eliminator_id,eliminated_players in elim_dict.items %}
           {% if eliminator_id == player.id %}
           <button class="btn eliminations-reset-btn" onclick="resetEliminations('{{player.id}}')">
@@ -254,12 +255,19 @@
 
   @media only screen and (max-width: 500px) {
     .backfill-display-group {
-      margin-bottom: 16px;
-      font-size: 12px;
+/*      margin-bottom: 16px;*/
+      font-size: 16px;
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      padding-top: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
     }
 
     .backfill-display-group-header {
-      margin-top: 16px;
+      font-size: 20px;
+      margin-top: 20px;
     }
 
     .backfill-submit-btn {
@@ -269,6 +277,10 @@
     .elimination-username {
       font-size: 12px;
       vertical-align: middle;
+      max-width: 180px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
     .remove-elimination-btn {
       color: #d9534f;
@@ -286,6 +298,25 @@
       margin-right: 8px;
       font-weight: 500;
       font-size: 16px;
+      max-width: 250px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .placement-header {
+      font-weight: 500;
+      font-size: 16px;
+    }
+
+    .backfill-description {
+      font-size: 14px;
+    }
+
+    .backfill-placement-container {
+      padding: 8px;
+      background-color: white;
+      border-radius: 8px;
     }
   }
 
@@ -294,12 +325,14 @@
       padding-left: 16px;
       padding-right: 16px;
       padding-bottom: 16px;
-      margin-bottom: 16px;
-      margin-top: 16px;
+      padding-top: 16px;
       font-size: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
     }
 
     .backfill-display-group-header {
+      font-size: 23px;
       margin-top: 24px;
     }
 
@@ -310,6 +343,10 @@
     .elimination-username {
       font-size: 16px;
       vertical-align: middle;
+      max-width: 430px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
     .remove-elimination-btn {
       color: #d9534f;
@@ -326,7 +363,26 @@
     .player-eliminations-header-username {
       margin-right: 8px;
       font-weight: 500;
-      font-size: 20px;
+      font-size: 18px;
+      max-width: 450px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .placement-header {
+      font-weight: 500;
+      font-size: 18px;
+    }
+
+    .backfill-description {
+      font-size: 16px;
+    }
+
+    .backfill-placement-container {
+      padding: 8px;
+      background-color: white;
+      border-radius: 8px;
     }
   }
 

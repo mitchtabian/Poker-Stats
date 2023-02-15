@@ -154,12 +154,6 @@ def join_tournament(request, *args, **kwargs):
 			messages.error(request, "This invitation wasn't for you.")
 			return redirect("home")
 
-		# # Create new TournamentPlayer
-		# player = TournamentPlayer.objects.create_player_for_tournament(
-		# 	user_id = invite.send_to.id,
-		# 	tournament_id = invite.tournament.id
-		# )
-
 		# Get the player and join the Tournament.
 		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
 			tournament_id = invite.tournament,

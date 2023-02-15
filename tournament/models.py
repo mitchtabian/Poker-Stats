@@ -303,6 +303,8 @@ class TournamentManager(models.Manager):
 				admin = tournament.admin,
 				tournament_id = tournament.id
 			)
+			# Delete any Tournament results.
+			TournamentPlayerResult.objects.delete_results_for_tournament(tournament.id)
 			tournament.started_at = None
 			tournament.completed_at = None
 			tournament.save(using=self._db)
@@ -910,7 +912,7 @@ class TournamentElimination(models.Model):
 	eliminator				= models.ForeignKey(TournamentPlayer, related_name="Eliminator", on_delete=models.CASCADE)	
 	eliminatee				= models.ForeignKey(TournamentPlayer, related_name="Eliminatee", on_delete=models.CASCADE)
 	eliminated_at			= models.DateTimeField(auto_now_add=True)
-	is_backfill 			= models.BooleanField(default=False)
+	is_backfill				= models.BooleanField(default=False)
 	
 	objects = TournamentEliminationManager()
 
@@ -1017,7 +1019,7 @@ exluded from any timeline related analytics.
 class TournamentRebuy(models.Model):
 	player					= models.ForeignKey(TournamentPlayer, related_name="player", on_delete=models.CASCADE)	
 	timestamp				= models.DateTimeField(auto_now_add=True)
-	is_backfill 			= models.BooleanField(default=False)
+	is_backfill				= models.BooleanField(default=False)
 	
 	objects = TournamentRebuyManager()
 
