@@ -1794,6 +1794,9 @@ class TournamentTestCase(TransactionTestCase):
 		# undo_complete to add some rebuys. This will reset all eliminations so we need to add again.
 		Tournament.objects.undo_complete_tournament(user = cat, tournament_id = tournament.id)
 
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
 		# Eliminate all the players except 1 (cat)
 		eliminate_all_players_except(
 			players = players,
