@@ -15,9 +15,7 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Remove eliminations and rebuys from TournamentPlayerResult? I think these are pointless and adds confusion
 1. undo completion should also deactivate the tournament
-1. Add rebuy undo button in admin view
 1. Are you sure you want to remove?
 1. Add breadcrumb to admin view
 1. Analytics for user

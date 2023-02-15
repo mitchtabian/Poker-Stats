@@ -1,0 +1,52 @@
+<!-- Modal -->
+{% for player in players %}
+  <div class="modal fade" id="id_remove_modal_{{player.id}}" tabindex="-1" aria-labelledby="{{player.user.username}} Remove Modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="id_remove_modal_title">
+            Remove {{player.user.username}}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body d-flex flex-column">
+          Are you sure you want to remove {{player.user.username}} from the tournament?
+        </div>
+        <div class="modal-footer" id="id_elim_model_button_container">
+          <button class="btn btn-danger" onclick="remove('{{player.id}}')">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+<script type="text/javascript">
+
+  function remove(player_id) {
+    // Hide the modal that was in view
+    const modal_id = "#id_remove_modal_" + player_id
+    const modalElement = document.querySelector(modal_id)
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement)
+    modal.hide()
+
+    // Perform the remove
+    const remove_url = "/tournament/remove_player/" + player_id + "/{{tournament.id}}/"
+    fetch(remove_url, {
+     headers: {
+        'Accept': 'application/json'
+     }}
+    ).then(function(data) {
+      if (data.status == 200) {
+        document.location.reload()
+      } else {
+        window.location.replace("{% url 'error' error_message='Removal failed.' %}");
+      }
+    }).catch(function(error) {
+      // Redirect to error page
+      window.location.replace("{% url 'error' error_message='Removal failed.' %}");
+    })
+  }
+
+
+</script>
+

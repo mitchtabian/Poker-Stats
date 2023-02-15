@@ -198,9 +198,10 @@ def remove_player_from_tournament(request, *args, **kwargs):
 	player_id = kwargs['player_id']
 	tournament_id = kwargs['tournament_id']
 	try:
+		player = TournamentPlayer.objects.get_by_id(player_id)
 		TournamentPlayer.objects.remove_player_from_tournament(
 			removed_by_user_id= user.id,
-			removed_user_id=player_id,
+			removed_user_id=player.user.id,
 			tournament_id=tournament_id
 		)
 	except Exception as e:

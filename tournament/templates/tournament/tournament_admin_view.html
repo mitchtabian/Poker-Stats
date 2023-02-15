@@ -8,6 +8,14 @@
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
 
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'tournament:tournament_view' pk=tournament.id %}">Tournament</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Admin view</li>
+      </ol>
+    </nav>
+
       <!-- Admin View title-->
       <h2>Admin View</h2>
       <!-- Tournament Title -->

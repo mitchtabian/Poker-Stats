@@ -2,6 +2,7 @@
 
 {% if tournament.get_state_string == "INACTIVE" %}
 {% if players or invites %}
+
 <div class="mt-3 players-container table-responsive" id="id_players_container">
   <table class="table">
   <thead>
@@ -22,7 +23,7 @@
         <td class="player-row">Joined</td>
         <td class="player-row">
           {% if request.user == tournament.admin and player.user != tournament.admin %}
-          <a hx-post="{% url 'tournament:remove_player' player_id=player.user.id tournament_id=player.tournament.id %}" hx-target="#parent" hx-swap="innerHTML" class="btn btn-danger btn-sm player-action-button">Remove</a>
+          <button class="btn btn-danger player-action-button btn-sm" data-bs-toggle="modal" data-bs-target="#id_remove_modal_{{player.id}}">Remove</button>
           {% elif request.user != tournament.admin and request.user == player.user %}
           <a hx-post="{% url 'tournament:remove_player' player_id=player.user.id tournament_id=player.tournament.id %}" hx-target="#parent" hx-swap="innerHTML" class="btn btn-danger btn-sm player-action-button">Leave</a>
           {% elif request.user == tournament.admin and request.user == player.user %}
@@ -31,6 +32,10 @@
         </td>
       </tr>
       {% endif %}
+
+      <!-- Removal Modals (one for each player) -->
+      {% include 'tournament/snippets/player_remove_modal.html' with players=players %}
+
       {% endfor %}
       {% for invite in invites %}
       <tr>
