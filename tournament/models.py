@@ -362,6 +362,7 @@ class TournamentManager(models.Manager):
 			tournament_id = tournament.id
 		)
 
+		tournament.started_at = None
 		tournament.completed_at = None
 		tournament.save(using=self._db)
 

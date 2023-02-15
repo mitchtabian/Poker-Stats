@@ -1,5 +1,5 @@
 {% if messages %}
-<div class="mx-4">
+<div class="messages-container">
     {% for message in messages %}
     {% if message.tags == 'error' %}
       <div class='alert alert-danger' role="alert">
@@ -16,4 +16,20 @@
     {% endif %}
     {% endfor %}
 </div>
+
+<style type="text/css">
+  @media only screen and (max-width: 500px) {
+        .messages-container {
+          margin-left: 8px;
+          margin-right: 8px;
+        }
+    }
+
+    @media only screen and (min-width: 501px) {
+        .messages-container {
+          margin-left: 16px;
+          margin-right: 16px;
+        }
+    }
+</style>
 {% endif %}
