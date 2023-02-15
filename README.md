@@ -18,22 +18,20 @@ This is a notes section for me personally.
 1. Remove eliminations and rebuys from TournamentPlayerResult? I think these are pointless and adds confusion
 1. undo completion should also deactivate the tournament
 1. Add rebuy undo button in admin view
+1. Are you sure you want to remove?
+1. Add breadcrumb to admin view
 1. Analytics for user
 	1. Accessible from profile
 	1. Shows summary across games
 		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
+1. Setup bugsnag
+1. Publish to website 
+	1. Make sure bugsnag is setup first
+1. Setup Jira for further feature work
 1. TournamentGroup? Think this through with some diagrams
 1. Analaytics based on TournamentGroup
 	- Basically this would just extend the per-user analytics
-1. Are you sure you want to remove?
-1. Make new database diagrams using that thing aaron showed you.
-1. "Guest" feature.
-	- If someone wanted to track their analytics and the people they were playing with do not use the site.
-	- Also for backfilling, not everyone may have registered or something
-	- Also need some kind of mechanism for going back into a completed Tournament and assigning a user to a guest. Like if you finished a tournament with a guest you could go back and assign a real user to it
-	- Ability to give the Guest a temporary name. Just a string.
-1. Update diagrams to include TournamentRebuy
-1. Setup bugsnag
+
 
 ## TODO (after app is fully functional)
 1. Optimize everything for mobile. (I think this is already done, but confirm)
@@ -48,6 +46,11 @@ This is a notes section for me personally.
 1. Add splitting feature
 1. Shareable invite link to a tournament? If user has no registered then they are prompted to before joining.
 1. Create Jira project with an email from whatever domain I end up using.
+1. "Guest" feature. Dunno if I really want this it would be very complicated. PRobably something to think about after launch.
+	- If someone wanted to track their analytics and the people they were playing with do not use the site.
+	- Also for backfilling, not everyone may have registered or something
+	- Also need some kind of mechanism for going back into a completed Tournament and assigning a user to a guest. Like if you finished a tournament with a guest you could go back and assign a real user to it
+	- Ability to give the Guest a temporary name. Just a string.
 
 # Resources
 1. django-allauth

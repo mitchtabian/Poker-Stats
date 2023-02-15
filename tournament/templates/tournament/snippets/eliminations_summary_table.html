@@ -23,18 +23,22 @@
       </tr>
     </thead>
     <tbody>
-    	{% for result in results %}
+    	{% for data in eliminations_data %}
 	    <tr>
 	      <td scope="row">
 	      	<div class="eliminations-summary-table-row">
 	      		<div class="eliminations-summary-table-username">
-	      			{{result.player.user.username}}
+	      			{{data.player_username}}
 	      		</div>
 	      	</div>
       	</td>
-	      <td><div class="eliminations-summary-table-row">{{result.elimination_ids|length|format_table_number}}</div></td>
+	      <td><div class="eliminations-summary-table-row">{{data.eliminated_player_usernames|length|format_table_number}}</div></td>
 	      {% if tournament.tournament_structure.bounty_amount != None %}
-	      <td><div class="eliminations-summary-table-row earnings-row" style="color: {{result.bounty_earnings|format_table_number_color}}; font-weight: {{result.bounty_earnings|format_number_weight}}">{{result.bounty_earnings|format_money}}</div></td>
+	      <td>
+	      	<div class="eliminations-summary-table-row earnings-row" style="color: {{data.bounty_earnings|format_table_number_color}}; font-weight: {{data.bounty_earnings|format_number_weight}}">
+	      		{{data.bounty_earnings|format_money}}
+	      	</div>
+	      </td>
 	      {% endif %}
 	    </tr>
 	    {% endfor %}

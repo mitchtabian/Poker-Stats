@@ -89,7 +89,7 @@ class TournamentPlayerResultAdmin(admin.ModelAdmin):
         (None, {'fields': ('player', 'tournament', 'net_earnings', 'gross_earnings', 'placement')}),
     )
 
-    list_display = ('player', 'tournament', 'net_earnings', 'placement', 'gross_earnings', 'elimination_ids')
+    list_display = ('player', 'tournament', 'net_earnings', 'placement', 'gross_earnings')
     search_fields = ('player', 'tournament',)
 
 

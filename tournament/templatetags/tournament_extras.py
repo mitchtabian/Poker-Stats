@@ -2,7 +2,7 @@ from decimal import Decimal
 from django import template
 from django.template.defaultfilters import stringfilter
 
-from tournament.models import TournamentPlayer
+from tournament.models import TournamentPlayer, TournamentRebuy
 from tournament.util import build_placement_string
 
 register = template.Library()
@@ -15,13 +15,13 @@ Ex: 5.56 -> $5.67
 @register.filter(name='format_money')
 @stringfilter
 def format_money(money_string):
-	if money_string == "0.00":
+	if money_string == "0.00" or money_string == "0.0" or money_string == "0":
 		return "--"
 	else:
-		money_value = Decimal(money_string)
+		money_value = round(Decimal(money_string), 2)
 		if money_value < 0:
 			return f"-${abs(money_value)}"
-		return f"${money_string}"
+		return f"${money_value}"
 
 """
 Used to format a number such that '0' becomes '--'.
@@ -110,7 +110,7 @@ def format_joined_status_color(has_joined):
 		return "#f0ad4e"
 
 """
-..
+get a value from a dictionary.
 """
 @register.filter
 def keyvalue(dictionary, key):
@@ -120,13 +120,20 @@ def keyvalue(dictionary, key):
 		return ''
 
 """
-..
+Does a value exist in a list.
 """
 @register.filter
 def does_value_exist_in_list(data_list, value):
 	return value in data_list
 
 
+"""
+Get the number of rebuys for a TournamentPlayer.
+"""
+@register.filter
+def get_rebuys_for_player(player):
+	rebuys = TournamentRebuy.objects.get_rebuys_for_player(player)
+	return rebuys
 
 
 

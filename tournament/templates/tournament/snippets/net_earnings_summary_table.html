@@ -41,7 +41,7 @@
 			    	</div>
 	    	</td>
 	    	{% if tournament.tournament_structure.allow_rebuys == True %}
-	    	<td><div class="net-earnings-table-row">{{result.rebuy_timestamps|length|format_table_number}}</div></td>
+	    	<td><div class="net-earnings-table-row">{{result.player|get_rebuys_for_player|length|format_table_number}}</div></td>
 	    	{% endif %}
       	<td><div class="net-earnings-table-row text-danger">-{{result.investment|format_money}}</div></td>
 	      <td><div class="net-earnings-table-row earnings-row" style="color: {{result.net_earnings|format_table_number_color}}; font-weight: {{result.net_earnings|format_number_weight}}">{{result.net_earnings|format_money}}</div></td>

@@ -37,6 +37,9 @@ class PlayerEliminationsData:
 	# username's of the players that were eliminated.
 	eliminated_player_usernames: list[str]
 
+	# Amount earned from bounties
+	bounty_earnings: float
+
 def build_placement_string(placement):
 	if placement == 0:
 		return "1st"
@@ -75,10 +78,15 @@ def build_player_eliminations_data_from_eliminations(eliminator, eliminations):
 	for elimination in eliminations:
 		eliminated_usernames.append(elimination.eliminatee.user.username)
 	if len(eliminated_usernames) > 0:
+		bounty_amount = eliminator.tournament.tournament_structure.bounty_amount
+		bounty_earnings = 0
+		if bounty_amount != None:
+			bounty_earnings = float(bounty_amount) * float(len(eliminated_usernames))
 		data = PlayerEliminationsData(
 			player_id = eliminator.id,
 			player_username = eliminator.user.username,
-			eliminated_player_usernames = eliminated_usernames
+			eliminated_player_usernames = eliminated_usernames,
+			bounty_earnings = bounty_earnings
 		)
 		return data
 	return None
