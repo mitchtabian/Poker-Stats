@@ -22,6 +22,7 @@ from tournament.test_util import (
 	PlayerPlacementData,
 	rebuy_for_test
 )
+from tournament.util import PlayerTournamentPlacement, build_placement_string
 from user.models import User
 from user.test_util import (
 	create_users,
@@ -72,6 +73,20 @@ class TournamentInvitesTestCase(TransactionTestCase):
 		)
 		self.assertEqual(len(invites), 1)
 		self.assertEqual(invites[0].send_to, users[1])
+
+		# Verify a TournamentPlayer is created
+		player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = users[1].id
+		)
+		self.assertEqual(player.user.id, users[1].id)
+
+		# Verify has_joined_tournament is False because they haven't accepted the invite.
+		has_joined_tournament = TournamentPlayer.objects.has_player_joined_tournament(
+			tournament_id = tournament.id,
+			player_id = player.id
+		)
+		self.assertEqual(has_joined_tournament, False)
 
 	"""
 	Verify cannot send duplicate invites
@@ -309,6 +324,14 @@ class TournamentInvitesTestCase(TransactionTestCase):
 		)
 		self.assertEqual(len(invites), 0)
 
+		# Verify the TournamentPlayer's were deleted except the admin
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		self.assertEqual(len(players), 1)
+		self.assertEqual(players[0].user, admin)
+
+
 class TournamentPlayersTestCase(TransactionTestCase):
 
 	# Reset primary keys after each test function run
@@ -332,6 +355,69 @@ class TournamentPlayersTestCase(TransactionTestCase):
 		users = create_users(
 			identifiers = ["cat", "dog", "monkey", "bird", "donkey", "elephant", "gator", "insect", "racoon"]
 		)
+
+	"""
+	Verify join_tournament
+	"""
+	def test_join_tournament(self):
+		users = User.objects.all()
+		admin = User.objects.get_by_username("cat")
+		tournament = self.setup_tournament(
+			admin = admin,
+			allow_rebuys = False
+		)
+
+		# send invitations
+		for user in users:
+			if user.username != "cat":
+				TournamentInvite.objects.send_invite(
+					sent_from_user_id = admin.id,
+					send_to_user_id = user.id,
+					tournament_id = tournament.id
+				)
+
+		# Verify all users were invited
+		invites = TournamentInvite.objects.find_pending_invites_for_tournament(
+			tournament_id = tournament.id
+		)
+		self.assertEqual(len(invites), 8)
+
+		# join everyone except users[8]
+		for invite in invites:
+			if invite.send_to != users[8]:
+				player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+					tournament_id = tournament.id,
+					user_id = invite.send_to.id
+				)
+				TournamentPlayer.objects.join_tournament(
+					player = player
+				)
+
+		# Verify all invitations were removed except users[8] invitation.
+		invites = TournamentInvite.objects.find_pending_invites_for_tournament(
+			tournament_id = tournament.id
+		)
+		self.assertEqual(len(invites), 1)
+		self.assertEqual(invites[0].send_to, users[8])
+
+		# Verify the TournamentPlayer's have has_joined_tournament == True except users[8]
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		self.assertEqual(len(players), 9)
+		for player in players:
+			if player.user == users[8]:
+				has_joined_tournament = TournamentPlayer.objects.has_player_joined_tournament(
+					tournament_id = tournament.id,
+					player_id = player.id
+				)
+				self.assertEqual(has_joined_tournament, False)
+			else:
+				has_joined_tournament = TournamentPlayer.objects.has_player_joined_tournament(
+					tournament_id = tournament.id,
+					player_id = player.id
+				)
+				self.assertEqual(has_joined_tournament, True)
 
 	"""
 	Verify the players are added correctly to the Tournament.
@@ -1035,6 +1121,49 @@ class TournamentTestCase(TransactionTestCase):
 		)
 		return tournament
 
+	"""
+	Verify any error occurs, the follow must happen:
+		1. eliminations deleted
+		2. rebuys deleted
+		3. Tournament.started_at = None
+		4. Tournament.completed_at = None
+	"""
+	def verify_tournament_reset(self, tournament_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		self.assertEqual(tournament.completed_at, None)
+		self.assertEqual(tournament.started_at, None)
+		rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(tournament.id)
+		self.assertEqual(len(rebuys), 0)
+		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
+		self.assertEqual(len(eliminations), 0)
+
+	"""
+	bounty_amount can be None if not a bounty tournament.
+	"""
+	def verify_result(self, result, placement_string, placement_earnings, rebuy_count, eliminations_count, buyin_amount, bounty_amount):
+		if bounty_amount == None:
+			bounty_amount = 0
+		expected_investment = round(buyin_amount + (buyin_amount * rebuy_count), 2)
+		expected_bounty_earnings = round(bounty_amount * eliminations_count, 2)
+		expected_placement_earnings = placement_earnings
+		expected_gross_earnings = round(expected_placement_earnings + expected_bounty_earnings, 2)
+		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+			player = result.player
+		)
+		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+			player_id = result.player.id
+		)
+		self.assertEqual(result.investment, expected_investment)
+		self.assertEqual(build_placement_string(result.placement), placement_string)
+		self.assertEqual(result.placement_earnings, expected_placement_earnings)
+		self.assertEqual(len(result.rebuys.all()), rebuy_count)
+		self.assertEqual(len(rebuys), rebuy_count)
+		self.assertEqual(result.bounty_earnings, expected_bounty_earnings)
+		self.assertEqual(result.gross_earnings, expected_gross_earnings)
+		self.assertEqual(len(result.eliminations.all()), eliminations_count)
+		self.assertEqual(len(eliminations), eliminations_count)
+		self.assertEqual(result.net_earnings, round(expected_gross_earnings - Decimal(expected_investment), 2))
+
 	def setUp(self):
 		# Build some users for the tests
 		users = create_users(
@@ -1695,6 +1824,815 @@ class TournamentTestCase(TransactionTestCase):
 		expected_value = round(Decimal(1958.40), 2)
 		self.assertEqual(value, expected_value)
 
+	"""
+	Verify completing a tournament for backfill is successful.
+	Bounties: Enabled
+	Rebuys: Enabled
+	"""
+	def test_complete_tournament_for_backfill_bounty_enabled_rebuy_enabled(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		buyin_amount = 115.20
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = buyin_amount,
+			bounty_amount = 11.7,
+			payout_percentages = [50, 30, 20],
+			allow_rebuys = True
+		)
+
+		# Create tournament
+		tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		# --- Placements ----
+		player_tournament_placements = [
+			# First
+			PlayerTournamentPlacement(
+				player_id = 1,
+				placement = 0,
+			),
+
+			# Second
+			PlayerTournamentPlacement(
+				player_id = 9,
+				placement = 1,
+			),
+
+			# Third
+			PlayerTournamentPlacement(
+				player_id = 6,
+				placement = 2,
+			),
+		]
+
+		# --- Eliminations ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("id")
+		elim_dict = {
+			# cat eliminates player3, player4, player5
+			1: [players[2], players[3], players[4]],
+
+			# player2 eliminates player9 (twice), player1, player4, player6
+			2: [players[8], players[0], players[3], players[8], players[5]],
+
+			# player5 eliminates player7, player6, player2
+			5: [players[6], players[5], players[1]],
+
+			# player7 eliminates player8
+			7: [players[7]],
+
+			# player8 eliminates player1
+			8: [players[0]],
+
+			# player9 eliminates player7
+			9: [players[6]],
+		}
+
+		# Execute the backfill
+		Tournament.objects.complete_tournament_for_backfill(
+			user = tournament.admin,
+			tournament_id = tournament.id,
+			player_tournament_placements = player_tournament_placements,
+			elim_dict = elim_dict
+		)
+
+		results = TournamentPlayerResult.objects.get_results_for_tournament(
+			tournament_id = tournament.id
+		)
+
+		buyin_amount = Decimal(115.20)
+		bounty_amount = Decimal(11.70)
+		for result in results:
+			self.assertEqual(result.is_backfill, True)
+			if result.player.id == 9:
+				self.verify_result(
+					result = result,
+					placement_string = "2nd",
+					placement_earnings = Decimal("465.75"),
+					rebuy_count = 1,
+					eliminations_count = 1,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 8:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 1,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 7:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 1,
+					eliminations_count = 1,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 6:
+				self.verify_result(
+					result = result,
+					placement_string = "3rd",
+					placement_earnings = Decimal("310.50"),
+					rebuy_count = 1,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 5:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 3,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 4:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 1,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 3:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 2:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 5,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 1:
+				self.verify_result(
+					result = result,
+					placement_string = "1st",
+					placement_earnings = Decimal("776.25"),
+					rebuy_count = 2,
+					eliminations_count = 3,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+
+	"""
+	Verify completing a tournament for backfill is successful.
+	Bounties: Disabled
+	Rebuys: Enabled
+	"""
+	def test_complete_tournament_for_backfill_success_bounty_disabled_rebuy_enabled(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		buyin_amount = 115.20
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = buyin_amount,
+			bounty_amount = None,
+			payout_percentages = [50, 30, 20],
+			allow_rebuys = True
+		)
+
+		# Create tournament
+		tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		# --- Placements ----
+		player_tournament_placements = [
+			# First
+			PlayerTournamentPlacement(
+				player_id = 1,
+				placement = 0,
+			),
+
+			# Second
+			PlayerTournamentPlacement(
+				player_id = 9,
+				placement = 1,
+			),
+
+			# Third
+			PlayerTournamentPlacement(
+				player_id = 6,
+				placement = 2,
+			),
+		]
+
+		# --- Eliminations ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("id")
+		elim_dict = {
+			# cat eliminates player3, player4, player5
+			1: [players[2], players[3], players[4]],
+
+			# player2 eliminates player9 (twice), player1, player4, player6
+			2: [players[8], players[0], players[3], players[8], players[5]],
+
+			# player5 eliminates player7, player6, player2
+			5: [players[6], players[5], players[1]],
+
+			# player7 eliminates player8
+			7: [players[7]],
+
+			# player8 eliminates player1
+			8: [players[0]],
+
+			# player9 eliminates player7
+			9: [players[6]],
+		}
+
+		# Execute the backfill
+		Tournament.objects.complete_tournament_for_backfill(
+			user = tournament.admin,
+			tournament_id = tournament.id,
+			player_tournament_placements = player_tournament_placements,
+			elim_dict = elim_dict
+		)
+
+		results = TournamentPlayerResult.objects.get_results_for_tournament(
+			tournament_id = tournament.id
+		)
+
+		buyin_amount = Decimal(115.20)
+		bounty_amount = None
+		# 1728
+		for result in results:
+			self.assertEqual(result.is_backfill, True)
+			if result.player.id == 9:
+				self.verify_result(
+					result = result,
+					placement_string = "2nd",
+					placement_earnings = Decimal("518.40"),
+					rebuy_count = 1,
+					eliminations_count = 1,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 8:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 1,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 7:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 1,
+					eliminations_count = 1,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 6:
+				self.verify_result(
+					result = result,
+					placement_string = "3rd",
+					placement_earnings = Decimal("345.60"),
+					rebuy_count = 1,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 5:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 3,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 4:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 1,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 3:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 2:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 5,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 1:
+				self.verify_result(
+					result = result,
+					placement_string = "1st",
+					placement_earnings = Decimal("864"),
+					rebuy_count = 2,
+					eliminations_count = 3,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+
+	"""
+	Verify completing a tournament for backfill is successful.
+	Bounties: Disabled
+	Rebuys: Disabled
+	"""
+	def test_complete_tournament_for_backfill_success_bounty_disabled_rebuy_disabled(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		buyin_amount = 115.20
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = buyin_amount,
+			bounty_amount = None,
+			payout_percentages = [50, 30, 20],
+			allow_rebuys = False
+		)
+
+		# Create tournament
+		tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		# --- Placements ----
+		player_tournament_placements = [
+			# First
+			PlayerTournamentPlacement(
+				player_id = 1,
+				placement = 0,
+			),
+
+			# Second
+			PlayerTournamentPlacement(
+				player_id = 9,
+				placement = 1,
+			),
+
+			# Third
+			PlayerTournamentPlacement(
+				player_id = 6,
+				placement = 2,
+			),
+		]
+
+		# --- Eliminations ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("id")
+		elim_dict = {
+			1: [players[2], players[4]],
+			2: [players[8], players[3],  players[5]],
+			5: [],
+			7: [players[7], players[1]],
+			8: [],
+			9: [players[6]],
+		}
+
+		# Execute the backfill
+		Tournament.objects.complete_tournament_for_backfill(
+			user = tournament.admin,
+			tournament_id = tournament.id,
+			player_tournament_placements = player_tournament_placements,
+			elim_dict = elim_dict
+		)
+
+		results = TournamentPlayerResult.objects.get_results_for_tournament(
+			tournament_id = tournament.id
+		)
+
+		buyin_amount = Decimal(115.20)
+		bounty_amount = None
+		# 1036.80
+		for result in results:
+			self.assertEqual(result.is_backfill, True)
+			if result.player.id == 9:
+				self.verify_result(
+					result = result,
+					placement_string = "2nd",
+					placement_earnings = Decimal("311.04"),
+					rebuy_count = 0,
+					eliminations_count = 1,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 8:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 7:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 2,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 6:
+				self.verify_result(
+					result = result,
+					placement_string = "3rd",
+					placement_earnings = Decimal("207.36"),
+					rebuy_count = 0,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 5:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 4:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 3:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 0,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 2:
+				self.verify_result(
+					result = result,
+					placement_string = "--",
+					placement_earnings = Decimal("0.00"),
+					rebuy_count = 0,
+					eliminations_count = 3,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+			elif result.player.id == 1:
+				self.verify_result(
+					result = result,
+					placement_string = "1st",
+					placement_earnings = Decimal("518.40"),
+					rebuy_count = 0,
+					eliminations_count = 2,
+					buyin_amount = buyin_amount,
+					bounty_amount = bounty_amount
+				)
+
+	"""
+	Verify if placements aren't added correctly this fails.
+	"""
+	def test_complete_tournament_error_placements_not_added(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		buyin_amount = 115.20
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = buyin_amount,
+			bounty_amount = 11.7,
+			payout_percentages = [50, 30, 20],
+			allow_rebuys = True
+		)
+
+		# Create tournament
+		tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		# --- Placements ----
+		player_tournament_placements = [
+			# First
+			PlayerTournamentPlacement(
+				player_id = 1,
+				placement = 0,
+			),
+
+			# Second
+			PlayerTournamentPlacement(
+				player_id = 9,
+				placement = 1,
+			),
+
+			# Missing third placement!
+		]
+
+		# --- Eliminations ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("id")
+		elim_dict = {
+			# cat eliminates player3, player4, player5
+			1: [players[2], players[3], players[4]],
+
+			# player2 eliminates player9 (twice), player1, player4, player6
+			2: [players[8], players[0], players[3], players[8], players[5]],
+
+			# player5 eliminates player7, player6, player2
+			5: [players[6], players[5], players[1]],
+
+			# player7 eliminates player8
+			7: [players[7]],
+
+			# player8 eliminates player1
+			8: [players[0]],
+
+			# player9 eliminates player7
+			9: [players[6]],
+		}
+
+		with self.assertRaisesMessage(ValidationError, "The tournament structure requires you select 3 players who placed in the tournament."):
+			Tournament.objects.complete_tournament_for_backfill(
+				user = tournament.admin,
+				tournament_id = tournament.id,
+				player_tournament_placements = player_tournament_placements,
+				elim_dict = elim_dict
+			)
+		self.verify_tournament_reset(tournament.id)
+
+	"""
+	Verify if the same player is specified for multiple placements, we fail.
+	"""
+	def test_complete_tournament_error_same_player_multiple_placements(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		buyin_amount = 115.20
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = buyin_amount,
+			bounty_amount = 11.7,
+			payout_percentages = [50, 30, 20],
+			allow_rebuys = True
+		)
+
+		# Create tournament
+		tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		# --- Placements ----
+		player_tournament_placements = [
+			# First
+			PlayerTournamentPlacement(
+				player_id = 1,
+				placement = 0,
+			),
+
+			# Second
+			PlayerTournamentPlacement(
+				player_id = 9,
+				placement = 1,
+			),
+
+			# Third (SAME PLAYER AS second)
+			PlayerTournamentPlacement(
+				player_id = 9,
+				placement = 2,
+			),
+		]
+
+		# --- Eliminations ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("id")
+		elim_dict = {
+			# cat eliminates player3, player4, player5
+			1: [players[2], players[3], players[4]],
+
+			# player2 eliminates player9 (twice), player1, player4, player6
+			2: [players[8], players[0], players[3], players[8], players[5]],
+
+			# player5 eliminates player7, player6, player2
+			5: [players[6], players[5], players[1]],
+
+			# player7 eliminates player8
+			7: [players[7]],
+
+			# player8 eliminates player1
+			8: [players[0]],
+
+			# player9 eliminates player7
+			9: [players[6]],
+		}
+
+		with self.assertRaisesMessage(ValidationError, "You can't specify the same player for multiple placements."):
+			Tournament.objects.complete_tournament_for_backfill(
+				user = tournament.admin,
+				tournament_id = tournament.id,
+				player_tournament_placements = player_tournament_placements,
+				elim_dict = elim_dict
+			)
+		self.verify_tournament_reset(tournament.id)
+
+	"""
+	Verify if a player did not win, they were eliminated at least once.
+	"""
+	def test_complete_tournament_error_if_player_did_not_win_must_be_eliminated(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		buyin_amount = 115.20
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = buyin_amount,
+			bounty_amount = 11.7,
+			payout_percentages = [50, 30, 20],
+			allow_rebuys = True
+		)
+
+		# Create tournament
+		tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		# --- Placements ----
+		player_tournament_placements = [
+			# First
+			PlayerTournamentPlacement(
+				player_id = 1,
+				placement = 0,
+			),
+
+			# Second
+			PlayerTournamentPlacement(
+				player_id = 9,
+				placement = 1,
+			),
+
+			# Third
+			PlayerTournamentPlacement(
+				player_id = 3,
+				placement = 2,
+			),
+		]
+
+		# --- Eliminations ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("id")
+		elim_dict = {
+			# cat eliminates player3, player4, player5
+			1: [players[2], players[3], players[4]],
+
+			# player2 eliminates player9 (twice), player1, player4, player6
+			2: [players[8], players[0], players[3], players[8], players[5]],
+
+			# player5 eliminates player7, player6, player2
+			5: [players[6], players[5], players[1]],
+
+			7: [],
+
+			# player8 eliminates player1
+			8: [players[0]],
+
+			# player9 eliminates player7
+			9: [players[6]],
+		}
+
+		# Note: players[7] was never eliminated and they did not win. So error will throw.
+		with self.assertRaisesMessage(ValidationError, f"{players[7].user.username} did not win, they must have been eliminated at least once."):
+			Tournament.objects.complete_tournament_for_backfill(
+				user = tournament.admin,
+				tournament_id = tournament.id,
+				player_tournament_placements = player_tournament_placements,
+				elim_dict = elim_dict
+			)
+		self.verify_tournament_reset(tournament.id)
+		
 
 
 class TournamentPlayerResultTestCase(TransactionTestCase):

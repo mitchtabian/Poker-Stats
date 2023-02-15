@@ -16,6 +16,9 @@ Project for tracking poker stats from tournaments.
 # TODO
 This is a notes section for me personally.
 1. Backfilling data?...
+	1. IMprove the UI in backfill view?
+
+1. Add rebuy undo button in admin view
 1. Analytics for user
 	1. Accessible from profile
 	1. Shows summary across games

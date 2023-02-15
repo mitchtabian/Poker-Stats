@@ -26,25 +26,20 @@
       <h2 class="backfill-display-group-header">Placements</h2>
       <hr>
       <div class="backfill-display-group">
-        <form method="POST">
-          {% csrf_token %}
-          {% for placement in tournament.tournament_structure.payout_percentages %}
-          <p class="mb-2 mt-4">{{forloop.counter0|format_placement}}</p>
-          <select class="form-select" aria-label="Who came in {{forloop.counter0|format_placement}}" id="id_player_placement_selector_{{forloop.counter0}}"  onchange="onPlacementChanged('{{forloop.counter0}}')">
-            <option value="-1">---------</option>
-            {% for player in players %}
-            <option value="{{player.id}}">{{player.user.username}}</option>
-            {% endfor %}
-          </select>
-
-
-          <!-- Add invisible input for each placement. It holds the TournamentPlayer.id once set -->
-          <input class="d-none" id="id_{{forloop.counter0}}_player_id_input" name="{{forloop.counter0}}_player_id_input">
+        {% for position in num_payout_positions_iterator %}
+        <p class="mb-2 mt-4">{{forloop.counter0|format_placement}}</p>
+        <select class="form-select" aria-label="Who came in {{forloop.counter0|format_placement}}" id="id_player_placement_selector_{{forloop.counter0}}"  onchange="onPlacementChanged('{{forloop.counter0}}')">
+          <option value="-1">---------</option>
+          {% for player in players %}
+            {% if placements_dict|keyvalue:position == player.id|stringformat:"i" %}
+              <option value="{{player.id}}" selected>{{player.user.username}}</option>
+            {% else %}
+              <option value="{{player.id}}">{{player.user.username}}</option>
+            {% endif %}
           {% endfor %}
-          <div class="d-flex flex-row justify-content-end">
-            <button class="btn btn-primary backfill-submit-btn" type="submit">Save</button>
-          </div>
-        </form>
+        </select>
+
+        {% endfor %}
       </div>
 
       {% if tournament.tournament_structure.bounty_amount != None %}
@@ -52,48 +47,58 @@
       <h2 class="backfill-display-group-header">Eliminations</h2>
       <hr>
       <div class="backfill-display-group">
-        {% for key,value in elim_dict.items %}
-          <p class="text-danger">{{key}}, {{value}}</p>
-        {% endfor %}
         {% for player in players %}
-          <h6 class="mt-4">{{player.user.username}}</h6>
-          <div class="player-eliminations-group">
-            <ul class="list-group">
-              {% for eliminator_id,eliminated_players in elim_dict.items %}
-              {% if eliminator_id == player.id %}
-                {% for eliminated_player in eliminated_players %}
-                <li class="list-group-item list-group-item-action elimination-list-group-item" onclick="removeElimination('{{eliminator_id}}','{{eliminated_player.id}}')">
-                  <div class="d-flex flex-row align-items-middle" >
-                    <div class="remove-elimination-btn">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
-                      </svg>
-                    </div>
-                    <div class="elimination-username">{{eliminated_player.user.username}}<div>
-                  </div>
-                </li>
-                {% endfor %}
-              {% endif %}
-              {% endfor %}
+        <div class="player-eliminations-header d-flex flex-row mt-4">
+          <span class="player-eliminations-header-username d-flex">{{player.user.username}}</span>
+          {% for eliminator_id,eliminated_players in elim_dict.items %}
+          {% if eliminator_id == player.id %}
+          <button class="btn eliminations-reset-btn" onclick="resetEliminations('{{player.id}}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-arrow-clockwise " viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+            </svg>
+          </button>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="player-eliminations-group">
+          {% for eliminator_id,eliminated_players in elim_dict.items %}
+          {% if eliminator_id == player.id %}
+            <ul class="list-group player-eliminations-list">
+            {% for eliminated_player in eliminated_players %}
+            <li class="list-group-item elimination-list-group-item">
+              <div class="elimination-username">{{eliminated_player.user.username}}<div>
+            </li>
+            {% endfor %}
             </ul>
-          </div>
-          <!-- Empty selector for adding more -->
-          <div class="elim-selector-group mt-3">
-            <select class="form-select" aria-label="Selected eliminations for {{player.user.username}}" id="id_{{player.id}}_new_elim" onchange="selectElimination('{{player.id}}')">
-              <option value="-1" selected>------</option>
-              {% for player_selector_value in players %}
-              {% if player.id != player_selector_value.id %}
-                <option value="{{player_selector_value.id}}">{{player_selector_value.user.username}}</option>
-              {% endif %}
-              {% endfor %}
-            </select>
-          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <!-- Empty selector for adding more -->
+        <div class="elim-selector-group mt-3">
+          <select class="form-select" aria-label="Selected eliminations for {{player.user.username}}" id="id_{{player.id}}_new_elim" onchange="selectElimination('{{player.id}}')">
+            <option value="-1" selected> -------- </option>
+            {% for player_selector_value in players %}
+            {% if player.id != player_selector_value.id %}
+            <option value="{{player_selector_value.id}}">{{player_selector_value.user.username}}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
         {% endfor %}
       </div>
       {% endif %}
 
-      <!-- Hidden htmx button-->
-      <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#parent" name="elimination_json" value="{{json_dict}}"></button>
+      <!-- Submit button for saving -->
+      <form method="POST">
+        {% csrf_token %}
+        <!-- Hidden htmx input -->
+        <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#parent" name="data_json" value="{{json_dict}}"></button>
+        <div class="d-flex flex-row justify-content-end">
+          <button class="btn btn-primary backfill-submit-btn" type="submit">Save</button>
+        </div>
+      </form>
 
     </div>
   </div>
@@ -112,27 +117,52 @@
 <script type="text/javascript">
 
   /**
-   * Data payload sent to view containing eliminations data.
+   * Data payload sent to view containing eliminations and placements data.
    * Sent using htmx.
-   * [
-   *  {
-   *   "player_id": "1",
-   *   "eliminatee_id": "25"
-   *  },
-   *  {
-   *   "player_id": "2",
-   *   "eliminatee_id": "1"
-   *  },
-   *  {
-   *   "player_id": "1",
-   *   "eliminatee_id": "2"
-   *  },
+   * {
+   *   "placements": {
+   *     "0": "<player_id>", <-- first
+   *     "1": "<player_id>", <-- second
+   *     etc...
+   *   },
+   *   "eliminations": [
+   *    {
+   *     "eliminator_id": "1",
+   *     "eliminatee_id": "25"
+   *    },
+   *    {
+   *     "eliminator_id": "2",
+   *     "eliminatee_id": "1"
+   *    },
+   *    {
+   *     "eliminator_id": "1",
+   *     "eliminatee_id": "2"
+   *    },
    *   ... etc
-   * ]
-   *
-   * The view will build a dict where the player id the key and the the value is a list of all
-   *  the TournamentPlayer's they eliminated.
+   *   ]
+   * }
    * */
+
+  function onPlacementChanged(placement) {
+    var selector_id = "id_player_placement_selector_" + placement
+    var options = document.getElementById(selector_id).querySelectorAll("option");
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].selected) {
+        var htmx_button = document.getElementById("id_hidden_htmx_data")
+        var player_id = options[index].value
+        var jsonData = getJsonFromHtmxField()
+        if (jsonData == null) {
+          jsonData = buildNewDataJson()
+          jsonData['placements'][placement] = player_id
+        } else {
+          jsonData['placements'][placement] = player_id
+        }
+        htmx_button.value = JSON.stringify(jsonData)
+        htmx_button.click()
+        break
+      }
+    }
+  }
 
   function selectElimination(player_id) {
     var selector_id = "id_" + player_id + "_new_elim"
@@ -140,39 +170,44 @@
     for (let index = 0; index < options.length; index++) {
       if (options[index].selected) {
         var htmx_button = document.getElementById("id_hidden_htmx_data")
-        var dataArray = getJsonFromHtmxField()
-        if (dataArray == null) {
-          dataArray = JSON.parse('{ "data": []}')
+        var jsonData = getJsonFromHtmxField()
+        if (jsonData == null) {
+          jsonData = buildNewDataJson()
           var newJson = JSON.parse('{ "eliminator_id": "' + player_id + '", "eliminatee_id": "' + options[index].value + '" }')
-          dataArray['data'].push(newJson)
+          jsonData['eliminations'].push(newJson)
         } else {
           var newJson = JSON.parse('{ "eliminator_id": "' + player_id + '", "eliminatee_id": "' + options[index].value + '" }')
-          dataArray['data'].push(newJson)
+          jsonData['eliminations'].push(newJson)
         }
-        htmx_button.value = JSON.stringify(dataArray)
+        htmx_button.value = JSON.stringify(jsonData)
         htmx_button.click()
         break
       }
     }
   }
 
-  function removeElimination(eliminator_id, eliminatee_id) {
-    var dataArray = getJsonFromHtmxField()
+  function buildNewDataJson() {
+    return JSON.parse('{ "placements": {}, "eliminations": []}')
+  }
 
-    // Rebuild the json object. Ignoring the entry that needs to removing.
-    var newJsonArray = JSON.parse('{ "data": []}')
-    for(var key in dataArray['data']) {
-      var eliminator_id_data = JSON.stringify(dataArray['data'][key]['eliminator_id']).replace(/"/g,'')
-      var eliminatee_id_data = JSON.stringify(dataArray['data'][key]['eliminatee_id']).replace(/"/g,'')
-      if (eliminator_id == eliminator_id_data && eliminatee_id == eliminatee_id_data) {
+  function resetEliminations(player_id) {
+    let jsonData = getJsonFromHtmxField()
+    // Rebuild the json object. Ignoring the entries from player_id.
+    // copy the json data and clear the eliminations
+    let jsonDataCopy = JSON.parse(JSON.stringify(jsonData));
+    jsonDataCopy['eliminations'] = JSON.parse("[]")
+    for(var key in jsonData['eliminations']) {
+      var eliminator_id_data = JSON.stringify(jsonData['eliminations'][key]['eliminator_id']).replace(/"/g,'')
+      var eliminatee_id_data = JSON.stringify(jsonData['eliminations'][key]['eliminatee_id']).replace(/"/g,'')
+      if (player_id == eliminator_id_data) {
         // Do nothing. This entry needs to be removed.
       } else {
         var newJson = JSON.parse('{ "eliminator_id": "' + eliminator_id_data + '", "eliminatee_id": "' + eliminatee_id_data + '" }')
-        newJsonArray['data'].push(newJson)
+        jsonDataCopy['eliminations'].push(newJson)
       }
     }
     var htmx_button = document.getElementById("id_hidden_htmx_data")
-    htmx_button.value = JSON.stringify(newJsonArray)
+    htmx_button.value = JSON.stringify(jsonDataCopy)
     htmx_button.click()
   }
 
@@ -182,23 +217,9 @@
     try{
       valueJson = JSON.parse(htmx_button.value)
     }catch (e){
-      console.log("Bad JSON")
       valueJson = null
     }
     return valueJson
-  }
-
-  function onPlacementChanged(placement) {
-    var selector_id = "id_player_placement_selector_" + placement
-    var options = document.getElementById(selector_id).querySelectorAll("option");
-    for (let index = 0; index < options.length; index++) {
-      if (options[index].selected) {
-        // Find corresponding invisible input and set the value
-        var input_element = document.getElementById("id_" + placement + "_player_id_input")
-        input_element.value = options[index].value
-        break
-      }
-    }
   }
 
 </script>
@@ -209,8 +230,26 @@
     margin-bottom: 8px;
   }
 
-  .elimination-list-group-item:hover {
-    cursor: pointer;
+  .player-eliminations-header {
+    align-items: center;
+  }
+
+  .eliminations-reset-btn {
+    color: white;
+    background-color: #d9534f;
+    padding-top:0px;
+    padding-bottom:0px;
+    padding-right:6px;
+    padding-left:6px;
+  }
+
+  .eliminations-reset-btn:hover {
+    color: white;
+    background-color: #e89996;
+    padding-top:0px;
+    padding-bottom:0px;
+    padding-right:6px;
+    padding-left:6px;
   }
 
   @media only screen and (max-width: 500px) {
@@ -230,7 +269,6 @@
     .elimination-username {
       font-size: 12px;
       vertical-align: middle;
-      margin-left: 8px;
     }
     .remove-elimination-btn {
       color: #d9534f;
@@ -238,6 +276,16 @@
     }
     .elim-selector-group {
       margin-top: 8px;
+    }
+
+    .player-eliminations-list {
+      margin-top: 8px;
+    }
+
+    .player-eliminations-header-username {
+      margin-right: 8px;
+      font-weight: 500;
+      font-size: 16px;
     }
   }
 
@@ -262,7 +310,6 @@
     .elimination-username {
       font-size: 16px;
       vertical-align: middle;
-      margin-left: 16px;
     }
     .remove-elimination-btn {
       color: #d9534f;
@@ -270,6 +317,16 @@
     }
     .elim-selector-group {
       margin-top: 16px;
+    }
+
+    .player-eliminations-list {
+      margin-top: 16px;
+    }
+
+    .player-eliminations-header-username {
+      margin-right: 8px;
+      font-weight: 500;
+      font-size: 20px;
     }
   }
 

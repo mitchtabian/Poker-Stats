@@ -124,9 +124,6 @@ def keyvalue(dictionary, key):
 """
 @register.filter
 def does_value_exist_in_list(data_list, value):
-	print(f"data_list? {data_list}")
-	print(f"value? {value}")
-	print(f"does exist? {value in data_list}")
 	return value in data_list
 
 

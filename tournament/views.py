@@ -529,6 +529,32 @@ def verify_admin(user, tournament_id, error_message):
 	if user != tournament.admin:
 		raise ValidationError(error_message)
 
+"""
+This view is insanely complicated. The source of truth for the placements and eliminations data is held in a hidden 
+field in the UI. The data structure in that hidden field is JSON.
+
+Everytime the placements/eliminations are updated, the JSON payload is updated and htmx triggers the view to update.
+
+Payload:
+{
+    "placements": {
+       "0": "<player_id>",
+       "1": "<player_id>",
+       ...
+    },
+    "eliminations":[
+       {
+          "eliminator_id":"<player_id>",
+          "eliminatee_id":"<player_id>"
+       },
+       {
+          "eliminator_id":"<player_id>",
+          "eliminatee_id":"<player_id>"
+       },
+       ...
+    ]
+}
+"""
 @login_required
 def tournament_backfill_view(request, *args, **kwargs):
 	context = {}
@@ -546,20 +572,72 @@ def tournament_backfill_view(request, *args, **kwargs):
 		context['players'] = TournamentPlayer.objects.get_tournament_players(
 			tournament_id = tournament.id
 		)
+		
+		# --- START: Update Eliminations and Placements with htmx ---
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		context['players'] = players
+		player_eliminations = []
+		data_json = None
+		if request.method == "GET":
+			data_json = request.GET.get('data_json')
+		elif request.method == "POST":
+			data_json = request.POST.get('data_json')
+		elim_dict = {}
+		num_payout_positions = len(tournament.tournament_structure.payout_percentages)
+		context['num_payout_positions_iterator'] = range(0, num_payout_positions)
+		placements_dict = {}
+		if data_json != None and len(data_json) > 0:
+			json_dict = json.loads(data_json)
+			# Return the json data to the view. That is the source of truth.
+			context['json_dict'] = data_json
+
+			# parse the json placements data so its more readable in the view.
+			if 'placements' in json_dict:
+				for position in range(0, num_payout_positions):
+					if f"{position}" in json_dict['placements']:
+						player_id = json_dict['placements'][f'{position}']
+						placements_dict[f"{position}"] = player_id
+
+			# parse the json eliminations data so its more readable in the view.
+			if "eliminations" in json_dict:
+				for elimination in json_dict['eliminations']:
+					eliminator_id = int(elimination['eliminator_id'])
+					eliminatee_id = int(elimination['eliminatee_id'])
+					player = TournamentPlayer.objects.get_by_id(eliminatee_id)
+					if eliminator_id in elim_dict:
+						current_values = elim_dict[eliminator_id]
+						current_values.append(player)
+						elim_dict[eliminator_id] = current_values
+					else:
+						elim_dict[eliminator_id] = [player]
+		# --- END: Update Eliminations and Placements with htmx ---
+
+		context['elim_dict'] = elim_dict
+		context['placements_dict'] = placements_dict
+
+		# --- Saving ---
 		if request.method == "POST":
+			# --- Figure out the placements ---
 			player_tournament_placements = {}
 			# Populate data for positions who are getting paid
-			for index,placement in enumerate(tournament.tournament_structure.payout_percentages):
-				player_id = request.POST.get(f"{index}_player_id_input")
-				player = TournamentPlayer.objects.get_by_id(player_id)
-				# Check for duplicates. Cannot assign the same player multiple placements
-				if player_id in player_tournament_placements.keys():
-					raise ValidationError(f"Cannot assign multiple placements to {player.user.username}.")
-				player_tournament_placement = PlayerTournamentPlacement(
-					player_id = player_id,
-					placement = index
-				)
-				player_tournament_placements[player_id] = player_tournament_placement
+			for position in range(0, num_payout_positions):
+				if f"{position}" in placements_dict:
+					player_id = placements_dict[f"{position}"]
+					player_tournament_placement = PlayerTournamentPlacement(
+						player_id = player_id,
+						placement = position
+					)
+					# Check for duplicates. Cannot assign the same player multiple placements
+					if player_id in player_tournament_placements.keys():
+						player = TournamentPlayer.objects.get_by_id(player_id)
+						raise ValidationError(f"Cannot assign multiple placements to {player.user.username}.")
+					player_tournament_placements[player_id] = player_tournament_placement
+
+			# Verify a player was selected for each placement
+			if len(player_tournament_placements.keys()) != num_payout_positions:
+				raise ValidationError("You must select a player for each placement position.")
 
 			# Find players who did not place
 			players = TournamentPlayer.objects.get_tournament_players(
@@ -572,41 +650,21 @@ def tournament_backfill_view(request, *args, **kwargs):
 						placement = DID_NOT_PLACE_VALUE # assign 999999999 to players who did not place
 	 				)
 					player_tournament_placements[f"{player.id}"] = player_tournament_placement
+
+			# DEBUG
+			# for player_id in player_tournament_placements.keys():
+			# 	player = TournamentPlayer.objects.get_by_id(player_id)
+			# 	print(f"{player.user.username} placed {player_tournament_placements[player_id].placement}")
+
 			# Complete the backfilled Tournament
 			Tournament.objects.complete_tournament_for_backfill(
 				user = request.user,
 				tournament_id = tournament.id,
-				player_tournament_placements = player_tournament_placements.values()
+				player_tournament_placements = player_tournament_placements.values(),
+				elim_dict = elim_dict
 			)
 
 			return redirect("tournament:tournament_view", pk=tournament.id)
-			
-		# --- Update Eliminations with htmx ---
-		players = TournamentPlayer.objects.get_tournament_players(
-			tournament_id = tournament.id
-		)
-		context['players'] = players
-		player_eliminations = []
-		if request.method == "GET":
-			elimination_json = request.GET.get('elimination_json')
-			print(f"elimination_json {elimination_json}")
-			if elimination_json != None:
-				json_dict = json.loads(elimination_json)
-				# Return the json dictionary to the view. That is the source of truth.
-				context['json_dict'] = elimination_json
-				elim_dict = {}
-				for data in json_dict['data']:
-					eliminator_id = int(data['eliminator_id'])
-					eliminatee_id = int(data['eliminatee_id'])
-					player = TournamentPlayer.objects.get_by_id(eliminatee_id)
-					if eliminator_id in elim_dict:
-						current_values = elim_dict[eliminator_id]
-						current_values.append(player)
-						elim_dict[eliminator_id] = current_values
-					else:
-						elim_dict[eliminator_id] = [player]
-				context['elim_dict'] = elim_dict
-			
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return render(request=request, template_name="tournament/tournament_backfill.html", context=context)
