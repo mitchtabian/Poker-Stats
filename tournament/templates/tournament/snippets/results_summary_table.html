@@ -29,7 +29,9 @@
 	      	<div class="results-summary-table-row">
 	      		<div class="d-flex flex-column">
 			      	<span class="results-summary-table-username ">{{result.player.user.username}}</span>
-			      	<span class="results-summary-string" style="color: {{result.placement|placement_color:payout_positions}}">{{result.placement_string}}</span>
+			      	{% if result.placement_string != '--' %}
+			      		<span class="results-summary-string" style="color: {{result.placement|placement_color:payout_positions}}">{{result.placement_string}}</span>
+			      	{% endif %}
 			    	</div>
 	    </td>
 	      <td><div class="results-summary-table-row">{{result.placement_earnings|format_money}}</div></td>

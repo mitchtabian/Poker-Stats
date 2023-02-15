@@ -1,5 +1,16 @@
 from dataclasses import dataclass
 
+DID_NOT_PLACE_VALUE = 999999999
+
+"""
+player_id: TournamentPlayer id.
+placement: Where they placed in the tournament. 1 is considered 1st place.
+"""
+@dataclass
+class PlayerTournamentPlacement:
+	player_id: int
+	placement: int
+
 """
 A utility data holder class for modeling information used in complex views like tournament_admin_view.
 player_id: TournamentPlayer pk
@@ -33,6 +44,8 @@ def build_placement_string(placement):
 		return "2nd"
 	elif placement == 2:
 		return "3rd"
+	elif placement == DID_NOT_PLACE_VALUE:
+		return "--"
 	else:
 		return f"{placement + 1}th"
 

@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% load tournament_extras %}
+
+{% block head_title %}Tournaments{% endblock %}
+
+{% block content %}
+
+<div class="container" id="parent">
+  <div class="row">
+    <div class="offset-lg-3 col-lg-6">
+
+      <!-- title -->
+      <h2>
+        <div class="d-flex">
+          <span class="tournament-title">{{tournament.title}}</span>
+        </div>
+      </h2>
+
+      <!-- Description -->
+      <div class="mt-4 backfill-description">
+        <p>Backfilling data for a tournament that's already completed.</p>
+      </div>
+
+      <!-- Placements -->
+      <h2 class="backfill-display-group-header">Placements</h2>
+      <hr>
+      <div class="backfill-display-group">
+        {% for position in num_payout_positions_iterator %}
+        <div class="backfill-placement-container {% if forloop.counter0 > 0 %}mt-3{% endif %}">
+        <p class="placement-header">{{forloop.counter0|format_placement}}</p>
+        <select class="form-select" aria-label="Who came in {{forloop.counter0|format_placement}}" id="id_player_placement_selector_{{forloop.counter0}}"  onchange="onPlacementChanged('{{forloop.counter0}}')">
+          <option value="-1">---------</option>
+          {% for player in players %}
+            {% if placements_dict|keyvalue:position == player.id|stringformat:"i" %}
+              <option value="{{player.id}}" selected>{{player.user.username}}</option>
+            {% else %}
+              <option value="{{player.id}}">{{player.user.username}}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if tournament.tournament_structure.bounty_amount != None %}
+      <!-- Eliminations -->
+      <h2 class="backfill-display-group-header">Eliminations</h2>
+      <hr>
+      <div class="backfill-display-group">
+        {% for player in players %}
+        <div class="player-eliminations-header d-flex flex-row {% if forloop.counter0 > 0 %}mt-3{% endif %}">
+          <div class="player-eliminations-header-username">{{player.user.username}}</div>
+          {% for eliminator_id,eliminated_players in elim_dict.items %}
+          {% if eliminator_id == player.id %}
+          <button class="btn eliminations-reset-btn" onclick="resetEliminations('{{player.id}}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-arrow-clockwise " viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+            </svg>
+          </button>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="player-eliminations-group">
+          {% for eliminator_id,eliminated_players in elim_dict.items %}
+          {% if eliminator_id == player.id %}
+            <ul class="list-group player-eliminations-list">
+            {% for eliminated_player in eliminated_players %}
+            <li class="list-group-item elimination-list-group-item">
+              <div class="elimination-username">{{eliminated_player.user.username}}<div>
+            </li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <!-- Empty selector for adding more -->
+        <div class="elim-selector-group mt-3">
+          <select class="form-select" aria-label="Selected eliminations for {{player.user.username}}" id="id_{{player.id}}_new_elim" onchange="selectElimination('{{player.id}}')">
+            <option value="-1" selected> -------- </option>
+            {% for player_selector_value in players %}
+            {% if player.id != player_selector_value.id %}
+            <option value="{{player_selector_value.id}}">{{player_selector_value.user.username}}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Submit button for saving -->
+      <form method="POST">
+        {% csrf_token %}
+        <!-- Hidden htmx input -->
+        <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#parent" name="data_json" value="{{json_dict}}"></button>
+        <div class="d-flex flex-row justify-content-end">
+          <button class="btn btn-primary backfill-submit-btn" type="submit">Save</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/htmx.org@1.8.5"></script>
+
+<script type="text/javascript">
+
+  document.body.addEventListener('htmx:configRequest', (event) => {
+    event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+  })
+
+
+</script>
+<script type="text/javascript">
+
+  /**
+   * Data payload sent to view containing eliminations and placements data.
+   * Sent using htmx.
+   * {
+   *   "placements": {
+   *     "0": "<player_id>", <-- first
+   *     "1": "<player_id>", <-- second
+   *     etc...
+   *   },
+   *   "eliminations": [
+   *    {
+   *     "eliminator_id": "1",
+   *     "eliminatee_id": "25"
+   *    },
+   *    {
+   *     "eliminator_id": "2",
+   *     "eliminatee_id": "1"
+   *    },
+   *    {
+   *     "eliminator_id": "1",
+   *     "eliminatee_id": "2"
+   *    },
+   *   ... etc
+   *   ]
+   * }
+   * */
+
+  function onPlacementChanged(placement) {
+    var selector_id = "id_player_placement_selector_" + placement
+    var options = document.getElementById(selector_id).querySelectorAll("option");
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].selected) {
+        var htmx_button = document.getElementById("id_hidden_htmx_data")
+        var player_id = options[index].value
+        var jsonData = getJsonFromHtmxField()
+        if (jsonData == null) {
+          jsonData = buildNewDataJson()
+          jsonData['placements'][placement] = player_id
+        } else {
+          jsonData['placements'][placement] = player_id
+        }
+        htmx_button.value = JSON.stringify(jsonData)
+        htmx_button.click()
+        break
+      }
+    }
+  }
+
+  function selectElimination(player_id) {
+    var selector_id = "id_" + player_id + "_new_elim"
+    var options = document.getElementById(selector_id).querySelectorAll("option");
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].selected) {
+        var htmx_button = document.getElementById("id_hidden_htmx_data")
+        var jsonData = getJsonFromHtmxField()
+        if (jsonData == null) {
+          jsonData = buildNewDataJson()
+          var newJson = JSON.parse('{ "eliminator_id": "' + player_id + '", "eliminatee_id": "' + options[index].value + '" }')
+          jsonData['eliminations'].push(newJson)
+        } else {
+          var newJson = JSON.parse('{ "eliminator_id": "' + player_id + '", "eliminatee_id": "' + options[index].value + '" }')
+          jsonData['eliminations'].push(newJson)
+        }
+        htmx_button.value = JSON.stringify(jsonData)
+        htmx_button.click()
+        break
+      }
+    }
+  }
+
+  function buildNewDataJson() {
+    return JSON.parse('{ "placements": {}, "eliminations": []}')
+  }
+
+  function resetEliminations(player_id) {
+    let jsonData = getJsonFromHtmxField()
+    // Rebuild the json object. Ignoring the entries from player_id.
+    // copy the json data and clear the eliminations
+    let jsonDataCopy = JSON.parse(JSON.stringify(jsonData));
+    jsonDataCopy['eliminations'] = JSON.parse("[]")
+    for(var key in jsonData['eliminations']) {
+      var eliminator_id_data = JSON.stringify(jsonData['eliminations'][key]['eliminator_id']).replace(/"/g,'')
+      var eliminatee_id_data = JSON.stringify(jsonData['eliminations'][key]['eliminatee_id']).replace(/"/g,'')
+      if (player_id == eliminator_id_data) {
+        // Do nothing. This entry needs to be removed.
+      } else {
+        var newJson = JSON.parse('{ "eliminator_id": "' + eliminator_id_data + '", "eliminatee_id": "' + eliminatee_id_data + '" }')
+        jsonDataCopy['eliminations'].push(newJson)
+      }
+    }
+    var htmx_button = document.getElementById("id_hidden_htmx_data")
+    htmx_button.value = JSON.stringify(jsonDataCopy)
+    htmx_button.click()
+  }
+
+  function getJsonFromHtmxField() {
+    var htmx_button = document.getElementById("id_hidden_htmx_data")
+    var valueJson = null
+    try{
+      valueJson = JSON.parse(htmx_button.value)
+    }catch (e){
+      valueJson = null
+    }
+    return valueJson
+  }
+
+</script>
+
+<style type="text/css">
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .player-eliminations-header {
+    align-items: center;
+  }
+
+  .eliminations-reset-btn {
+    color: white;
+    background-color: #d9534f;
+    padding-top:0px;
+    padding-bottom:0px;
+    padding-right:6px;
+    padding-left:6px;
+  }
+
+  .eliminations-reset-btn:hover {
+    color: white;
+    background-color: #e89996;
+    padding-top:0px;
+    padding-bottom:0px;
+    padding-right:6px;
+    padding-left:6px;
+  }
+
+  @media only screen and (max-width: 500px) {
+    .backfill-display-group {
+/*      margin-bottom: 16px;*/
+      font-size: 16px;
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      padding-top: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+    }
+
+    .backfill-display-group-header {
+      font-size: 20px;
+      margin-top: 20px;
+    }
+
+    .backfill-submit-btn {
+      font-size: 12px;
+      margin-top: 12px;
+    }
+    .elimination-username {
+      font-size: 12px;
+      vertical-align: middle;
+      max-width: 180px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .remove-elimination-btn {
+      color: #d9534f;
+      vertical-align: middle;
+    }
+    .elim-selector-group {
+      margin-top: 8px;
+    }
+
+    .player-eliminations-list {
+      margin-top: 8px;
+    }
+
+    .player-eliminations-header-username {
+      margin-right: 8px;
+      font-weight: 500;
+      font-size: 16px;
+      max-width: 250px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .placement-header {
+      font-weight: 500;
+      font-size: 16px;
+    }
+
+    .backfill-description {
+      font-size: 14px;
+    }
+
+    .backfill-placement-container {
+      padding: 8px;
+      background-color: white;
+      border-radius: 8px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .backfill-display-group {
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      padding-top: 16px;
+      font-size: 16px;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+    }
+
+    .backfill-display-group-header {
+      font-size: 23px;
+      margin-top: 24px;
+    }
+
+    .backfill-submit-btn {
+      font-size: 16px;
+      margin-top: 16px;
+    }
+    .elimination-username {
+      font-size: 16px;
+      vertical-align: middle;
+      max-width: 430px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .remove-elimination-btn {
+      color: #d9534f;
+      vertical-align: middle;
+    }
+    .elim-selector-group {
+      margin-top: 16px;
+    }
+
+    .player-eliminations-list {
+      margin-top: 16px;
+    }
+
+    .player-eliminations-header-username {
+      margin-right: 8px;
+      font-weight: 500;
+      font-size: 18px;
+      max-width: 450px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .placement-header {
+      font-weight: 500;
+      font-size: 18px;
+    }
+
+    .backfill-description {
+      font-size: 16px;
+    }
+
+    .backfill-placement-container {
+      padding: 8px;
+      background-color: white;
+      border-radius: 8px;
+    }
+  }
+
+</style>
+
+{% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+

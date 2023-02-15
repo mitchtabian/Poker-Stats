@@ -13,10 +13,11 @@ Project for tracking poker stats from tournaments.
 1. Personalized game statistics
 1. TODO... more stuff
 
-
 # TODO
 This is a notes section for me personally.
-1. Backfilling data?...
+1. Remove eliminations and rebuys from TournamentPlayerResult? I think these are pointless and adds confusion
+1. undo completion should also deactivate the tournament
+1. Add rebuy undo button in admin view
 1. Analytics for user
 	1. Accessible from profile
 	1. Shows summary across games

@@ -32,7 +32,7 @@ class TournamentPlayerAdmin(admin.ModelAdmin):
         (None, {'fields': ('user', 'tournament')}),
     )
 
-    list_display = ('user', 'tournament')
+    list_display = ('user', 'id', 'tournament')
     search_fields = ('user', 'tournament')
 
 
@@ -86,10 +86,10 @@ admin.site.register(TournamentRebuy, TournamentRebuyAdmin)
 class TournamentPlayerResultAdmin(admin.ModelAdmin):
 
     fieldsets = (
-        (None, {'fields': ('player', 'tournament', 'net_earnings', 'gross_earnings')}),
+        (None, {'fields': ('player', 'tournament', 'net_earnings', 'gross_earnings', 'placement')}),
     )
 
-    list_display = ('player', 'tournament', 'net_earnings',  'gross_earnings', 'elimination_ids')
+    list_display = ('player', 'tournament', 'net_earnings', 'placement', 'gross_earnings', 'elimination_ids')
     search_fields = ('player', 'tournament',)
 
 
