@@ -2,8 +2,14 @@ from decimal import Decimal
 from django import template
 from django.template.defaultfilters import stringfilter
 
-from tournament.models import TournamentPlayer, TournamentRebuy
-from tournament.util import build_placement_string
+from tournament.models import TournamentPlayer, TournamentRebuy, TournamentElimination
+from tournament.util import (
+	build_placement_string,
+	TournamentEliminationEvent,
+	TournamentRebuyEvent,
+	TournamentCompleteEvent,
+	TournamentInProgressEvent
+)
 
 register = template.Library()
 
@@ -135,8 +141,33 @@ def get_rebuys_for_player(player):
 	rebuys = TournamentRebuy.objects.get_rebuys_for_player(player)
 	return rebuys
 
+"""
+Determine if an object is a TournamentRebuyEvent.
+"""
+@register.filter
+def is_tournament_rebuy(obj):
+	return type(obj) is TournamentRebuyEvent
 
+"""
+Determine if an object is a TournamentEliminationEvent.
+"""
+@register.filter
+def is_tournament_elimination(event):
+	return type(event) is TournamentEliminationEvent
 
+"""
+Determine if an object is a TournamentCompleteEvent.
+"""
+@register.filter
+def is_tournament_completion(event):
+	return type(event) is TournamentCompleteEvent
+
+"""
+Determine if an object is a TournamentInProgressEvent.
+"""
+@register.filter
+def is_tournament_in_progress(event):
+	return type(event) is TournamentInProgressEvent
 
 
 

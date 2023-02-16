@@ -1,0 +1,254 @@
+{% load tournament_extras %}
+{% load humanize %}
+
+{% if events|length > 0 %}
+<div class="d-flex justify-content-center expand-collapse-icon-container" data-toggle="tooltip" data-placement="top" title="Toggle the timeline">
+	<svg onclick="expandTimelineEventTable()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0275d8" class="bi bi-plus-circle expand-timeline-event-list" id="id_expand_timeline_event_list" viewBox="0 0 16 16">
+	  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+	  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+	</svg>
+	<svg onclick="collapseTimelineEventTable()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#d9534f" class="bi bi-dash-circle collapse-timeline-event-list" id="id_collapse_timeline_event_list" viewBox="0 0 16 16">
+	  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+	  <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+	</svg>
+</div>
+<div class="timeline-event-list" id="id_timeline_event_list">
+	{% for event in events %}
+	<div class="timeline-event {% if forloop.counter == events|length %}pb-4{% endif %}">
+		<div class="timeline-icon">
+			{% if event|is_tournament_elimination %}
+			<!-- Red skull -->
+			<svg xmlns="http://www.w3.org/2000/svg" class="timeline-icon-svg" version="1.0" width="512.000000pt" height="512.000000pt" viewBox="0 0 512.000000 512.000000" preserveAspectRatio="xMidYMid meet">
+			<g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" fill="#000000" stroke="none">
+			<path d="M0 2560 l0 -2560 2560 0 2560 0 0 2560 0 2560 -2560 0 -2560 0 0 -2560z m2762 1494 c493 -172 843 -478 1063 -929 51 -105 122 -301 112 -311 -4 -4 -85 53 -365 259 -35 26 -67 47 -71 47 -4 0 -95 -40 -202 -88 -107 -49 -219 -99 -249 -113 -30 -13 -86 -40 -125 -59 l-70 -36 1 -104 c1 -117 19 -240 41 -283 8 -15 26 -32 41 -38 17 -7 137 -8 334 -5 245 4 308 3 308 -7 0 -14 92 -48 128 -48 12 1 22 -4 22 -10 0 -7 11 -9 25 -7 14 3 28 2 31 -3 2 -4 11 -6 19 -2 8 3 15 1 15 -5 0 -5 -69 -56 -152 -113 -448 -302 -458 -309 -480 -333 -16 -17 -18 -44 -18 -263 l0 -243 -90 -87 c-123 -118 -119 -115 -166 -98 -22 8 -108 34 -192 59 l-152 45 -199 -58 -199 -58 -105 93 c-79 70 -106 101 -111 125 -3 17 -6 131 -6 254 0 255 13 222 -125 317 -129 89 -333 228 -430 292 l-90 60 50 8 c27 4 51 12 53 18 2 5 8 7 13 4 6 -3 16 0 24 6 8 7 15 9 15 4 0 -5 4 -4 8 1 4 6 21 20 39 33 32 22 37 22 347 22 184 0 326 4 341 10 39 15 53 62 71 240 13 136 14 165 2 176 -7 7 -76 41 -153 74 -77 34 -218 98 -313 142 l-172 81 -53 -36 c-28 -20 -81 -57 -117 -83 -131 -95 -263 -184 -268 -180 -15 16 112 315 188 442 247 413 578 663 1080 819 119 37 101 39 302 -31z"/>
+			<path d="M2507 2513 c-121 -215 -288 -545 -299 -592 -20 -87 -38 -82 299 -80 164 1 325 5 358 8 53 5 61 9 69 32 8 23 -5 54 -94 225 -112 216 -257 484 -270 497 -4 5 -32 -36 -63 -90z"/>
+			</g>
+			</svg>
+			{% elif event|is_tournament_rebuy %}
+			<!-- Money icon -->
+			<svg class="timeline-icon-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="256" height="256" viewBox="0 0 256 256" xml:space="preserve">
+
+			<defs>
+			</defs>
+			<g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;" transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
+			<linearGradient id="SVGID_1" gradientUnits="userSpaceOnUse" x1="45" y1="84.7883" x2="45" y2="4.2607">
+			<stop offset="0%" style="stop-color:rgb(0, 153, 51);stop-opacity: 1"/>
+			<stop offset="100%" style="stop-color:rgb(0, 204, 68);stop-opacity: 1"/>
+
+			</linearGradient>
+			<circle cx="45" cy="45" r="45" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: url(#SVGID_1); fill-rule: nonzero; opacity: 1;" transform="  matrix(1 0 0 1 0 0) "/>
+			<path d="M 49.798 55.043 c 0 -1.522 -0.376 -2.716 -1.127 -3.584 c -0.752 -0.867 -2.072 -1.686 -3.96 -2.456 c -1.889 -0.77 -3.632 -1.551 -5.231 -2.341 s -2.977 -1.706 -4.133 -2.746 c -1.156 -1.04 -2.043 -2.245 -2.659 -3.614 c -0.617 -1.367 -0.925 -3.024 -0.925 -4.971 c 0 -3.256 1.098 -5.939 3.295 -8.049 c 2.196 -2.11 5.125 -3.338 8.786 -3.685 V 17.5 h 4.596 v 6.214 c 3.525 0.521 6.295 1.971 8.309 4.35 c 2.013 2.38 3.02 5.4 3.02 9.06 H 50 c 0 -2.003 -0.386 -3.545 -1.157 -4.624 c -0.77 -1.079 -1.869 -1.618 -3.294 -1.618 c -1.272 0 -2.259 0.4 -2.963 1.199 c -0.703 0.8 -1.055 1.903 -1.055 3.309 c 0 1.426 0.405 2.558 1.214 3.396 c 0.809 0.838 2.11 1.638 3.902 2.399 c 1.792 0.761 3.483 1.551 5.072 2.37 c 1.589 0.819 2.962 1.748 4.119 2.789 c 1.156 1.04 2.061 2.255 2.716 3.642 c 0.655 1.387 0.983 3.054 0.983 4.999 c 0 3.295 -1.045 5.983 -3.136 8.064 c -2.091 2.081 -4.937 3.295 -8.541 3.641 V 72.5 h -4.595 v -5.838 c -4.201 -0.444 -7.423 -1.883 -9.668 -4.321 c -2.245 -2.437 -3.367 -5.65 -3.367 -9.638 h 9.74 c 0 2.197 0.486 3.869 1.459 5.014 c 0.973 1.147 2.356 1.72 4.148 1.72 c 1.31 0 2.341 -0.39 3.093 -1.171 C 49.421 57.485 49.798 56.412 49.798 55.043 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round"/>
+			</g>
+			</svg>
+			{% elif event|is_tournament_completion %}
+			<svg class="timeline-icon-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="256" height="256" viewBox="0 0 256 256" xml:space="preserve">
+
+			<defs>
+			</defs>
+			<g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;" transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
+			<circle cx="45" cy="45" r="45" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0, 153, 255); fill-rule: nonzero; opacity: 1;" transform="  matrix(1 0 0 1 0 0) "/>
+			<path d="M 16.1 21.222 c -0.334 9.587 7.368 24.416 18.256 35.679 c -0.246 7.129 0.547 13.556 4.108 18.113 l 8.024 -8.024 l 0 0 l 7.69 -7.69 l 7.69 -7.69 v 0 l 7.994 -7.994 c -3.618 -3.676 -10.392 -4.301 -18.032 -4.088 C 40.562 28.613 25.702 20.887 16.1 21.222 z M 29.922 43.794 c -2.416 -2.416 -2.416 -6.334 0 -8.75 c 2.416 -2.416 6.334 -2.416 8.75 0 c 2.416 2.416 2.416 6.334 0 8.75 C 36.256 46.21 32.339 46.21 29.922 43.794 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0, 107, 179); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round"/>
+			<path d="M 55.325 65.407 c 0.799 1.227 1.791 2.456 2.956 3.621 c 3.665 3.665 8.628 6.291 11.805 6.18 c 0.111 -3.177 -2.515 -8.14 -6.18 -11.805 c -1.165 -1.165 -2.394 -2.157 -3.621 -2.956 l -2.48 2.48 L 55.325 65.407 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0, 122, 204); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round"/>
+			<path d="M 20.1 17.222 c -0.334 9.587 7.368 24.416 18.256 35.679 c -0.246 7.129 0.547 13.556 4.108 18.113 l 8.024 -8.024 l 0 0 l 7.69 -7.69 l 7.69 -7.69 v 0 l 7.994 -7.994 c -3.618 -3.676 -10.392 -4.301 -18.032 -4.088 C 44.562 24.613 29.702 16.887 20.1 17.222 z M 33.922 39.794 c -2.416 -2.416 -2.416 -6.334 0 -8.75 c 2.416 -2.416 6.334 -2.416 8.75 0 c 2.416 2.416 2.416 6.334 0 8.75 C 40.256 42.21 36.339 42.21 33.922 39.794 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round"/>
+			<path d="M 59.325 61.407 c 0.799 1.227 1.791 2.456 2.956 3.621 c 3.665 3.665 8.628 6.291 11.805 6.18 c 0.111 -3.177 -2.515 -8.14 -6.18 -11.805 c -1.165 -1.165 -2.394 -2.157 -3.621 -2.956 l -2.48 2.48 L 59.325 61.407 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round"/>
+			</g>
+			</svg>
+			{% elif event|is_tournament_in_progress %}
+			<svg class="timeline-icon-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" viewBox="0 0 60 60" xml:space="preserve">
+			<path style="fill:#E6E6E6;" d="M41.857,22.096C43.82,20.786,45,18.582,45,16.222V5H15v11.222c0,2.36,1.18,4.564,3.143,5.874  l9.319,6.843C27.8,29.187,28,29.581,28,30l0,0c0,0.419-0.2,0.813-0.537,1.061l-9.319,6.843C16.18,39.214,15,41.418,15,43.778V55h30  V43.778c0-2.36-1.18-4.564-3.143-5.874l-9.319-6.843C32.2,30.813,32,30.419,32,30l0,0c0-0.419,0.2-0.813,0.537-1.061L41.857,22.096z  "/>
+			<rect x="10" y="55" style="fill:#9E6C53;" width="40" height="4"/>
+			<rect x="10" y="1" style="fill:#9E6C53;" width="40" height="4"/>
+			<g>
+				<path style="fill:#8A5336;" d="M54,58h-4H6c-0.552,0-1,0.447-1,1s0.448,1,1,1h44h4c0.552,0,1-0.447,1-1S54.552,58,54,58z"/>
+				<path style="fill:#8A5336;" d="M6,2h44h4c0.552,0,1-0.447,1-1s-0.448-1-1-1h-4H6C5.448,0,5,0.447,5,1S5.448,2,6,2z"/>
+			</g>
+			<path style="fill:#EBBA16;" d="M40.192,19.6C41.324,18.845,42,17.582,42,16.223v0c0-1.306-0.889-2.445-2.156-2.762L24.791,9.698  C21.342,8.835,18,11.444,18,15v1.223c0,1.359,0.676,2.622,1.808,3.377L29,26.346v15.877c0,3.63-3.764,6.036-7.058,4.511l0,0  c-1.774-0.821-3.922,0.394-3.941,2.349c0,0.014,0,0.027,0,0.041V55h24V43.777c0-0.014,0-0.027,0-0.041  c-0.019-1.931-1.889-3.322-3.791-2.991l-2.049,0.357C33.466,41.571,31,39.497,31,36.763V26.346L40.192,19.6z"/>
+			</svg>
+			{% endif %}
+		</div>
+		<div class="timeline-content">
+			<div class="timeline-event-description">
+				{% if event|is_tournament_elimination %}
+				Elimination
+				{% elif event|is_tournament_rebuy %}
+				Rebuy
+				{% elif event|is_tournament_in_progress %}
+				In-Progress
+				{% elif event|is_tournament_completion %}
+				Tournament Complete
+				{% endif %}
+			</div>
+			{% if event|is_tournament_elimination %}
+			<div class="d-flex flex-column">
+				<div class="d-flex flex-row align-items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle timeline-positive-icon" viewBox="0 0 16 16">
+					  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+					  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+					</svg>
+					<div class="timeline-username" style="margin-left: 8px;">{{event.eliminator_username}}</div>
+				</div>
+				<div class="d-flex flex-row align-items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle text-danger" viewBox="0 0 16 16">
+					  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+					  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+					</svg>
+					<div class="timeline-username" style="margin-left: 8px;">{{event.eliminatee_username}}</div>
+				</div>
+			</div>
+			{% elif event|is_tournament_rebuy %}
+			<div class="timeline-description">{{event.username}}</div>
+			{% elif event|is_tournament_in_progress %}
+			<div class="timeline-description">{{event.in_progress_description}}</div>
+			{% elif event|is_tournament_completion %}
+			<div class="timeline-description">{{event.winning_player_username}} wins!</div>
+			{% endif %}
+
+			{% if event|is_tournament_in_progress %}
+			<div class="timeline-timestamp">Started {{event.started_at|naturaltime}}</div>
+			{% else %}
+			<div class="timeline-timestamp">{{event.timestamp}}</div>
+			{% endif %}
+		</div>
+	</div>
+	{% endfor %}
+</div>
+
+<script type="text/javascript">
+	function expandTimelineEventTable() {
+		$("#id_timeline_event_list").animate({ height: 'toggle', opacity: 'toggle' }, 'slow');
+		$("#id_expand_timeline_event_list").animate({ height: 'toggle', opacity: 'toggle' }, 'slow');
+		$("#id_collapse_timeline_event_list").toggle(500)
+	}
+
+	function collapseTimelineEventTable() {
+		$("#id_timeline_event_list").animate({ height: 'toggle', opacity: 'toggle' }, 'slow');
+		$("#id_expand_timeline_event_list").toggle(500)
+		$("#id_collapse_timeline_event_list").animate({ height: 'toggle', opacity: 'toggle' }, 'slow');
+	}
+</script>
+
+<style type="text/css">
+	.expand-collapse-icon-container {
+		position: relative;
+		top: -16px;
+		margin-top: 32px;
+	}
+
+	.expand-timeline-event-list {
+		position: absolute;
+		background-color:#fff;
+		width: 32px;
+		height: 32px;
+		z-index: 16;
+		display: none;
+	}
+
+	.collapse-timeline-event-list {
+		position: absolute;
+		background-color:#fff;
+		width: 32px;
+		height: 32px;
+		z-index: 16;
+	}
+
+	.timeline-event-list {
+		border: 1px solid #e5e5e5;
+		border-radius: 8px;
+	}
+
+	.timeline-event {
+		display: flex;
+		flex-direction: row;
+		border-left: 1px solid #e5e5e5;
+		position:relative;
+		padding: 32px 24px 8px 40px;
+		font-size: 14.4px;
+		margin-left: 40px;
+		min-height: 40px
+	}
+
+	.timeline-description {
+		display: flex;
+		flex-direction: row;
+		font-weight: 400;
+		font-size: 14px;
+	}
+
+	.timeline-username {
+		max-width: 250px;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.timeline-timestamp {
+		font-weight: 380;
+		font-size: 12px;
+		color: #8c8c8c;
+	}
+
+	.timeline-content {
+		display: flex;
+		flex-direction: column;
+		margin-left: 4px;
+	}
+
+	.elimination-icon-svg {
+		width: 36px;
+		height: 36px;
+		color: #d9534f;
+	}
+
+	.rebuy-icon-svg {
+		width: 36px;
+		height: 36px;
+		color: #5cb85c;
+	}
+
+	.timeline-end-icon-svg {
+		width: 36px;
+		height: 36px;
+		color: #0275d8;
+	}
+
+	.timeline-icon {
+		position:absolute;
+		left:-18px;
+		background-color:#fff;
+	}
+
+	.timeline-icon-svg {
+		border-radius: 50%;
+		width: 38px;
+		height: 38px;
+	}
+
+	.timeline-event-description {
+		font-size: 16px;
+		font-weight: 500;
+	}
+
+	.timeline-positive-icon {
+		color: #5cb85c;
+	}
+
+	.timeline-negative-icon {
+		color: #d9534f;
+	}
+</style>
+
+{% endif %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
