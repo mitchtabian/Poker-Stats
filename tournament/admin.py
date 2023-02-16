@@ -51,7 +51,7 @@ admin.site.register(TournamentInvite, TournamentInviteAdmin)
 
 class TournamentEliminationAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('get_tournament_title', 'eliminator', 'eliminatee', 'eliminated_at')}),
+        (None, {'fields': ('get_tournament_title', 'eliminator', 'eliminatee', 'eliminated_at', 'is_backfill')}),
     )
     readonly_fields = ['eliminated_at', 'get_tournament_title', 'eliminator', 'eliminatee',]
     list_display = ('get_tournament', 'eliminator', 'eliminatee', 'eliminated_at')
@@ -65,7 +65,7 @@ admin.site.register(TournamentElimination, TournamentEliminationAdmin)
 
 class TournamentRebuyAdmin(admin.ModelAdmin):
     fieldsets = (
-        (None, {'fields': ('get_tournament', 'get_player_username','timestamp')}),
+        (None, {'fields': ('get_tournament', 'get_player_username','timestamp', 'is_backfill')}),
     )
     readonly_fields = ['get_tournament', 'get_player_username', 'timestamp']
 

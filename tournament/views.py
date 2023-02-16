@@ -25,7 +25,11 @@ from tournament.util import (
 	build_player_eliminations_data_from_eliminations,
 	build_placement_string,
 	PlayerTournamentPlacement,
-	DID_NOT_PLACE_VALUE
+	DID_NOT_PLACE_VALUE,
+	build_elimination_event,
+	build_rebuy_event,
+	build_completion_event,
+	build_in_progress_event
 )
 from user.models import User
 
@@ -341,35 +345,99 @@ def render_tournament_view(request, tournament_id):
 	context['allow_rebuys'] = tournament.tournament_structure.allow_rebuys
 	context['player_tournament_data'] = get_player_tournament_data(tournament_id)
 
-	# If the tournament is completed, add the TournamentPlayerResult data to the context
-	if tournament.completed_at != None:
-		results = TournamentPlayerResult.objects.get_results_for_tournament(
-			tournament_id = tournament.id
-		)
-		context['results'] = results.order_by("placement")
-		context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
+	# # If the tournament is completed, add the TournamentPlayerResult data to the context
+	# if tournament.completed_at != None:
+	# 	results = TournamentPlayerResult.objects.get_results_for_tournament(
+	# 		tournament_id = tournament.id
+	# 	)
+	# 	context['results'] = results.order_by("placement")
+	# 	context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
 
-		# Build PlayerEliminationsData for each player
-		eliminations_data = []
-		for result in results:
-			# Determine who they eliminated in this tournament.
-			eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
-				player_id = result.player.id
-			)
-			if len(eliminations) > 0:
-				data = build_player_eliminations_data_from_eliminations(
-					eliminator = result.player,
-					eliminations = eliminations
-				)
-				if data != None:
-					eliminations_data.append(data)
-		context['eliminations_data'] = eliminations_data
+	# 	# --- Build PlayerEliminationsData for each player ---
+	# 	eliminations_data = []
+	# 	for result in results:
+	# 		# Determine who they eliminated in this tournament.
+	# 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+	# 			player_id = result.player.id
+	# 		)
+	# 		if len(eliminations) > 0:
+	# 			data = build_player_eliminations_data_from_eliminations(
+	# 				eliminator = result.player,
+	# 				eliminations = eliminations
+	# 			)
+	# 			if data != None:
+	# 				eliminations_data.append(data)
+	# 	context['eliminations_data'] = eliminations_data
 
-		# Add a "Warning" section if not all TournamentPlayers have joined the Tournament.
-		has_all_joined = Tournament.objects.have_all_players_joined_tournament(
-			tournament_id = tournament.id
-		)
-		context['have_all_players_joined_tournament'] = has_all_joined
+	# 	# --- Add a "Warning" section if not all TournamentPlayers have joined the Tournament. ---
+	# 	has_all_joined = Tournament.objects.have_all_players_joined_tournament(
+	# 		tournament_id = tournament.id
+	# 	)
+	# 	context['have_all_players_joined_tournament'] = has_all_joined
+
+	# --- Build timeline ---
+	# Note: Only build a timeline if this is not a backfill tournament and the state is either ACTIVE or COMPLETED.
+	eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
+	if len(eliminations) > 0:
+		if not eliminations[0].is_backfill:
+			if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
+				# Get all the TournamentElimination's and TournamentRebuyEvent's and add to the context as an event.
+				# Sort on timestamp. This is for building the timeline.
+				events = []
+				# Eliminations
+				for elimination in eliminations:
+					event = build_elimination_event(elimination)
+					events.append(event)
+				# Rebuys
+				rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(tournament.id)
+				for rebuy in rebuys:
+					event = build_rebuy_event(rebuy)
+					events.append(event)
+
+				# If it's completed, add TournamentCompletionEvent and determine the results
+				if tournament.get_state() == TournamentState.COMPLETED:
+					results = TournamentPlayerResult.objects.get_results_for_tournament(
+						tournament_id = tournament.id
+					)
+					context['results'] = results.order_by("placement")
+					context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
+
+					# --- Build PlayerEliminationsData for each player ---
+					eliminations_data = []
+					for result in results:
+						# Determine who they eliminated in this tournament.
+						eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+							player_id = result.player.id
+						)
+						if len(eliminations) > 0:
+							data = build_player_eliminations_data_from_eliminations(
+								eliminator = result.player,
+								eliminations = eliminations
+							)
+							if data != None:
+								eliminations_data.append(data)
+					context['eliminations_data'] = eliminations_data
+
+					# --- Add a "Warning" section if not all TournamentPlayers have joined the Tournament. ---
+					has_all_joined = Tournament.objects.have_all_players_joined_tournament(
+						tournament_id = tournament.id
+					)
+					context['have_all_players_joined_tournament'] = has_all_joined
+					winning_player_result = results.filter(placement=0)[0]
+					event = build_completion_event(
+						completed_at = tournament.completed_at,
+						winning_player = winning_player_result.player
+					)
+					events.append(event)
+				else:
+					# if it's not completed, add a "TournamentInProgressEvent"
+					event = build_in_progress_event(
+						started_at = tournament.started_at
+					)
+					events.append(event)
+
+				events.sort(key=lambda event: event.timestamp)
+				context['events'] = events
 
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
 

@@ -36,6 +36,18 @@
       </div>
       {% endif %}
 
+      <!-- Timeline -->
+      <!-- Only show timeline if tournament is ACTIVE or COMPLETED. Also if it is not a backfill. -->
+      {% if tournament.get_state_string == "ACTIVE" or tournament.get_state_string == "COMPLETED" %}
+      {% if events|length > 0 %}
+      <h5>Timeline</h5>
+      <hr>
+      <div class="tournament-details-group" id="id_timeline_group">
+        {% include 'tournament/snippets/tournament_events_timeline.html' %}
+      </div>
+      {% endif %}
+      {% endif %}
+
       <!-- Players -->
       <h5>
         {% if tournament.completed_at != None %}
