@@ -5,7 +5,7 @@ from django.utils import timezone
 DID_NOT_PLACE_VALUE = 999999999
 
 """
-TODO docs for all these
+An Elimination event for tournament timelines.
 """
 @dataclass
 class TournamentEliminationEvent:
@@ -20,6 +20,9 @@ def build_elimination_event(tournament_elimination):
 		timestamp = tournament_elimination.eliminated_at,
 	)
 
+"""
+A Rebuy event for tournament timelines.
+"""
 @dataclass
 class TournamentRebuyEvent:
 	username: str
@@ -31,6 +34,9 @@ def build_rebuy_event(tournament_rebuy):
 		timestamp = tournament_rebuy.timestamp,
 	)
 
+"""
+A Completion event for tournament timelines.
+"""
 @dataclass
 class TournamentCompleteEvent:
 	winning_player_username: str
@@ -42,6 +48,9 @@ def build_completion_event(completed_at, winning_player):
 		timestamp = completed_at,
 	)
 
+"""
+An in-progress event for tournament timelines.
+"""
 @dataclass
 class TournamentInProgressEvent:
 	in_progress_description: str
