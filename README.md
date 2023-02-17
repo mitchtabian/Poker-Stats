@@ -15,27 +15,22 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Add a navigation bar or something for:
-	1. Profile
-	1. Tournaments
-	1. logout
-	1. Login
-1. Analytics for user
-	1. Accessible from profile
-	1. Shows summary across games
-		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
-1. Design a landing page
-	1. On mobile optimize for quickly creating or joining a tournament
 1. Purchase a domain so I can set up bugsnag and emails and stuff
 1. Setup bugsnag
 1. Publish to website 
 	1. Publish a release branch that is versioned so I can easily revert to different releases in the future
 	1. Make sure bugsnag is setup first
 1. Setup Jira for further feature work
+1. Analytics for user
+	1. Accessible from profile
+	1. Shows summary across games
+		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
+1. Design a landing page
+	1. On mobile optimize for quickly creating or joining a tournament
+
 1. TournamentGroup? Think this through with some diagrams
 1. Analaytics based on TournamentGroup
 	- Basically this would just extend the per-user analytics
-
 
 ## TODO (after app is fully functional)
 1. Optimize everything for mobile. (I think this is already done, but confirm)
