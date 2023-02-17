@@ -359,36 +359,6 @@ def render_tournament_view(request, tournament_id):
 	context['allow_rebuys'] = tournament.tournament_structure.allow_rebuys
 	context['player_tournament_data'] = get_player_tournament_data(tournament_id)
 
-	# # If the tournament is completed, add the TournamentPlayerResult data to the context
-	# if tournament.completed_at != None:
-	# 	results = TournamentPlayerResult.objects.get_results_for_tournament(
-	# 		tournament_id = tournament.id
-	# 	)
-	# 	context['results'] = results.order_by("placement")
-	# 	context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
-
-	# 	# --- Build PlayerEliminationsData for each player ---
-	# 	eliminations_data = []
-	# 	for result in results:
-	# 		# Determine who they eliminated in this tournament.
-	# 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
-	# 			player_id = result.player.id
-	# 		)
-	# 		if len(eliminations) > 0:
-	# 			data = build_player_eliminations_data_from_eliminations(
-	# 				eliminator = result.player,
-	# 				eliminations = eliminations
-	# 			)
-	# 			if data != None:
-	# 				eliminations_data.append(data)
-	# 	context['eliminations_data'] = eliminations_data
-
-	# 	# --- Add a "Warning" section if not all TournamentPlayers have joined the Tournament. ---
-	# 	has_all_joined = Tournament.objects.have_all_players_joined_tournament(
-	# 		tournament_id = tournament.id
-	# 	)
-	# 	context['have_all_players_joined_tournament'] = has_all_joined
-
 	# --- Build timeline ---
 	# Note: Only build a timeline if this is not a backfill tournament and the state is either ACTIVE or COMPLETED.
 	eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
