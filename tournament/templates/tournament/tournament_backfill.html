@@ -95,7 +95,7 @@
       <form method="POST">
         {% csrf_token %}
         <!-- Hidden htmx input -->
-        <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#parent" name="data_json" value="{{json_dict}}"></button>
+        <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#body_container" name="data_json" value="{{json_dict}}"></button>
         <div class="d-flex flex-row justify-content-end">
           <button class="btn btn-primary backfill-submit-btn" type="submit">Save</button>
         </div>

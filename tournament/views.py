@@ -60,7 +60,20 @@ def tournament_create_view(request, *args, **kwargs):
 @login_required
 def tournament_list_view(request, *args, **kwargs):
 	context = {}
+
+	# The tournament where they are the admin
 	context['tournaments'] = Tournament.objects.get_by_user(user=request.user)
+
+	# The tournaments they have joined (with accepted invite) but are not admin
+	context['joined_tournaments'] = Tournament.objects.get_joined_tournaments(request.user.id)
+
+	# pending invites
+	invites = TournamentInvite.objects.find_pending_invites_for_user(request.user.id)
+	for invite in invites:
+		if invite.tournament.get_state() == TournamentState.COMPLETED:
+			invites = invites.exclude(tournament=invite.tournament)
+	context['invites'] = invites
+
 	return render(request=request, template_name="tournament/tournament_list.html", context=context)
 
 @login_required

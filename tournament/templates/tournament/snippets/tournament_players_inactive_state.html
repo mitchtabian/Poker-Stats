@@ -11,6 +11,8 @@
       <th scope="col player-col">Status</th>
       {% if request.user == tournament.admin %}
       <th scope="col player-col">Action</th>
+      {% else %}
+      <th scope="col player-col"></th>
       {% endif %}
     </tr>
   </thead>
@@ -25,7 +27,7 @@
           {% if request.user == tournament.admin and player.user != tournament.admin %}
           <button class="btn btn-danger player-action-button btn-sm" data-bs-toggle="modal" data-bs-target="#id_remove_modal_{{player.id}}">Remove</button>
           {% elif request.user != tournament.admin and request.user == player.user %}
-          <a hx-post="{% url 'tournament:remove_player' player_id=player.user.id tournament_id=player.tournament.id %}" hx-target="#parent" hx-swap="innerHTML" class="btn btn-danger btn-sm player-action-button">Leave</a>
+          <a hx-post="{% url 'tournament:remove_player' player_id=player.user.id tournament_id=player.tournament.id %}" hx-target="#body_container" hx-swap="innerHTML" class="btn btn-danger btn-sm player-action-button">Leave</a>
           {% elif request.user == tournament.admin and request.user == player.user %}
           <span style="font-weight: bold;">admin</span>
           {% endif %}
@@ -43,9 +45,9 @@
         <td class="player-row">Invite pending</td>
         <td class="player-row">
           {% if request.user == tournament.admin %}
-            <a hx-post="{% url 'tournament:uninvite' player_id=invite.send_to.id tournament_id=invite.tournament.id %}" hx-target="#parent" hx-swap="innerHTML" class="btn btn-warning btn-sm player-action-button">Uninvite</a>
+            <a hx-post="{% url 'tournament:uninvite' player_id=invite.send_to.id tournament_id=invite.tournament.id %}" hx-target="#body_container" hx-swap="innerHTML" class="btn btn-warning btn-sm player-action-button">Uninvite</a>
           {% elif request.user == invite.send_to %}
-            <a hx-post="{% url 'tournament:join_tournament' pk=invite.id %}" hx-target="#parent" hx-swap="innerHTML" class="btn btn-primary btn-sm player-action-button">Join</a>
+            <a hx-post="{% url 'tournament:join_tournament' pk=invite.id %}" hx-target="#body_container" hx-swap="innerHTML" class="btn btn-primary btn-sm player-action-button">Join</a>
           {% endif %}
         </td>
       </tr>

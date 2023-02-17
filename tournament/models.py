@@ -500,6 +500,23 @@ class TournamentManager(models.Manager):
 				return False
 		return True
 
+	"""
+	Returns all the Tournaments this user has joined (no pending invite) and is not an admin of.
+	"""
+	def get_joined_tournaments(self, user_id):
+		# get all the Tournaments that this user has joined
+		tournament_players = TournamentPlayer.objects.get_all_tournament_players_by_user_id(user_id)
+		tournaments = []
+		for player in tournament_players:
+			if player.tournament.admin != player.user:
+				invites = TournamentInvite.objects.find_pending_invites(
+					send_to_user_id = player.user.id,
+					tournament_id = player.tournament.id
+				)
+				if len(invites) == 0:
+					tournaments.append(player.tournament)
+		return tournaments
+
 """
 The states a tournament can be in.
 INACTIVE: started_at == None and completed_at == None.
