@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, reverse
 
 from tournament.models import TournamentInvite, TournamentPlayer,TournamentState
 
@@ -18,8 +18,9 @@ def root_view(request):
 		for player in tournament_players:
 			tournaments.append(player.tournament)
 		context['tournaments'] = tournaments
-
-	return render(request, "root/root.html", context=context)
+		return render(request, "root/root.html", context=context)
+	else:
+		return redirect("/accounts/login/")
 
 def contact_view(request):
 	return render(request, "root/contact.html")

@@ -70,7 +70,7 @@
         {% if request.user == tournament.admin and tournament.get_state_string == "INACTIVE" %}
           <div id="id_send_invite_container" class="mt-4">
             <h6>Invite Players</h6>
-            <input hx-get="{% url 'tournament:tournament_view' pk=tournament.id %}" hx-target="#parent" hx-swap="innerHTML" hx-trigger="input delay:0.3s" type="text" name="search" id="id_search" class="form-control mt-3" placeholder="Add players" aria-label="Add players" value="{{search}}">
+            <input hx-get="{% url 'tournament:tournament_view' pk=tournament.id %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="input delay:0.3s" type="text" name="search" id="id_search" class="form-control mt-3" placeholder="Add players" aria-label="Add players" value="{{search}}">
             {% include 'tournament/snippets/user_search_results.html' %}
           </div>
         {% endif %}

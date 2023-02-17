@@ -3,11 +3,11 @@
 
 {% if events|length > 0 %}
 <div class="d-flex justify-content-center expand-collapse-icon-container" data-toggle="tooltip" data-placement="top" title="Toggle the timeline">
-	<svg onclick="expandTimelineEventTable()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0275d8" class="bi bi-plus-circle expand-timeline-event-list" id="id_expand_timeline_event_list" viewBox="0 0 16 16">
+	<svg onclick="expandTimelineEventTable()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0275d8" class="bi bi-plus-circle expand-timeline-event-list timeline-toggler" id="id_expand_timeline_event_list" viewBox="0 0 16 16">
 	  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 	  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
 	</svg>
-	<svg onclick="collapseTimelineEventTable()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#d9534f" class="bi bi-dash-circle collapse-timeline-event-list" id="id_collapse_timeline_event_list" viewBox="0 0 16 16">
+	<svg onclick="collapseTimelineEventTable()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#d9534f" class="bi bi-dash-circle collapse-timeline-event-list timeline-toggler" id="id_collapse_timeline_event_list" viewBox="0 0 16 16">
 	  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 	  <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
 	</svg>
@@ -128,6 +128,10 @@
 </script>
 
 <style type="text/css">
+	.timeline-toggler:hover {
+		cursor: pointer;
+	}
+
 	.expand-collapse-icon-container {
 		position: relative;
 		top: -16px;

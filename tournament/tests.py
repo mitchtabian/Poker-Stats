@@ -1257,6 +1257,78 @@ class TournamentTestCase(TransactionTestCase):
 
 
 	"""
+	Verify get_joined_tournaments
+	"""
+	def test_get_joined_tournaments(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 100,
+			bounty_amount = 10,
+			payout_percentages = [100],
+			allow_rebuys = False
+		)
+
+		# Create tournament owned by 'cat'
+		cat_tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Build a structure made by dog
+		dog = User.objects.get_by_username("dog")
+		structure = self.build_structure(
+			user = dog,
+			buyin_amount = 100,
+			bounty_amount = 10,
+			payout_percentages = [100],
+			allow_rebuys = False
+		)
+
+		# Create tournament owned by 'dog'
+		dog_tournament = self.build_tournament(
+			title = "Dog Tournament",
+			admin = dog,
+			structure = structure
+		)
+
+		# invite dog to cat's tournament
+		TournamentInvite.objects.send_invite(
+			sent_from_user_id = cat.id,
+			send_to_user_id = dog.id,
+			tournament_id = cat_tournament.id
+		)
+
+		# Verify dog's joined tournaments list is empty
+		dogs_joined_tournaments = Tournament.objects.get_joined_tournaments(
+			user_id = dog.id
+		)
+		self.assertEqual(len(dogs_joined_tournaments), 0)
+
+		# Now join the tournament on dog
+		dog_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			user_id = dog.id,
+			tournament_id = cat_tournament.id
+		)
+		TournamentPlayer.objects.join_tournament(
+			player = dog_player
+		)
+
+		# Verify dog's joined tournaments list is NOT empty
+		dogs_joined_tournaments = Tournament.objects.get_joined_tournaments(
+			user_id = dog.id
+		)
+		self.assertEqual(len(dogs_joined_tournaments), 1)
+
+		# Verify cat's joined tournaments list is empty since they are the admin of the only tournament they're part of.
+		cats_joined_tournaments = Tournament.objects.get_joined_tournaments(
+			user_id = cat.id
+		)
+		self.assertEqual(len(cats_joined_tournaments), 0)
+
+	"""
 	Verify is_completable without rebuys enabled.
 	"""
 	def test_is_completable_without_rebuys(self):

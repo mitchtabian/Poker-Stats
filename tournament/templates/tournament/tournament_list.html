@@ -4,19 +4,94 @@
 
 {% block content %}
 
-{% load bootstrap5 %}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
-
 <div class="container">
   <div class="row">
     <div class="offset-lg-3 col-lg-6">
-      <h2 class="mb-3">My Tournaments</h2>
-      <p>These are Tournaments that you're the admin of.</p>
-      <a class="btn btn-primary mb-4" href="{% url 'tournament:create_tournament' %}">Create new Tournament</a>
-      {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=tournaments %}
-	</div>
+
+      <!-- Create a new tournament -->
+      <div class="tournament-list-group">
+        <a class="btn btn-primary" href="{% url 'tournament:create_tournament' %}">Create Tournament</a>
+      </div>
+
+      {% if invites %}
+      <h2>Tournament invites</h2>
+      <hr>
+      <div class="tournament-list-group">
+        <ul class="mt-3 list-group">
+        {% for invite in invites %}
+          {% if invite.tournament.get_state_string != "COMPLETED" %}
+          <div class="d-flex flex-row justify-content-between list-group-item align-items-center">
+            <div>{{invite.tournament.title}}</div>
+            <div>
+              <a class="btn btn-primary btn-sm" href="{% url 'tournament:join_tournament' pk=invite.id %}">Join</a>
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- My Tournaments (is admin) -->
+      {% if tournaments %}
+      <h2>My Tournaments</h2>
+      <hr>
+      <div class="tournament-list-group">
+        <p>These are Tournaments that you're the admin of.</p>
+        {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=tournaments %}
+      </div>
+      {% endif %}
+
+      <!-- Tournaments they've joined (not admin) -->
+      {% if joined_tournaments %}
+      <h2>Joined Tournaments</h2>
+      <hr>
+      <div class="tournament-list-group">
+        <p>These are Tournaments that you've joined.</p>
+        {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=joined_tournaments %}
+      </div>
+      {% endif %}
+
+	 </div>
   </div>
 </div>
 
+<style type="text/css">
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  @media only screen and (max-width: 500px) {
+    .tournament-list-group {
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .tournament-list-group {
+      padding-left: 16px;
+      padding-right: 16px;
+/*      padding-top: 16px;*/
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+  }
+</style>
+
 {% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
