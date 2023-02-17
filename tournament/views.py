@@ -138,9 +138,10 @@ def undo_started_at(request, *args, **kwargs):
 			error_message = "You are not the admin of this Tournament."
 		)
 
-		tournament = Tournament.objects.get_by_id(tournament_id)
-		tournament.started_at = None
-		tournament.save()
+		Tournament.objects.undo_start_tournament(
+			user = user,
+			tournament_id = tournament_id
+		)
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return redirect("tournament:tournament_view", pk=tournament_id)

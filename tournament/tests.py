@@ -2661,7 +2661,121 @@ class TournamentTestCase(TransactionTestCase):
 				elim_dict = elim_dict
 			)
 		self.verify_tournament_reset(tournament.id)
-		
+
+	"""
+	Verify undo activating a tournament deletes eliminations and rebuys.
+	"""
+	def test_undo_activation_deletes_eliminations_rebuys(self):
+		# Build a structure made by cat
+		cat = User.objects.get_by_username("cat")
+		structure = self.build_structure(
+			user = cat,
+			buyin_amount = 100,
+			bounty_amount = 10,
+			payout_percentages = [100],
+			allow_rebuys = True
+		)
+
+		# Create tournament
+		tournament = self.build_tournament(
+			title = "Cat Tournament",
+			admin = cat,
+			structure = structure
+		)
+
+		# Add players
+		players = add_players_to_tournament(
+			users = User.objects.all(),
+			tournament = tournament
+		)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Eliminate all the players except 1 (cat)
+		eliminate_all_players_except(
+			players = players,
+			except_player = cat_player,
+			tournament = tournament
+		)
+
+		# Rebuy on all players (except admin)
+		for player in players:
+			if player != cat_player:
+				rebuy_for_test(
+					tournament_id = tournament.id,
+					player_id = player.id
+				)
+
+		# Eliminate everyone again (Except admin)
+		eliminate_all_players_except(
+			players = players,
+			except_player = cat_player,
+			tournament = tournament
+		)
+
+		# Verify every player has 2 eliminations (Except cat)
+		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
+			tournament_id = tournament.id
+		)
+		elim_dict = {}
+		for elimination in eliminations:
+			if elimination.eliminatee.id in elim_dict.keys():
+				elim_dict[elimination.eliminatee.id] = elim_dict[elimination.eliminatee.id] + 1
+			else:
+				elim_dict[elimination.eliminatee.id] = 1
+		self.assertFalse(cat_player.id in elim_dict)
+		for key in elim_dict.keys():
+			self.assertEqual(elim_dict[key], 2)
+
+		# Verify every player has 1 rebuy (except cat)
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		for player in players:
+			num_rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
+			)
+			if player != cat_player:
+				self.assertEqual(len(num_rebuys), 1)
+			else:
+				self.assertEqual(len(num_rebuys), 0)
+
+		# verify there are no tournament results
+		tournament_results = TournamentPlayerResult.objects.get_results_for_tournament(tournament.id)
+		self.assertTrue(len(tournament_results) == 0)
+
+		# De-activate the tournament
+		Tournament.objects.undo_start_tournament(user = cat, tournament_id = tournament.id)
+
+		# verify there are no tournament results
+		tournament_results = TournamentPlayerResult.objects.get_results_for_tournament(tournament.id)
+		self.assertTrue(len(tournament_results) == 0)
+
+		# Verify the eliminations are deleted
+		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
+			tournament_id = tournament.id
+		)
+		self.assertEqual(len(eliminations), 0)
+
+		# Verify rebuys are deleted
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		for player in players:
+			num_rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
+			)
+			self.assertEqual(len(num_rebuys), 0)
+
+		# Verify started_at is None
+		tournament = Tournament.objects.get_by_id(tournament.id)
+		self.assertEqual(tournament.started_at, None)
 
 
 class TournamentPlayerResultTestCase(TransactionTestCase):
