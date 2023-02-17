@@ -410,6 +410,26 @@ class TournamentManager(models.Manager):
 		tournament.save(using=self._db)
 		return tournament
 
+	def undo_start_tournament(self, user, tournament_id):
+		tournament = self.get(pk=tournament_id)
+		if tournament.admin != user:
+			raise ValidationError("You cannot update a Tournament if you're not the admin.")
+		if tournament.started_at is None:
+			raise ValidationError("You can't deactivate a Tournament that has not been activated.")
+
+		self.delete_all_rebuys_and_eliminations(
+			admin = user,
+			tournament_id = tournament.id
+		)
+
+		tournament.started_at = None
+		tournament.save(using=self._db)
+
+		# Delete any Tournament results.
+		TournamentPlayerResult.objects.delete_results_for_tournament(tournament.id)
+
+		return tournament
+
 	def get_by_id(self, tournament_id):
 		try:
 			tournament = self.get(pk=tournament_id)
