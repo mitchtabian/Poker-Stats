@@ -15,7 +15,6 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Tournament timeline
 1. Warning modal on de-activate
 	1. de-activate should delete all tournament data (rebuys, eliminations, results)
 1. Analytics for user
