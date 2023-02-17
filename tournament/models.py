@@ -504,7 +504,6 @@ class TournamentManager(models.Manager):
 	Returns all the Tournaments this user has joined (no pending invite) and is not an admin of.
 	"""
 	def get_joined_tournaments(self, user_id):
-		# get all the Tournaments that this user has joined
 		tournament_players = TournamentPlayer.objects.get_all_tournament_players_by_user_id(user_id)
 		tournaments = []
 		for player in tournament_players:
