@@ -52,4 +52,4 @@ jobs:
         EMAIL_ID: dunno
         EMAIL_PASSWORD: dunno2
       run: |
-        python manage.py test
+        python manage.py test --debug-mode
