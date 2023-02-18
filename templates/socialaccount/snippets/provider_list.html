@@ -1,4 +1,5 @@
 {% load socialaccount %}
+{% load static %}
 
 {% get_providers as socialaccount_providers %}
 
@@ -18,7 +19,7 @@
 <a title="{{provider.name}}" class="socialaccount_provider {{provider.id}} btn btn-light brand-button"
      href="{% provider_login_url provider.id process=process scope=scope auth_params=auth_params %}" style="text-decoration: none">
   {% if provider.name == "Google" %}
-  <img src="/media/resources/google_logo.png" style="width: 32px; height: 32px;">
+  <img src="{% static 'resources/google_logo.png' %}" style="width: 32px; height: 32px;">
   {% endif %}
  {{provider.name}}
 </a>
