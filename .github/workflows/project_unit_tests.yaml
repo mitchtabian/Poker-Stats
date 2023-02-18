@@ -44,7 +44,7 @@ jobs:
         DB_USER: postgres
         DB_PASSWORD: postgres
         DJANGO_ALLOWED_HOSTS: localhost 127.0.0.1 [::1]
-        DEBUG_MODE: False
+        DEBUG: True
         TIME_ZONE: US/Pacific
         CACHE_KEY_PREFIX: Halo
         GOOGLE_AUTH_CLIENT_ID: whocares
@@ -52,4 +52,4 @@ jobs:
         EMAIL_ID: dunno
         EMAIL_PASSWORD: dunno2
       run: |
-        python manage.py test --debug-mode
+        python manage.py test

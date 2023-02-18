@@ -15,11 +15,14 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Purchase a domain so I can set up bugsnag and emails and stuff
+1. CI still broken with --debug-mode?
+1. Google signin issue? Not working for people to sign up with google account (See screenshot saved)
 1. Setup bugsnag
-1. Publish to website 
-	1. Publish a release branch that is versioned so I can easily revert to different releases in the future
-	1. Make sure bugsnag is setup first
+1. Create a pokerstats.lol email for verifications and other stuff
+1. Fix all the django-allauth templates to reference pokerstats.lol
+1. Do not remove pending invites when activating tournament.
+	- This will get annoying in practice. So allow tournaments to be filled out and completed without a person confirming.
+	- Think about this more...?
 1. Setup Jira for further feature work
 1. Analytics for user
 	1. Accessible from profile
