@@ -86,6 +86,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'root.context_processors.app_name',
+                'root.context_processors.domain'
             ],
         },
     },
@@ -156,6 +158,7 @@ ACCOUNT_LOGIN_ON_PASSWORD_RESET=True
 LOGIN_URL = 'account_login'
 LOGOUT_REDIRECT_URL = 'home'
 LOGIN_REDIRECT_URL = 'home'
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '(pokerstats.lol) '
 
 SITE_ID = 1
 
