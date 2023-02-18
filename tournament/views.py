@@ -323,13 +323,10 @@ def rebuy_player_in_tournament(request, *args, **kwargs):
 		return HttpResponse(content_type='application/json', status=400)
 	return HttpResponse(content_type='application/json', status=200)
 
-from django.conf import settings
-
 """
 Common function shared between tournament_view and htmx requests used in that view.
 """
 def render_tournament_view(request, tournament_id):
-	print(f"DEBUG: {settings.DEBUG}, {type(settings.DEBUG)}")
 	context = {}
 	tournament = Tournament.objects.get_by_id(tournament_id)
 	context['tournament'] = tournament
