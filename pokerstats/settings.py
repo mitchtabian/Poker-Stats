@@ -208,6 +208,7 @@ if DEBUG == False:
     AWS_S3_ENDPOINT_URL = env('AWS_S3_ENDPOINT_URL')
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
+        'ACL': 'public-read',
     }
     AWS_LOCATION = env('AWS_LOCATION')
 

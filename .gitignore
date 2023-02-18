@@ -8,6 +8,5 @@ media
 .env
 .env-prod
 notes.md
-static
 static_cdn
 media_cdn
