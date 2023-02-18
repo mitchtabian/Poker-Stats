@@ -231,13 +231,13 @@ USE_TZ = True
 STATICFILES_DIRS = [
         BASE_DIR / "static",
     ]
-    STATIC_ROOT = "static_cdn"
+STATIC_ROOT = "static_cdn"
 
-    STATIC_URL = '/static/'
+STATIC_URL = '/static/'
 
-    MEDIA_URL = '/media/'
+MEDIA_URL = '/media/'
 
-    MEDIA_ROOT = 'media_cdn'
+MEDIA_ROOT = 'media_cdn'
 
 
 # Default primary key field type
