@@ -51,5 +51,13 @@ jobs:
         GOOGLE_AUTH_CLIENT_SECRET: whocares2
         EMAIL_ID: dunno
         EMAIL_PASSWORD: dunno2
+        AWS_ACCESS_KEY_ID: ndkslgnsdklg
+        AWS_SECRET_ACCESS_KEY: gmgglkgmd
+        AWS_STORAGE_BUCKET_NAME: fggkfdgfdgd
+        AWS_S3_ENDPOINT_URL: https://whocares.com
+        AWS_LOCATION: doesnotmatter
+        STATIC_URL: https://whocares.com
+        STATICFILES_STORAGE: fgdfgdgf
+        DEFAULT_FILE_STORAGE: gsdsgsdg
       run: |
         python manage.py test

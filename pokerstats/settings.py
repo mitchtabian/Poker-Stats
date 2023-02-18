@@ -29,7 +29,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG') == 'True'
+if os.environ.get('GITHUB_WORKFLOW'):
+    DEBUG = True
+else:
+    DEBUG = env('DEBUG') == 'True'
 
 ALLOWED_HOSTS = ['pokerstats.lol', 'www.pokerstats.lol', '67.205.147.15', 'localhost']
 
