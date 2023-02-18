@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -200,18 +201,44 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
+# if DEBUG == False:
+#     AWS_ACCESS_KEY_ID = 'your-spaces-access-key'
+#     AWS_SECRET_ACCESS_KEY = 'your-spaces-secret-access-key'
+#     AWS_STORAGE_BUCKET_NAME = 'your-storage-bucket-name'
+#     AWS_S3_ENDPOINT_URL = 'https://nyc3.digitaloceanspaces.com'
+#     AWS_S3_OBJECT_PARAMETERS = {
+#         'CacheControl': 'max-age=86400',
+#     }
+#     AWS_LOCATION = 'your-spaces-files-folder'
+
+#     STATICFILES_DIRS = [
+#         os.path.join(BASE_DIR, 'mysite/static'),
+#     ]
+#     STATIC_URL = 'https://%s/%s/' % (AWS_S3_ENDPOINT_URL, AWS_LOCATION)
+#     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# else:
+#     STATICFILES_DIRS = [
+#         BASE_DIR / "static",
+#     ]
+#     STATIC_ROOT = "static_cdn"
+
+#     STATIC_URL = '/static/'
+
+#     MEDIA_URL = '/media/'
+
+#     MEDIA_ROOT = 'media_cdn'
 
 STATICFILES_DIRS = [
-    BASE_DIR / "static",
-    # '/var/www/static/',
-]
-STATIC_ROOT = "static_cdn"
+        BASE_DIR / "static",
+    ]
+    STATIC_ROOT = "static_cdn"
 
-STATIC_URL = '/static/'
+    STATIC_URL = '/static/'
 
-MEDIA_URL = '/media/'
+    MEDIA_URL = '/media/'
 
-MEDIA_ROOT = 'media_cdn'
+    MEDIA_ROOT = 'media_cdn'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
