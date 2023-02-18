@@ -31,7 +31,7 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['pokerstats.lol', 'www.pokerstats.lol', '67.205.147.15', 'localhost']
 
 # Application definition
 
