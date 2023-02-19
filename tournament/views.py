@@ -69,9 +69,6 @@ def tournament_list_view(request, *args, **kwargs):
 
 	# pending invites
 	invites = TournamentInvite.objects.find_pending_invites_for_user(request.user.id)
-	for invite in invites:
-		if invite.tournament.get_state() == TournamentState.COMPLETED:
-			invites = invites.exclude(tournament=invite.tournament)
 	context['invites'] = invites
 
 	return render(request=request, template_name="tournament/tournament_list.html", context=context)
