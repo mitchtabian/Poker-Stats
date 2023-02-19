@@ -15,11 +15,10 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. CI still broken with --debug-mode?
 1. Google signin issue? Not working for people to sign up with google account (See screenshot saved)
+	- Seems to be from opening pokerstats.lol from within another app. Can I fix this easily?
 1. Setup bugsnag
 1. Create a pokerstats.lol email for verifications and other stuff
-1. Fix all the django-allauth templates to reference pokerstats.lol
 1. Do not remove pending invites when activating tournament.
 	- This will get annoying in practice. So allow tournaments to be filled out and completed without a person confirming.
 	- Think about this more...?
