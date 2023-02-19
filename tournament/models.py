@@ -283,13 +283,13 @@ class TournamentManager(models.Manager):
 			if tournament.tournament_structure.allow_rebuys == True:
 				for player_id in rebuys_dict:
 					for i in range(0, rebuys_dict[player_id]):
-						TournamentRebuy.objects.backfill_rebuy(
+						rebuy = TournamentRebuy.objects.backfill_rebuy(
 							tournament_id = tournament.id,
 							player_id = player_id
 						)
 
 			# Add the eliminations
-			self.build_eliminations_for_backfilled_tournament(
+			eliminations = self.build_eliminations_for_backfilled_tournament(
 				tournament_id = tournament.id,
 				elim_dict = elim_dict
 			)
@@ -1125,29 +1125,28 @@ class TournamentPlayerResultManager(models.Manager):
 
 		# First build the results for the players who placed
 		for player_placement in player_tournament_placements:
-			# Build result using forced placement
-			player = TournamentPlayer.objects.get_by_id(player_placement.player_id)
-			placement = player_placement.placement
-			result = self.create_tournament_player_result(
-				user_id = player.user.id,
-				tournament_id = tournament.id,
-				placement = placement,
-				is_backfill = True
-			)
+			if player_placement.placement != DID_NOT_PLACE_VALUE:
+				# Build result using forced placement
+				player = TournamentPlayer.objects.get_by_id(player_placement.player_id)
+				placement = player_placement.placement
+				result = self.create_tournament_player_result(
+					user_id = player.user.id,
+					tournament_id = tournament.id,
+					placement = placement,
+					is_backfill = True
+				)
+				results.append(result)
+			else:
+				# Build result using placement = DID_NOT_PLACE_VALUE
+				player = TournamentPlayer.objects.get_by_id(player_placement.player_id)
+				result = self.create_tournament_player_result(
+					user_id = player.user.id,
+					tournament_id = tournament.id,
+					placement = DID_NOT_PLACE_VALUE,
+					is_backfill = True
+				)
+				results.append(result)
 
-		# Then build the results for the players who did not place.
-		players = TournamentPlayer.objects.get_tournament_players(tournament_id = tournament.id)
-		placement_player_ids = [value.player_id for value in player_tournament_placements]
-		players = players.exclude(id__in=placement_player_ids)
-		for player in players:
-			# Build result using placement = DID_NOT_PLACE_VALUE
-			result = self.create_tournament_player_result(
-				user_id = player.user.id,
-				tournament_id = tournament.id,
-				placement = DID_NOT_PLACE_VALUE,
-				is_backfill = True
-			)
-			results.append(result)
 		return results
 
 
