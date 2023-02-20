@@ -602,7 +602,7 @@ def get_player_tournament_data(tournament_id):
 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
 			player_id = player.id
 		)
-		is_eliminated = TournamentElimination.objects.is_player_eliminated(
+		is_eliminated = TournamentPlayer.objects.is_player_eliminated(
 			player_id = player.id
 		)
 		rebuys = TournamentRebuy.objects.get_rebuys_for_player(

@@ -693,6 +693,24 @@ class TournamentPlayerManager(models.Manager):
 		except TournamentPlayer.DoesNotExist:
 			pass
 		return False
+
+	"""
+	Return True is a player has been eliminated from a Tournament (and has no more rebuys).
+	How?
+	Compare the number of times they've been eliminated against the number of rebuys.
+	Remember: If they've rebought once they will have one existing elimination.
+	"""
+	def is_player_eliminated(self, player_id):
+		player = TournamentPlayer.objects.get_by_id(pk = player_id)
+		eliminations = TournamentElimination.objects.get_eliminations_by_eliminatee(player_id = player.id)
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminatee(player_id = player.id)
+		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+					player = player
+				)
+		if len(eliminations) + len(split_eliminations) > len(rebuys):
+			return True
+		return False
+
 """
 A player associated with specific tournament.
 """
@@ -902,7 +920,7 @@ class TournamentEliminationManager(models.Manager):
 			raise ValidationError("You can't eliminate any more players. Complete the Tournament.")
 
 		# Verify a multiple-eliminations aren't happening unless they've rebought.
-		is_player_eliminated = self.is_player_eliminated(
+		is_player_eliminated = TournamentPlayer.objects.is_player_eliminated(
 			player_id = eliminatee_player.id
 		)
 		if is_player_eliminated:
@@ -927,23 +945,6 @@ class TournamentEliminationManager(models.Manager):
 		elimination.is_backfill = True
 		elimination.save()
 		return elimination
-
-	"""
-	Return True is a player has been eliminated from a Tournament (and has no more rebuys).
-	How?
-	Compare the number of times they've been eliminated against the number of rebuys.
-	Remember: If they've rebought once they will have one existing elimination.
-	"""
-	def is_player_eliminated(self, player_id):
-		player = TournamentPlayer.objects.get_by_id(pk = player_id)
-		eliminations = self.get_eliminations_by_eliminatee(player_id = player.id)
-		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
-					player = player
-				)
-		if len(eliminations) > len(rebuys):
-			return True
-		return False
-
 
 """
 Tracks the data for eliminations. 
@@ -1023,7 +1024,7 @@ class TournamentSplitEliminationManager(models.Manager):
 			pk = eliminatee_id
 		)
 		if eliminatee_player == None:
-			raise ValidationError(f"{eliminatee_player.user.username} is not part of that Tournament.")
+			raise ValidationError("Eliminatee is not part of that Tournament.")
 
 		# Get the players doing the eliminating (splitting the elimination)
 		eliminator_players = []
@@ -1034,11 +1035,11 @@ class TournamentSplitEliminationManager(models.Manager):
 			
 			# Verify they are part of this tournament
 			if eliminator_player == None:
-				raise ValidationError(f"{eliminator_player.user.username} is not part of that Tournament.")
+				raise ValidationError("Eliminator is not part of that Tournament.")
 			
 			# Make sure a player isn't trying to eliminate themself.
 			if eliminator_player == eliminatee_player:
-				raise ValueError(f"{eliminator_player.user.username} can't eliminate themselves!")
+				raise ValidationError(f"{eliminator_player.user.username} can't eliminate themselves!")
 
 			# Make sure they didn't specify the same user twice
 			if eliminator_player in eliminator_players:
@@ -1071,7 +1072,7 @@ class TournamentSplitEliminationManager(models.Manager):
 			raise ValidationError("You can't eliminate any more players. Complete the Tournament.")
 
 		# Verify a multiple-eliminations aren't happening unless they've rebought.
-		is_player_eliminated = TournamentElimination.objects.is_player_eliminated(
+		is_player_eliminated = TournamentPlayer.objects.is_player_eliminated(
 			player_id = eliminatee_player.id
 		)
 		if is_player_eliminated:

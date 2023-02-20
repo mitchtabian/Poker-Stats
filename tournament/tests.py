@@ -10,7 +10,8 @@ from tournament.models import (
 	Tournament,
 	TournamentPlayer,
 	TournamentState,
-	TournamentRebuy
+	TournamentRebuy,
+	TournamentSplitElimination
 )
 from tournament.test_util import (
 	add_players_to_tournament,
@@ -20,7 +21,8 @@ from tournament.test_util import (
 	eliminate_all_players_except,
 	eliminate_player,
 	PlayerPlacementData,
-	rebuy_for_test
+	rebuy_for_test,
+	split_eliminate_player
 )
 from tournament.util import PlayerTournamentPlacement, build_placement_string
 from user.models import User
@@ -454,6 +456,90 @@ class TournamentPlayersTestCase(TransactionTestCase):
 					user_id = player.user.id,
 					tournament_id = tournament.id
 				)
+
+	"""
+	Verifying the is_player_eliminated function works as expected when a player is split eliminated.
+	"""
+	def test_is_split_eliminated(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("user__username")
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		admin_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = tournament.admin.id
+		)
+
+		# split eliminate player0
+		split_eliminate_player(
+			tournament_id = tournament.id,
+			eliminator_ids = [players[1].id, players[2].id],
+			eliminatee_id = players[0].id
+		)
+
+		# Confirm only player0 is eliminated
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament.id)
+		self.assertEqual(len(split_eliminations), 1)
+		for split_elimination in split_eliminations:
+			is_eliminated = TournamentPlayer.objects.is_player_eliminated(
+				player_id = split_elimination.eliminatee.id,
+			)
+			if split_elimination.eliminatee.id == players[0].id:
+				self.assertEqual(is_eliminated, True)
+			else:
+				self.assertEqual(is_eliminated, False)
+
+	"""
+	Verifying the is_player_eliminated function works as expected
+	"""
+	def test_is_eliminated(self):
+		admin = User.objects.get_by_username("cat")
+
+		tournament = self.setup_tournament(admin=admin, allow_rebuys=False)
+
+		users = User.objects.all()
+
+		# Add the users to the Tournament as TournamentPlayer's
+		add_players_to_tournament(
+			users = users,
+			tournament = tournament
+		)
+
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("user__username")
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		admin_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = tournament.admin.id
+		)
+
+		# eliminate player0
+		eliminate_player(
+			tournament_id = tournament.id,
+			eliminator_id = admin_player.id,
+			eliminatee_id = players[0].id
+		)
+
+		# Confirm only player0 is eliminated
+		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
+		for elimination in eliminations:
+			is_eliminated = TournamentPlayer.objects.is_player_eliminated(
+				player_id=elimination.eliminatee.id,
+			)
+			if elimination.eliminatee.id == players[0].id:
+				self.assertEqual(is_eliminated, True)
+			else:
+				self.assertEqual(is_eliminated, False)
 
 	"""
 	Verify you can't add or remove players from a Tournament that is completed.
@@ -983,44 +1069,6 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 			)
 
 	"""
-	Verifying the is_player_eliminated function works as expected
-	"""
-	def test_is_eliminated(self):
-		tournament = Tournament.objects.get_by_id(1)
-		tournament_id = tournament.id
-
-		players = TournamentPlayer.objects.get_tournament_players(
-			tournament_id = tournament.id
-		).order_by("user__username")
-
-		# Start
-		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
-
-		admin_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
-			tournament_id = tournament.id,
-			user_id = tournament.admin.id
-		)
-
-		# eliminate player0
-		eliminate_player(
-			tournament_id = tournament.id,
-			eliminator_id = admin_player.id,
-			eliminatee_id = players[0].id
-		)
-
-		# Confirm only player0 is eliminated
-		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament_id)
-		for elimination in eliminations:
-			is_eliminated = TournamentElimination.objects.is_player_eliminated(
-				player_id=elimination.eliminatee.id,
-			)
-			if elimination.eliminatee.id == players[0].id:
-				self.assertEqual(is_eliminated, True)
-			else:
-				self.assertEqual(is_eliminated, False)
-
-
-	"""
 	Verify you cannot eliminate a player that is already eliminated
 	"""
 	def test_cannot_eliminate_player_who_is_already_eliminated(self):
@@ -1048,7 +1096,7 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 	"""
 	Verify you cannot eliminate a player when the tournament is not started.
 	"""
-	def test_cannot_eliminate_player_who_is_already_eliminated(self):
+	def test_cannot_eliminate_player_when_tournament_not_active(self):
 		tournament = Tournament.objects.get_by_id(1)
 		tournament_id = tournament.id
 
@@ -2848,6 +2896,309 @@ class TournamentTestCase(TransactionTestCase):
 		# Verify started_at is None
 		tournament = Tournament.objects.get_by_id(tournament.id)
 		self.assertEqual(tournament.started_at, None)
+
+
+class TournamentSplitEliminationsTestCase(TransactionTestCase):
+
+	# Reset primary keys after each test function run
+	reset_sequences = True
+	
+	def setUp(self):
+		# Build some users for the tests
+		users = create_users(
+			identifiers = ["cat", "dog", "monkey", "bird", "donkey", "elephant", "gator", "insect", "racoon"]
+		)
+
+		# Build a Structure with no bounties and no rebuys
+		structure = build_structure(
+			admin = users[0], # Cat is admin
+			buyin_amount = 115,
+			bounty_amount = 15,
+			payout_percentages = (60, 30, 10),
+			allow_rebuys = False
+		)
+
+		tournament = build_tournament(structure)
+
+		# Add the users to the Tournament as TournamentPlayer's
+		add_players_to_tournament(
+			# Remove the admin since they are already a player automatically
+			users = [value for value in users if value.username != "cat"],
+			tournament = tournament
+		)
+
+
+	"""
+	Test the split eliminations
+	"""
+	def test_split_eliminations(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		# -- Create eliminations --
+		# player0 and player4 eliminate player1
+		split_eliminate_player(
+			tournament_id = tournament_id,
+			eliminator_ids = [players[0].id, players[4].id],
+			eliminatee_id = players[1].id
+		)
+
+		# player2, player6 and player8 eliminate player3
+		split_eliminate_player(
+			tournament_id = tournament_id,
+			eliminator_ids = [players[2].id, players[6].id, players[8].id],
+			eliminatee_id = players[3].id
+		)
+
+		# player4 eliminates player5
+		eliminate_player(
+			tournament_id = tournament_id,
+			eliminator_id = players[4].id,
+			eliminatee_id = players[5].id
+		)
+
+		# player6 eliminates player7
+		eliminate_player(
+			tournament_id = tournament_id,
+			eliminator_id = players[6].id,
+			eliminatee_id = players[7].id
+		)
+
+		# player0 eliminates player8
+		eliminate_player(
+			tournament_id = tournament_id,
+			eliminator_id = players[0].id,
+			eliminatee_id = players[8].id
+		)
+
+		# At this point everyone is eliminated except player0
+
+		# -- Verify eliminations --
+
+		# Verify the split eliminations by player0 and player4
+		split_eliminations0 = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+			player_id = players[0].id
+		)
+		self.assertEqual(split_eliminations0[0].eliminatee.tournament, tournament)
+		self.assertEqual(len(split_eliminations0), 1)
+
+		# verify player0 and player4 split eliminated player1
+		split_eliminators0 = split_eliminations0[0].eliminators.all()
+		for eliminator in split_eliminators0:
+			self.assertEqual(eliminator.tournament, tournament)
+		self.assertEqual(len(split_eliminators0), 2)
+		self.assertTrue(players[0] in split_eliminators0)
+		self.assertTrue(players[4] in split_eliminators0)
+		self.assertEqual(split_eliminations0[0].eliminatee, players[1])
+
+		# Verify the split eliminations by player2, player6 and player8
+		split_eliminations1 = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+					player_id = players[2].id
+		)
+		# verify player2, player6 and player8 split eliminated player3
+		split_eliminators1 = split_eliminations1[0].eliminators.all()
+		for eliminator in split_eliminators1:
+			self.assertEqual(eliminator.tournament, tournament)
+		self.assertEqual(len(split_eliminators1), 3)
+		self.assertTrue(players[2] in split_eliminators1)
+		self.assertTrue(players[6] in split_eliminators1)
+		self.assertTrue(players[8] in split_eliminators1)
+		self.assertEqual(split_eliminations1[0].eliminatee, players[3])
+
+
+	"""
+	Test you cannot do a split elimination when specifying only one eliminator.
+	"""
+	def test_split_eliminations(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		with self.assertRaisesMessage(ValidationError, "You must choose more than one eliminator for a split elimination."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[0].id],
+				eliminatee_id = players[1].id
+			)
+
+	"""
+	Cannot eliminate a player who is not part of the tournament and cannot perform an elimination if the eliminator
+	is not part of the tournment.
+	"""
+	def test_cannot_split_eliminate_user_who_has_not_joined_tournament(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+		new_user = create_users(['horse'])[0]
+
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		with self.assertRaisesMessage(ValidationError, "Eliminatee is not part of that Tournament."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[0].user.id, players[1].user.id],
+				eliminatee_id = new_user.id # This will fail b/c its not a TournamentPlayer
+			)
+
+		with self.assertRaisesMessage(ValidationError, "Eliminator is not part of that Tournament."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [new_user.id, players[2].user.id], # This will fail b/c its not a TournamentPlayer
+				eliminatee_id = players[0].user.id 
+			)
+
+	"""
+	Verify you cannot split eliminate a player that is already eliminated
+	"""
+	def test_cannot_split_eliminate_player_who_is_already_eliminated(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("user__username")
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		# split eliminate player0
+		split_eliminate_player(
+			tournament_id = tournament_id,
+			eliminator_ids = [players[1].id, players[2].id],
+			eliminatee_id = players[0].id
+		)
+		# Try to eliminate again. This will fail because they have already been eliminated and have no more rebuys.
+		with self.assertRaisesMessage(ValidationError, f"{players[0].user.username} has already been eliminated and has no more re-buys."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[1].id, players[3].id],
+				eliminatee_id = players[0].id
+			)
+
+	"""
+	Verify you cannot specifiy the same user as an eliminator more than once during a split elimination.
+	"""
+	def test_cannot_specify_same_eliminator_multiple_times_for_split_elimination(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("user__username")
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		with self.assertRaisesMessage(ValidationError, f"You specified {players[1].user.username} more than once as an eliminator."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[1].id, players[1].id],
+				eliminatee_id = players[0].id
+			)
+
+	"""
+	Verify you cannot split eliminate a player when the tournament is not started.
+	"""
+	def test_cannot_split_eliminate_player_when_tournament_not_active(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		).order_by("user__username")
+
+		with self.assertRaisesMessage(ValidationError, "You can only eliminate players if the Tournament is Active."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[1].id, players[2].id],
+				eliminatee_id = players[0].id
+			)
+
+	"""
+	Test cannot split eliminate the final player. The Tournament should be completed.
+	"""
+	def test_cannot_split_eliminate_last_player(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		# -- Create eliminations --
+
+		# Eliminate all players except player0
+		eliminate_all_players_except(
+			players = players,
+			except_player = players[0],
+			tournament = tournament
+		)
+
+		# At this point everyone is eliminated except player0
+		# Try to eliminate them.
+		with self.assertRaisesMessage(ValidationError, "You can't eliminate any more players. Complete the Tournament."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[8].id, players[7].id],
+				eliminatee_id = players[0].id
+			)
+
+	"""
+	Test cannot split eliminate themself.
+	"""
+	def test_cannot_split_eliminate_last_player(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		with self.assertRaisesMessage(ValidationError, f"{players[0].user.username} can't eliminate themselves!"):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[0].id, players[7].id],
+				eliminatee_id = players[0].id
+			)
+
+	"""
+	Test must choose at least 2 players to do a split elimination.
+	"""
+	def test_must_choose_at_least_2_players_to_perform_split_elimination(self):
+		tournament = Tournament.objects.get_by_id(1)
+		tournament_id = tournament.id
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
+		with self.assertRaisesMessage(ValidationError, "You must choose more than one eliminator for a split elimination."):
+			split_eliminate_player(
+				tournament_id = tournament_id,
+				eliminator_ids = [players[7].id],
+				eliminatee_id = players[0].id
+			)
 
 
 class TournamentPlayerResultTestCase(TransactionTestCase):
