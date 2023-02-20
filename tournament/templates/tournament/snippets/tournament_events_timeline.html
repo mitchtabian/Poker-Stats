@@ -24,6 +24,14 @@
 			<path d="M2507 2513 c-121 -215 -288 -545 -299 -592 -20 -87 -38 -82 299 -80 164 1 325 5 358 8 53 5 61 9 69 32 8 23 -5 54 -94 225 -112 216 -257 484 -270 497 -4 5 -32 -36 -63 -90z"/>
 			</g>
 			</svg>
+			{% elif event|is_tournament_split_elimination %}
+			<div class="split-elimination-icon-identifier">3</div>
+			<svg xmlns="http://www.w3.org/2000/svg" class="timeline-icon-svg" version="1.0" width="512.000000pt" height="512.000000pt" viewBox="0 0 512.000000 512.000000" preserveAspectRatio="xMidYMid meet">
+			<g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" fill="#000000" stroke="#000000">
+			<path d="M0 2560 l0 -2560 2560 0 2560 0 0 2560 0 2560 -2560 0 -2560 0 0 -2560z m2762 1494 c493 -172 843 -478 1063 -929 51 -105 122 -301 112 -311 -4 -4 -85 53 -365 259 -35 26 -67 47 -71 47 -4 0 -95 -40 -202 -88 -107 -49 -219 -99 -249 -113 -30 -13 -86 -40 -125 -59 l-70 -36 1 -104 c1 -117 19 -240 41 -283 8 -15 26 -32 41 -38 17 -7 137 -8 334 -5 245 4 308 3 308 -7 0 -14 92 -48 128 -48 12 1 22 -4 22 -10 0 -7 11 -9 25 -7 14 3 28 2 31 -3 2 -4 11 -6 19 -2 8 3 15 1 15 -5 0 -5 -69 -56 -152 -113 -448 -302 -458 -309 -480 -333 -16 -17 -18 -44 -18 -263 l0 -243 -90 -87 c-123 -118 -119 -115 -166 -98 -22 8 -108 34 -192 59 l-152 45 -199 -58 -199 -58 -105 93 c-79 70 -106 101 -111 125 -3 17 -6 131 -6 254 0 255 13 222 -125 317 -129 89 -333 228 -430 292 l-90 60 50 8 c27 4 51 12 53 18 2 5 8 7 13 4 6 -3 16 0 24 6 8 7 15 9 15 4 0 -5 4 -4 8 1 4 6 21 20 39 33 32 22 37 22 347 22 184 0 326 4 341 10 39 15 53 62 71 240 13 136 14 165 2 176 -7 7 -76 41 -153 74 -77 34 -218 98 -313 142 l-172 81 -53 -36 c-28 -20 -81 -57 -117 -83 -131 -95 -263 -184 -268 -180 -15 16 112 315 188 442 247 413 578 663 1080 819 119 37 101 39 302 -31z"/>
+			<path d="M2507 2513 c-121 -215 -288 -545 -299 -592 -20 -87 -38 -82 299 -80 164 1 325 5 358 8 53 5 61 9 69 32 8 23 -5 54 -94 225 -112 216 -257 484 -270 497 -4 5 -32 -36 -63 -90z"/>
+			</g>
+			</svg>
 			{% elif event|is_tournament_rebuy %}
 			<!-- Money icon -->
 			<svg class="timeline-icon-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="256" height="256" viewBox="0 0 256 256" xml:space="preserve">
@@ -70,6 +78,8 @@
 			<div class="timeline-event-description">
 				{% if event|is_tournament_elimination %}
 				Elimination
+				{% elif event|is_tournament_split_elimination %}
+				Split Elimination
 				{% elif event|is_tournament_rebuy %}
 				Rebuy
 				{% elif event|is_tournament_in_progress %}
@@ -87,6 +97,25 @@
 					</svg>
 					<div class="timeline-username" style="margin-left: 8px;">{{event.eliminator_username}}</div>
 				</div>
+				<div class="d-flex flex-row align-items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle text-danger" viewBox="0 0 16 16">
+					  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+					  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+					</svg>
+					<div class="timeline-username" style="margin-left: 8px;">{{event.eliminatee_username}}</div>
+				</div>
+			</div>
+			{% elif event|is_tournament_split_elimination %}
+			<div class="d-flex flex-column">
+				{% for eliminator_username in event.eliminator_usernames %}
+				<div class="d-flex flex-row align-items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle timeline-positive-icon" viewBox="0 0 16 16">
+					  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+					  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+					</svg>
+					<div class="timeline-username" style="margin-left: 8px;">{{eliminator_username}}</div>
+				</div>
+				{% endfor %}
 				<div class="d-flex flex-row align-items-center">
 					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle text-danger" viewBox="0 0 16 16">
 					  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -238,6 +267,22 @@
 
 	.timeline-negative-icon {
 		color: #d9534f;
+	}
+
+	.split-elimination-icon-identifier {
+		position: absolute;
+		width: 20px;
+		height: 20px;
+		text-align: center;
+		vertical-align: middle;
+		z-index: 16;
+		border-radius: 50%;
+		padding: 3px;
+		background: #f2f2f2;
+		left: 25px;
+		top: -8px;
+		font-size: 10px;
+		border: 1px solid #000;
 	}
 </style>
 

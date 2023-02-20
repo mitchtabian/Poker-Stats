@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -16,7 +17,8 @@ from tournament.models import (
 	TournamentPlayer,
 	TournamentElimination,
 	TournamentPlayerResult,
-	TournamentRebuy
+	TournamentRebuy,
+	TournamentSplitElimination
 )
 from tournament.util import (
 	PlayerTournamentData,
@@ -29,7 +31,8 @@ from tournament.util import (
 	build_elimination_event,
 	build_rebuy_event,
 	build_completion_event,
-	build_in_progress_event
+	build_in_progress_event,
+	build_split_elimination_event
 )
 from user.models import User
 
@@ -288,6 +291,44 @@ def eliminate_player_from_tournament(request, *args, **kwargs):
 	return HttpResponse(content_type='application/json', status=200)
 
 """
+Perform a split elimination.
+"""
+@login_required
+def split_eliminate_player_from_tournament(request, *args, **kwargs):
+	user = request.user
+	try:
+		# Who is doing the eliminating (this is a comma separated list of player ids)
+		eliminator_ids = kwargs['eliminator_ids']
+
+		# Who is being eliminated
+		eliminatee_id = kwargs['eliminatee_id']
+
+		# Tournament id where this is taking place
+		tournament_id = kwargs['tournament_id']
+
+		eliminator_id_integers = []
+		for player_id in eliminator_ids.split(","):
+			eliminator_id_integers.append(int(player_id))
+
+		# Verify the admin is the one eliminating
+		verify_admin(
+			user = request.user,
+			tournament_id = tournament_id,
+			error_message = "Only the admin can eliminate players."
+		)
+
+		# All the validation is performed in the create_split_elimination function.
+		elimination = TournamentSplitElimination.objects.create_split_elimination(
+			tournament_id = tournament_id,
+			eliminator_ids = eliminator_id_integers,
+			eliminatee_id = eliminatee_id
+		)
+	except Exception as e:
+		messages.error(request, e.args[0])
+		return HttpResponse(content_type='application/json', status=400)
+	return HttpResponse(content_type='application/json', status=200)	
+
+"""
 Rebuy for an eliminated player.
 Returns a generic HttpResponse with a status code representing whether it was successful or not.
 If it was not successful, the user will be redirected to an error page.
@@ -390,12 +431,12 @@ def render_tournament_view(request, tournament_id):
 	# --- Build timeline ---
 	# Note: Only build a timeline if this is not a backfill tournament and the state is either ACTIVE or COMPLETED.
 	eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
-	if len(eliminations) > 0:
+	events = []
+	if len(eliminations):
 		if not eliminations[0].is_backfill:
 			if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
 				# Get all the TournamentElimination's and TournamentRebuyEvent's and add to the context as an event.
 				# Sort on timestamp. This is for building the timeline.
-				events = []
 				# Eliminations
 				for elimination in eliminations:
 					event = build_elimination_event(elimination)
@@ -420,9 +461,19 @@ def render_tournament_view(request, tournament_id):
 						started_at = tournament.started_at
 					)
 					events.append(event)
+	
+	# SPLIT ELIMINATIONS for timeline
+	split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament.id)
+	if len(split_eliminations) > 0:
+		if not split_eliminations[0].is_backfill:
+			if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
+				for split_elimination in split_eliminations:
+					event = build_split_elimination_event(split_elimination)
+					events.append(event)
 
-				events.sort(key=lambda event: event.timestamp)
-				context['events'] = events
+	if len(events) > 0:
+		events.sort(key=lambda event: event.timestamp)
+		context['events'] = events
 
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
 
@@ -554,16 +605,27 @@ def get_player_tournament_data(tournament_id):
 		is_eliminated = TournamentElimination.objects.is_player_eliminated(
 			player_id = player.id
 		)
-
 		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
 			player = player
 		)
+
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+			player_id = player.id
+		)
+
+		# Initialize bounties to the len(eliminations), then add the fractional quantities from split eliminations.
+		bounties = len(eliminations)
+		for split_elimination in split_eliminations:
+			bounty_fraction = round(Decimal(1.0 / len(split_elimination.eliminators.all())), 2)
+			print(f"bounty_fraction: {bounty_fraction}")
+			bounties += bounty_fraction
+		print(f"bounties: {bounties}")
 
 		data = PlayerTournamentData(
 					player_id = player.id,
 					username = player.user.username,
 					rebuys = len(rebuys),
-					bounties = len(eliminations),
+					bounties = bounties,
 					is_eliminated = is_eliminated
 				)
 		player_tournament_data.append(data)

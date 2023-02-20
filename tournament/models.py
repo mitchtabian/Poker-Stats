@@ -971,6 +971,156 @@ class TournamentElimination(models.Model):
 	def get_tournament_title(self):
 		return self.eliminator.tournament.title
 
+class TournamentSplitEliminationManager(models.Manager):
+
+	def get_split_eliminations_by_tournament(self, tournament_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		split_eliminations = []
+		for player in players:
+			split_eliminations_for_player = self.get_split_eliminations_by_eliminatee(
+				player_id = player.id
+			)
+			for split_elimination in split_eliminations_for_player:
+				split_eliminations.append(split_elimination)
+		return split_eliminations
+
+	def get_split_eliminations_by_eliminator(self, player_id):
+		player = TournamentPlayer.objects.get_by_id(
+			pk = player_id
+		)
+		# Get the split eliminations for the tournament
+		split_eliminations = self.get_split_eliminations_by_tournament(
+			tournament_id = player.tournament.id
+		)
+		# Find Split eliminations where this player was the eliminator.
+		player_split_eliminations = []
+		for split_elimination in split_eliminations:
+			if player in split_elimination.eliminators.all():
+				player_split_eliminations.append(split_elimination)
+		return player_split_eliminations
+
+	def get_split_eliminations_by_eliminatee(self, player_id):
+		player = TournamentPlayer.objects.get_by_id(
+			pk = player_id
+		)
+		# SplitEliminations where this player was the eliminatee.
+		eliminations = super().get_queryset().filter(
+			eliminatee=player,
+		)
+		return eliminations
+
+	"""
+	Creates a TournamentSplitElimination using the list of eliminators in 'eliminator_ids'.
+	"""
+	def create_split_elimination(self, tournament_id, eliminator_ids, eliminatee_id):
+		tournament = Tournament.objects.get_by_id(tournament_id)
+
+		# Get eliminated player
+		eliminatee_player = TournamentPlayer.objects.get_by_id(
+			pk = eliminatee_id
+		)
+		if eliminatee_player == None:
+			raise ValidationError(f"{eliminatee_player.user.username} is not part of that Tournament.")
+
+		# Get the players doing the eliminating (splitting the elimination)
+		eliminator_players = []
+		for eliminator_id in eliminator_ids:
+			eliminator_player = TournamentPlayer.objects.get_by_id(
+				pk = eliminator_id
+			)
+			
+			# Verify they are part of this tournament
+			if eliminator_player == None:
+				raise ValidationError(f"{eliminator_player.user.username} is not part of that Tournament.")
+			
+			# Make sure a player isn't trying to eliminate themself.
+			if eliminator_player == eliminatee_player:
+				raise ValueError(f"{eliminator_player.user.username} can't eliminate themselves!")
+
+			# Make sure they didn't specify the same user twice
+			if eliminator_player in eliminator_players:
+				raise ValidationError(f"You specified {eliminator_player.user.username} more than once as an eliminator.")
+
+			eliminator_players.append(eliminator_player)
+
+		if len(eliminator_players) <= 1:
+			raise ValidationError("You must choose more than one eliminator for a split elimination.")
+
+		# Verify the Tournament has started
+		if tournament.get_state() != TournamentState.ACTIVE:
+			raise ValidationError("You can only eliminate players if the Tournament is Active.")
+
+		print(f"eliminator_players: {eliminator_players}")
+		
+		# Verify this is not the last player in the Tournament.
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+		num_rebuys = 0
+		if tournament.tournament_structure.allow_rebuys:
+			tournament_rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
+				tournament_id = tournament.id
+			)
+			num_rebuys += len(tournament_rebuys)
+		total_buyins = num_rebuys + len(players)
+		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
+			tournament_id = tournament.id
+		)
+		if total_buyins <= (len(eliminations) + 1):
+			raise ValidationError("You can't eliminate any more players. Complete the Tournament.")
+
+		# Verify a multiple-eliminations aren't happening unless they've rebought.
+		is_player_eliminated = TournamentElimination.objects.is_player_eliminated(
+			player_id = eliminatee_player.id
+		)
+		if is_player_eliminated:
+			raise ValidationError(f"{eliminatee_player.user.username} has already been eliminated and has no more re-buys.")
+
+		split_elimination = self.model(
+			eliminatee = eliminatee_player
+		)
+		split_elimination.save(using=self._db)
+		split_elimination.eliminators.add(*eliminator_players)
+		split_elimination.save()
+		return split_elimination
+
+	"""
+	Creates a TouramentSplitElimination for a backfilled tournament. Because its a backfill, the `is_backfill' flag is set to True.
+	"""
+	def create_backfill_split_elimination(self, tournament_id, eliminator_ids, eliminatee_id):
+		split_elimination = self.create__split_elimination(
+			tournament_id = tournament_id,
+			eliminator_ids = eliminator_ids,
+			eliminatee_id = eliminatee_id,
+		)
+		split_elimination.is_backfill = True
+		split_elimination.save()
+		return split_elimination
+
+class TournamentSplitElimination(models.Model):
+	eliminators				= models.ManyToManyField(TournamentPlayer, related_name="Eliminators_for_split")
+	eliminatee				= models.ForeignKey(TournamentPlayer, related_name="Eliminatee_for_split", on_delete=models.CASCADE)
+	eliminated_at			= models.DateTimeField(auto_now_add=True)
+	is_backfill				= models.BooleanField(default=False)
+	
+	objects = TournamentSplitEliminationManager()
+
+	def __str__(self):
+		return f"Split elimination of {self.eliminatee.user.username} by {self.get_eliminators()}."
+
+	def get_eliminators(self):
+		eliminators = ""
+		for i, eliminator in enumerate(self.eliminators.all()):
+			eliminators += f"{eliminator.user.username}"
+			if i < len(self.eliminators.all()) - 1:
+				eliminators += ", "
+		return eliminators
+
+	def get_tournament_title(self):
+		return self.eliminatee.tournament.title
 
 class TournamentRebuyManager(models.Manager):
 

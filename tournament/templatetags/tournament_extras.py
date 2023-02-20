@@ -8,7 +8,8 @@ from tournament.util import (
 	TournamentEliminationEvent,
 	TournamentRebuyEvent,
 	TournamentCompleteEvent,
-	TournamentInProgressEvent
+	TournamentInProgressEvent,
+	TournamentSplitEliminationEvent
 )
 
 register = template.Library()
@@ -169,6 +170,28 @@ Determine if an object is a TournamentInProgressEvent.
 def is_tournament_in_progress(event):
 	return type(event) is TournamentInProgressEvent
 
+"""
+Determine if an object is a TournamentSplitEliminationEvent.
+"""
+@register.filter
+def is_tournament_split_elimination(event):
+	return type(event) is TournamentSplitEliminationEvent
+
+"""
+Build a range from (0 -> length-substract_length)
+args: 'subtract_length, starting_value'
+"""
+@register.filter
+def build_loop_range(length, args):
+	split_args = args.split(",")
+	subtract_length = int(split_args[0])
+	starting_value = int(split_args[1])
+	counter = starting_value
+	range_list = []
+	for x in range(0, length - subtract_length):
+		range_list.append(counter)
+		counter += 1
+	return range_list
 
 
 
