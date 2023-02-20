@@ -460,10 +460,19 @@ class TournamentPlayersTestCase(TransactionTestCase):
 	"""
 	Verifying the is_player_eliminated function works as expected when a player is split eliminated.
 	"""
-	def test_is_split_eliminated(self):
-		tournament = Tournament.objects.get_by_id(1)
-		tournament_id = tournament.id
+	def test_is_player_eliminated_when_split_eliminated(self):
+		admin = User.objects.get_by_username("cat")
 
+		tournament = self.setup_tournament(admin=admin, allow_rebuys=False)
+
+		users = User.objects.all()
+
+		# Add the users to the Tournament as TournamentPlayer's
+		add_players_to_tournament(
+			users = users,
+			tournament = tournament
+		)
+		
 		players = TournamentPlayer.objects.get_tournament_players(
 			tournament_id = tournament.id
 		).order_by("user__username")
