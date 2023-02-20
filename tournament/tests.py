@@ -472,7 +472,7 @@ class TournamentPlayersTestCase(TransactionTestCase):
 			users = users,
 			tournament = tournament
 		)
-		
+
 		players = TournamentPlayer.objects.get_tournament_players(
 			tournament_id = tournament.id
 		).order_by("user__username")
@@ -1719,9 +1719,9 @@ class TournamentTestCase(TransactionTestCase):
 
 
 	"""
-	Verify undo completion deletes eliminations and rebuys
+	Verify undo completion deletes eliminations, split eliminations and rebuys
 	"""
-	def test_undo_completion_deletes_eliminations_rebuys_and_results(self):
+	def test_undo_completion_deletes_eliminations_split_eliminations_rebuys_and_results(self):
 		# Build a structure made by cat
 		cat = User.objects.get_by_username("cat")
 		structure = self.build_structure(
@@ -1768,14 +1768,35 @@ class TournamentTestCase(TransactionTestCase):
 					player_id = player.id
 				)
 
-		# Eliminate everyone again (Except admin)
-		eliminate_all_players_except(
-			players = players,
-			except_player = cat_player,
-			tournament = tournament
+		dog = User.objects.get_by_username("dog")
+		dog_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = dog.id
 		)
 
-		# Verify every player has 2 eliminations (Except cat)
+		bird = User.objects.get_by_username("bird")
+		bird_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = bird.id
+		)		
+
+		# Eliminate dog with a split elimination between cat and bird.
+		split_eliminate_player(
+			tournament_id = tournament.id,
+			eliminator_ids = [cat_player.id, bird_player.id],
+			eliminatee_id = dog_player.id
+		)
+
+		# Eliminate everyone else (Except admin)
+		for player in players:
+			if player.user.username != "cat" and player.user.username != "dog":
+				eliminate_player(
+					tournament_id = tournament.id,
+					eliminator_id = cat_player.id,
+					eliminatee_id = player.id
+				)
+		
+		# Verify every player has 2 eliminations (Except cat and dog). Dog will have 1 elimination and 1 split elimination.
 		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
 			tournament_id = tournament.id
 		)
@@ -1787,7 +1808,16 @@ class TournamentTestCase(TransactionTestCase):
 				elim_dict[elimination.eliminatee.id] = 1
 		self.assertFalse(cat_player.id in elim_dict)
 		for key in elim_dict.keys():
-			self.assertEqual(elim_dict[key], 2)
+			if key != dog_player.id:
+				self.assertEqual(elim_dict[key], 2)
+			elif key == dog_player.id:
+				# a single TournamentElimination for dog.
+				self.assertEqual(elim_dict[key], 1)
+
+		# Then verify dog has a TournamentSplitElimination
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament.id)
+		self.assertEqual(len(split_eliminations), 1)
+		self.assertEqual(split_eliminations[0].eliminatee, dog_player)
 
 		# Verify every player has 1 rebuy (except cat)
 		players = TournamentPlayer.objects.get_tournament_players(
@@ -1828,6 +1858,12 @@ class TournamentTestCase(TransactionTestCase):
 			tournament_id = tournament.id
 		)
 		self.assertEqual(len(eliminations), 0)
+
+		# Verify the split_eliminations are deleted
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(
+			tournament_id = tournament.id
+		)
+		self.assertEqual(len(split_eliminations), 0)
 
 		# Verify rebuys are deleted
 		players = TournamentPlayer.objects.get_tournament_players(

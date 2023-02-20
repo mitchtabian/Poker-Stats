@@ -381,6 +381,11 @@ class TournamentManager(models.Manager):
 		for elimination in eliminations:
 			elimination.delete()
 
+		# Delete all split eliminations
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament_id)
+		for split_elimination in split_eliminations:
+			split_elimination.delete()
+
 		# Delete all the rebuy data
 		TournamentRebuy.objects.delete_tournament_rebuys(
 			tournament_id = tournament.id
@@ -453,6 +458,7 @@ class TournamentManager(models.Manager):
 		tournament = self.get_by_id(tournament_id)
 		players = TournamentPlayer.objects.get_tournament_players(tournament_id)
 		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament_id)
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament_id)
 
 		# sum buyins + rebuys
 		rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(
@@ -461,7 +467,7 @@ class TournamentManager(models.Manager):
 		total_buyins = len(rebuys) + len(players)
 
 		# Find the number of eliminations
-		total_eliminations = len(eliminations)
+		total_eliminations = len(eliminations) + len(split_eliminations)
 
 		# If every play is eliminated, the difference will be 1
 		if total_buyins - total_eliminations != 1:
