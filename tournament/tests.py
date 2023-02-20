@@ -1171,6 +1171,9 @@ class TournamentEliminationsTestCase(TransactionTestCase):
 			tournament_id = tournament.id
 		).order_by("user__username")
 
+		# Start
+		Tournament.objects.start_tournament(user = tournament.admin, tournament_id = tournament.id)
+
 		# eliminate player0
 		eliminate_player(
 			tournament_id = tournament_id,
