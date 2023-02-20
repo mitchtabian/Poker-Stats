@@ -834,6 +834,89 @@ class TournamentRebuysTestCase(TransactionTestCase):
 
 
 	"""
+	get_rebuys_for_user: success when there is a split elimination.
+	"""
+	def test_rebuys_when_there_is_a_split_elimination_for_user_success(self):
+		tournament = self.setup_tournament(
+			allow_rebuys = True
+		)
+
+		players = TournamentPlayer.objects.get_tournament_players(
+			tournament_id = tournament.id
+		)
+
+		cat = User.objects.get_by_username("cat")
+
+		# Activate
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+
+		# Go through the players and invoke get_rebuys_for_user. They should all be 0.
+		for player in players:
+			rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
+			)
+			self.assertEqual(len(rebuys), 0)
+
+		cat_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = cat.id
+		)
+
+		dog_user = User.objects.get_by_username("dog")
+		dog_player = TournamentPlayer.objects.get_tournament_player_by_user_id(
+			tournament_id = tournament.id,
+			user_id = dog_user.id
+		)
+
+		# Eliminate players and rebuy on everyone except cat. Every second elimination should be a split elimination.
+		for i, player in enumerate(players):
+			if player.user.username != "cat" and player.user.username != "dog":
+				if i % 2 == 0:
+					split_eliminate_player(
+						tournament_id = tournament.id,
+						eliminator_ids = [cat_player.id, dog_player.id],
+						eliminatee_id = player.id
+					)
+				else:
+					eliminate_player(
+						tournament_id = tournament.id,
+						eliminator_id = cat_player.id,
+						eliminatee_id = player.id
+					)
+				rebuy = TournamentRebuy.objects.rebuy(
+					tournament_id = tournament.id,
+					player_id = player.id
+				)
+				self.assertEqual(rebuy.player.tournament, tournament)
+				self.assertEqual(rebuy.player, player)
+				self.assertEqual(rebuy.player.user, player.user)
+
+		# Then eliminate dog at the end
+		eliminate_player(
+			tournament_id = tournament.id,
+			eliminator_id = cat_player.id,
+			eliminatee_id = dog_player.id
+		)
+		rebuy = TournamentRebuy.objects.rebuy(
+			tournament_id = tournament.id,
+			player_id = dog_player.id
+		)
+		self.assertEqual(rebuy.player.tournament, tournament)
+		self.assertEqual(rebuy.player, dog_player)
+		self.assertEqual(rebuy.player.user, dog_player.user)
+
+		# Go through the players and invoke get_rebuys_for_user. They should all be 1 except cat.
+		for player in players:
+			rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+				player = player
+			)
+			if player == cat_player:
+				self.assertEqual(len(rebuys), 0)
+			else:
+				self.assertEqual(len(rebuys), 1)
+
+
+	"""
 	get_rebuys_for_tournament: success.
 	"""
 	def test_rebuys_for_tournament_success(self):

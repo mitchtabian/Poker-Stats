@@ -1145,6 +1145,11 @@ class TournamentRebuyManager(models.Manager):
 				player_id = player.id
 			)
 		)
+		num_eliminations += len(
+			TournamentSplitElimination.objects.get_split_eliminations_by_eliminatee(
+				player_id = player.id
+			)
+		)
 		rebuys = self.get_rebuys_for_player(
 			player = player
 		)
