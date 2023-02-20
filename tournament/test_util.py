@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from tournament.models import Tournament, TournamentPlayer, TournamentElimination, TournamentStructure, TournamentRebuy
+from tournament.models import Tournament, TournamentPlayer, TournamentElimination, TournamentStructure, TournamentRebuy, TournamentSplitElimination
 from user.models import User
 
 
@@ -89,6 +89,17 @@ def eliminate_player(tournament_id, eliminator_id, eliminatee_id):
 					eliminatee_id = eliminatee_id
 				)
 	return elimination
+
+"""
+Convenience function for eliminating players in tests (a split elimination)
+"""
+def split_eliminate_player(tournament_id, eliminator_ids, eliminatee_id):
+	split_elimination = TournamentSplitElimination.objects.create_split_elimination(
+					tournament_id = tournament_id,
+					eliminator_ids = eliminator_ids,
+					eliminatee_id = eliminatee_id
+				)
+	return split_elimination
 
 def eliminate_all_players_except(players, except_player, tournament):
 	# Eliminate all the players except 1 (except_user)

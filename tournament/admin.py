@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import TournamentStructure, Tournament, TournamentPlayer, TournamentElimination, TournamentInvite, TournamentPlayerResult, TournamentRebuy
+from .models import (
+    TournamentStructure,
+    Tournament,
+    TournamentPlayer,
+    TournamentElimination,
+    TournamentInvite,
+    TournamentPlayerResult,
+    TournamentRebuy,
+    TournamentSplitElimination
+)
 
 
 class TournamentStructureAdmin(admin.ModelAdmin):
@@ -62,6 +71,24 @@ class TournamentEliminationAdmin(admin.ModelAdmin):
         return elimination.get_tournament_title()
 
 admin.site.register(TournamentElimination, TournamentEliminationAdmin)
+
+class TournamentSplitEliminationAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('get_tournament_title', 'get_eliminators', 'eliminatee', 'eliminated_at', 'is_backfill')}),
+    )
+    readonly_fields = ['eliminated_at', 'get_tournament_title', 'get_eliminators', 'eliminatee',]
+    list_display = ('get_tournament', 'get_eliminators', 'eliminatee', 'eliminated_at')
+    search_fields = ('get_tournament', 'get_eliminators', 'eliminatee', )
+
+    @admin.display(description='Tournament')
+    def get_tournament(self, split_elimination):
+        return split_elimination.get_tournament_title()
+
+    @admin.display(description='Eliminators')
+    def get_eliminators(self, split_elimination):
+        return split_elimination.get_eliminators()
+
+admin.site.register(TournamentSplitElimination, TournamentSplitEliminationAdmin)
 
 class TournamentRebuyAdmin(admin.ModelAdmin):
     fieldsets = (

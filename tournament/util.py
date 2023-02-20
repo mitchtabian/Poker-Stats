@@ -5,6 +5,25 @@ from django.utils import timezone
 DID_NOT_PLACE_VALUE = 999999999
 
 """
+A Split Elimination event for tournament timelines.
+"""
+@dataclass
+class TournamentSplitEliminationEvent:
+	eliminatee_username: str
+	eliminator_usernames: list[str]
+	timestamp: datetime
+
+def build_split_elimination_event(tournament_split_elimination):
+	eliminators_string = tournament_split_elimination.get_eliminators()
+	eliminator_usernames = eliminators_string.split(",")
+	return TournamentSplitEliminationEvent(
+		eliminatee_username = tournament_split_elimination.eliminatee.user.username,
+		eliminator_usernames = eliminator_usernames,
+		timestamp = tournament_split_elimination.eliminated_at,
+	)
+
+
+"""
 An Elimination event for tournament timelines.
 """
 @dataclass
@@ -77,13 +96,15 @@ class PlayerTournamentPlacement:
 """
 A utility data holder class for modeling information used in complex views like tournament_admin_view.
 player_id: TournamentPlayer pk
+
+bounties: float b/c its possible to share an elimination between multiple players. (TournamentSplitElimination).
 """
 @dataclass
 class PlayerTournamentData:
 	player_id: int
 	username: str
 	rebuys: int
-	bounties: int
+	bounties: float
 	is_eliminated: bool
 
 """
