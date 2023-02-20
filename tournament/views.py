@@ -617,9 +617,7 @@ def get_player_tournament_data(tournament_id):
 		bounties = len(eliminations)
 		for split_elimination in split_eliminations:
 			bounty_fraction = round(Decimal(1.0 / len(split_elimination.eliminators.all())), 2)
-			print(f"bounty_fraction: {bounty_fraction}")
 			bounties += bounty_fraction
-		print(f"bounties: {bounties}")
 
 		data = PlayerTournamentData(
 					player_id = player.id,

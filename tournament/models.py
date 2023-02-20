@@ -1053,8 +1053,6 @@ class TournamentSplitEliminationManager(models.Manager):
 		if tournament.get_state() != TournamentState.ACTIVE:
 			raise ValidationError("You can only eliminate players if the Tournament is Active.")
 
-		print(f"eliminator_players: {eliminator_players}")
-		
 		# Verify this is not the last player in the Tournament.
 		players = TournamentPlayer.objects.get_tournament_players(
 			tournament_id = tournament.id

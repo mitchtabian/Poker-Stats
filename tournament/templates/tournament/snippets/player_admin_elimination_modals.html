@@ -47,9 +47,6 @@
 
 <script type="text/javascript">
 
-  // "-1" means no eliminator is selected
-  // var eliminator_id = "-1"
-
   /**
    * A map of {
    *  "<eliminator_number1>", "<eliminator_id1>",
@@ -160,63 +157,12 @@
     }
   }
 
-  // function setEliminatorId(id) {
-  //   eliminator_id = id
-  // }
-
-  // function onEliminatorSelected(eliminator_number, selector_id) {
-  //   console.log("eliminator_number: " + eliminator_number)
-  //   var options = document.getElementById(selector_id).querySelectorAll("option");
-  //   for (let index = 0; index < options.length; index++) {
-  //     if (options[index].selected) {
-  //       setEliminatorId(options[index].value)
-  //       break
-  //     }
-  //   }
-  // }
-
-  // function eliminatePlayer(player_id) {
-
-  //   if (eliminator_id == "-1") {
-  //     var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + player_id)
-  //     if (modalErrorElement.classList.contains("d-none")) {
-  //       modalErrorElement.classList.remove("d-none")
-  //     }
-  //   } else {
-  //     // Hide the modal that was in view
-  //     const modal_id = "#id_eliminate_modal_" + player_id
-  //     const modalElement = document.querySelector(modal_id)
-  //     const modal = bootstrap.Modal.getOrCreateInstance(modalElement)
-  //     modal.hide()
-  //     // Reset the selector in that modal to the default value "-------"
-  //     const selector = document.querySelector("#id_eliminator_selector_" + player_id)
-  //     selector.value = "-1"
-
-  //     // Perform the elimination
-  //     const elimination_url = "/tournament/eliminate_player/{{tournament.id}}/" + eliminator_id + "/" + player_id
-  //     fetch(elimination_url, {
-  //      headers: {
-  //         'Accept': 'application/json'
-  //      }}
-  //     ).then(function(data) {
-  //       if (data.status == 200) {
-  //         document.location.reload()
-  //       } else {
-  //         window.location.replace("{% url 'error' error_message='Elimination failed.' %}");
-  //       }
-  //     }).catch(function(error) {
-  //       // Redirect to error page
-  //       window.location.replace("{% url 'error' error_message='Elimination failed.' %}");
-  //     })
-  //   }
-  // }
-
   function eliminationModalClicked(modal_player_id) {
     var modalErrorElement = document.getElementById("id_eliminate_modal_error_" + modal_player_id)
     if (!modalErrorElement.classList.contains("d-none")) {
       modalErrorElement.classList.add("d-none")
     }
-    eliminator_id = "-1"
+    eliminators = JSON.parse("{}")
   }
 
 </script>
