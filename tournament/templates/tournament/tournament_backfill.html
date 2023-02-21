@@ -91,13 +91,99 @@
       </div>
       {% endif %}
 
+      {% if tournament.tournament_structure.bounty_amount != None %}
+      <!-- Split Eliminations -->
+      <h2 class="backfill-display-group-header d-flex flex-row">
+        Split Eliminations
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center split-eliminations-info-icon" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Multiple players eliminating a single player.">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+        </svg>
+      </h2>
+      <hr>
+
+      {% if split_elimination_error %}
+      <div class="split-elimination-error">
+        {{split_elimination_error}}
+      </div>
+      {% endif %}
+
+      <!-- Split eliminations that were submitted -->
+      {% if split_eliminations|length > 0 %}
+        <div class="split-eliminations-list-container">
+          {% include 'tournament/snippets/split_eliminations_list_snippet.html' with split_eliminations=split_eliminations %}
+        </div>
+      {% endif %}
+
+      <!-- Input for new split eliminations -->
+      <div class="backfill-display-group">
+        <div class="split-elimination-input-form">
+          <div class="eliminatee-selector-for-split-header">Who was eliminated?</div>
+          <select class="form-select" aria-label="Select eliminatee for split elimination" id="id_split_eliminatee" onchange="selectEliminateeForSplit()">
+            {% if selected_eliminatee_id == None or selected_eliminatee_id == -1 %}
+              <option value="-1" selected> -------- </option>
+            {% else %}
+              {% for p in players %}
+                {% if selected_eliminatee_id == p.id %}
+                  <option value="{{p.id}}" selected>{{p.user.username}}</option>
+                {% endif %}
+              {% endfor %}
+              <option value="-1"> -------- </option>
+            {% endif %}
+            {% for inner_player in players %}
+              {% if selected_eliminatee_id != inner_player.id %}
+                <option value="{{inner_player.id}}">{{inner_player.user.username}}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Add animation to this appearing / disappearing? -->
+        {% if selected_eliminatee_id != None and selected_eliminatee_id != -1 %}
+        <div class="split-elimination-input-form">
+          <div class="eliminator-selector-for-split-header">Who eliminated them?</div>
+          {% for player in players %}
+            {% if selected_eliminatee_id != player.id %}
+              <select class="form-select mb-3" aria-label="Select eliminator for split elimination" id="id_split_eliminator_{{player.id}}" onchange="selectEliminatorForSplit('{{forloop.counter0}}', '{{player.id}}')">
+                <option value="-1" selected> -------- </option>
+                {% for inner_player in players %}
+
+                  <!-- If there are selected eliminators -->
+                  {% if selected_eliminator_ids %}
+                    {% for eliminator_data in selected_eliminator_ids %}
+                      {% if eliminator_data.eliminator_id == inner_player.id and eliminator_data.eliminator_number == forloop.parentloop.parentloop.counter0 %}
+                        <option value="{{inner_player.id}}" selected>{{inner_player.user.username}}</option>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+
+                  {% if selected_eliminatee_id != inner_player.id %}
+                    {% if not selected_eliminator_ids|keyvalue_in_list:inner_player.id %}
+                      <option value="{{inner_player.id}}">{{inner_player.user.username}}</option>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              </select>
+            {% endif %}
+          {% endfor %}
+        <div class="d-flex flex-row justify-content-end">
+          <!-- Submitting a new split elimination -->
+          <button class="btn btn-danger split-elimination-submit-btn" onclick="submitSplitElimination()">Add Split Elimination</button>
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+      </div>
+
       <!-- Submit button for saving -->
+      <h2 class="backfill-display-group-header">Save</h2>
+      <hr>
       <form method="POST">
         {% csrf_token %}
         <!-- Hidden htmx input -->
-        <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#body_container" name="data_json" value="{{json_dict}}"></button>
-        <div class="d-flex flex-row justify-content-end">
-          <button class="btn btn-primary backfill-submit-btn" type="submit">Save</button>
+        <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#body_container" name="data_json" value="{{json_dict}}">
+        <div class="d-flex flex-row justify-content-start">
+          <button class="btn btn-primary backfill-submit-btn" type="submit">Submit backfill data</button>
         </div>
       </form>
 
@@ -109,10 +195,14 @@
 
 <script type="text/javascript">
 
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+
   document.body.addEventListener('htmx:configRequest', (event) => {
     event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
   })
-
 
 </script>
 <script type="text/javascript">
@@ -140,9 +230,103 @@
    *     "eliminatee_id": "2"
    *    },
    *   ... etc
-   *   ]
+   *   ],
+   *   "split_eliminations": [
+   *      {
+   *       "eliminator_ids": [
+   *         "<player_id5>",
+   *         "<player_id4>",
+   *       ],
+   *       "eliminatee_id": "25"
+   *      },
+   *      {
+   *       "eliminator_ids": [
+   *         "<player_id7>",
+   *         "<player_id4>",
+   *         "<player_id55>",
+   *       ],
+   *       "eliminatee_id": "25"
+   *      },
+   *       ... etc
+   *    ]
+   *
+   *    "selected_eliminatee_id": "1", <-- The currently selected eliminatee for split.
+   *    "selected_eliminator_ids": {
+   *      "0": "<player_id5",
+   *      "1": "<player_id7",
+   *      ...
+   *    }
    * }
    * */
+
+  function submitSplitElimination() {
+    var htmx_button = document.getElementById("id_hidden_htmx_data")
+    var jsonData = getJsonFromHtmxField()
+    if (jsonData == null) {
+      jsonData = buildNewDataJson()
+    }
+    selected_eliminatee_id = jsonData.selected_eliminatee_id
+    selected_eliminator_ids = JSON.parse("[]")
+    Object.entries(jsonData.selected_eliminator_ids).forEach((entry) => {
+      const [key, value] = entry;
+      selected_eliminator_ids.push(value)
+    });
+    new_split_elimination = JSON.parse("{}")
+    new_split_elimination['eliminator_ids'] = selected_eliminator_ids
+    new_split_elimination['eliminatee_id'] = selected_eliminatee_id
+    jsonData['split_eliminations'].push(new_split_elimination)
+    // Clear the selected eliminators
+    jsonData['selected_eliminator_ids'] = JSON.parse("{}")
+    jsonData['selected_eliminatee_id'] = JSON.parse("-1")
+    // Update the hidden field
+    htmx_button.value = JSON.stringify(jsonData)
+    htmx_button.click()
+  }
+
+  function selectEliminateeForSplit() {
+    var selector_id = "id_split_eliminatee"
+    var options = document.getElementById(selector_id).querySelectorAll("option");
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].selected) {
+        var htmx_button = document.getElementById("id_hidden_htmx_data")
+        var player_id = options[index].value
+        var jsonData = getJsonFromHtmxField()
+        if (jsonData == null) {
+          jsonData = buildNewDataJson()
+          jsonData['selected_eliminatee_id'] = player_id
+        } else {
+          jsonData['selected_eliminatee_id'] = player_id
+        }
+        // Clear the selected eliminators
+        jsonData['selected_eliminator_ids'] = JSON.parse("{}")
+        // Update the hiddnen field
+        htmx_button.value = JSON.stringify(jsonData)
+        htmx_button.click()
+        break
+      }
+    }
+  }
+
+  function selectEliminatorForSplit(eliminator_number, player_id) {
+    var selector_id = "id_split_eliminator_" + player_id
+    var options = document.getElementById(selector_id).querySelectorAll("option");
+    for (let index = 0; index < options.length; index++) {
+       if (options[index].selected) {
+        var htmx_button = document.getElementById("id_hidden_htmx_data")
+        var eliminator_player_id = options[index].value
+        var jsonData = getJsonFromHtmxField()
+        if (jsonData == null) {
+          jsonData = buildNewDataJson()
+          new_split_elimination = JSON.parse()
+          jsonData['selected_eliminator_ids'][eliminator_number] = eliminator_player_id
+        } else {
+          jsonData['selected_eliminator_ids'][eliminator_number] = eliminator_player_id
+        }
+        htmx_button.value = JSON.stringify(jsonData)
+        htmx_button.click()
+       }
+    }
+  }
 
   function onPlacementChanged(placement) {
     var selector_id = "id_player_placement_selector_" + placement
@@ -188,7 +372,7 @@
   }
 
   function buildNewDataJson() {
-    return JSON.parse('{ "placements": {}, "eliminations": []}')
+    return JSON.parse('{ "placements": {}, "eliminations": [], "split_eliminations" : [], "selected_eliminatee_id": "-1", "selected_eliminator_ids": {} }')
   }
 
   function resetEliminations(player_id) {
@@ -255,7 +439,6 @@
 
   @media only screen and (max-width: 500px) {
     .backfill-display-group {
-/*      margin-bottom: 16px;*/
       font-size: 16px;
       padding-left: 16px;
       padding-right: 16px;
@@ -317,6 +500,35 @@
       padding: 8px;
       background-color: white;
       border-radius: 8px;
+    }
+
+    .split-elimination-input-form {
+      display: flex;
+      flex-direction: column;
+    }
+    .eliminator-selector-for-split-header {
+      font-size: 14px;
+      margin-bottom: 8px;
+      margin-top: 16px;
+    }
+    .eliminatee-selector-for-split-header {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .split-eliminations-list-container {
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    .split-eliminations-info-icon {
+      margin-left: 8px;
+    }
+    .split-elimination-error {
+      margin-top: 16px;
+      margin-bottom: 16px;
+      border: 2px solid red;
+      border-radius: 4px;
+      padding: 16px;
+      font-size: 16px;
     }
   }
 
@@ -383,6 +595,35 @@
       padding: 8px;
       background-color: white;
       border-radius: 8px;
+    }
+
+    .split-elimination-input-form {
+      display: flex;
+      flex-direction: column;
+    }
+    .eliminator-selector-for-split-header {
+      font-size: 16px;
+      margin-bottom: 8px;
+      margin-top: 16px;
+    }
+    .eliminatee-selector-for-split-header {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .split-eliminations-list-container {
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    .split-eliminations-info-icon {
+      margin-left: 8px;
+    }
+    .split-elimination-error {
+      margin-top: 16px;
+      margin-bottom: 16px;
+      border: 2px solid red;
+      border-radius: 4px;
+      padding: 16px;
+      font-size: 16px;
     }
   }
 

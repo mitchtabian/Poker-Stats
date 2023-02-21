@@ -199,8 +199,27 @@ class TournamentManager(models.Manager):
 			'player_id1': [player2, player3, ...],
 			...
 		}
+
+	split_eliminations: data for split eliminations.
+	Format:
+	[{
+      "eliminators": [
+	    "<player5>"
+	    "<player23>"
+      ],
+      "eliminatee":"<player8>"
+     },
+     {
+       "eliminators": [
+	     "<player6>"
+	     "<player23>"
+         "<player67>"
+       ],
+        "eliminatee":"<player9>"
+      }, ...
+      ]
 	"""
-	def complete_tournament_for_backfill(self, user, tournament_id, player_tournament_placements, elim_dict):
+	def complete_tournament_for_backfill(self, user, tournament_id, player_tournament_placements, elim_dict, split_eliminations):
 		tournament = self.get(pk=tournament_id)
 		if tournament.admin != user:
 			raise ValidationError("You cannot update a Tournament if you're not the admin.")
@@ -208,6 +227,22 @@ class TournamentManager(models.Manager):
 			raise ValidationError("You can't backfill an active Tournment.")
 		if tournament.completed_at is not None:
 			raise ValidationError("You can't backfill a completed Tournment.")
+
+		# Split elimination validation
+		for split_elim_data in split_eliminations:
+			eliminatee = split_elim_data['eliminatee']
+			eliminators = split_elim_data['eliminators']
+			if len(eliminators) <= 1:
+				raise ValidationError("Split Elimination Error: You must specify more than one eliminator for a split elimination.")
+			if eliminatee in eliminators:
+				raise ValidationError(f"Split Elimination Error: {eliminatee.user.username} cannot eliminate themself.")
+			if eliminatee.tournament != tournament:
+				raise ValidationError(f"Split Elimination Error: {eliminatee.user.username} is not part of this tournament.")
+			for eliminator in eliminators:
+				if eliminator.tournament != tournament:
+					raise ValidationError(f"Split Elimination Error: {eliminator.user.username} is not part of this tournament.")
+			if len(set(eliminators)) != len(eliminators):
+				raise ValidationError("Split Elimination Error: Cannot list the same eliminator more than once.")
 
 		# Verify the number of placements equals the number of payout percentages
 		num_placement_positions = len(tournament.tournament_structure.payout_percentages)
@@ -230,7 +265,7 @@ class TournamentManager(models.Manager):
 				winning_player = TournamentPlayer.objects.get_by_id(player_tournament_placement.player_id)
 
 		"""
-		Add the rebuys. First we need to determine who needs rebuys from the elim_dict.
+		Add the rebuys. First we need to determine who needs rebuys from the elim_dict and split_eliminations.
 			'rebuys' is a dict of player id's as the key and a an integer representing the number 
 			of rebuys they need.
 		Format:
@@ -239,6 +274,7 @@ class TournamentManager(models.Manager):
 		}
 		"""
 		rebuys_dict = {}
+		# Rebuys from eliminations
 		for player_id in elim_dict:
 			for eliminated_player in elim_dict[player_id]:
 				if eliminated_player.id not in rebuys_dict:
@@ -255,6 +291,24 @@ class TournamentManager(models.Manager):
 					num_rebuys = rebuys_dict[eliminated_player.id]
 					num_rebuys += 1
 					rebuys_dict[eliminated_player.id] = num_rebuys
+		# Rebuys from split eliminations
+		for elim_data in split_eliminations:
+			eliminatee = elim_data['eliminatee']
+			if eliminatee.id not in rebuys_dict:
+				# First time they were eliminated. Add an entry to the dict with a value of 0
+				# since the initial buyin does not count as a rebuy.
+				if eliminatee.id == winning_player.id:
+					# Start the winning players rebuy counter at 1 since a rebuy won't be added
+					# because they get populated based on eliminations.
+					rebuys_dict[eliminatee.id] = 1
+				else:
+					rebuys_dict[eliminatee.id] = 0
+			else:
+				# They already exist in the rebuys_dict. Increment the value.
+				num_rebuys = rebuys_dict[eliminatee.id]
+				num_rebuys += 1
+				rebuys_dict[eliminatee.id] = num_rebuys
+
 
 		# DEBUG
 		# for player_id in rebuys_dict:
@@ -271,6 +325,10 @@ class TournamentManager(models.Manager):
 				for eliminated_player in elim_dict[player_id]:
 					if player == eliminated_player:
 						num_times_player_was_eliminated += 1
+			for elim_data in split_eliminations:
+				eliminatee = elim_data['eliminatee']
+				if player == eliminatee:
+					num_times_player_was_eliminated += 1
 			if num_times_player_was_eliminated == 0:
 				raise ValidationError(f"{player.user.username} did not win, they must have been eliminated at least once.")
 
@@ -294,6 +352,12 @@ class TournamentManager(models.Manager):
 				elim_dict = elim_dict
 			)
 
+			# Add split eliminations
+			split_eliminations = self.build_split_eliminations_for_backfilled_tournament(
+				tournament_id = tournament.id,
+				split_eliminations = split_eliminations
+			)
+
 			# Complete the Tournament
 			tournament.completed_at = timezone.now()
 			tournament.save(using=self._db)
@@ -310,6 +374,7 @@ class TournamentManager(models.Manager):
 			2. undo completion
 			3. delete rebuys
 			4. delete eliminations
+			5. delete split eliminations
 			"""
 			Tournament.objects.delete_all_rebuys_and_eliminations(
 				admin = tournament.admin,
@@ -344,6 +409,39 @@ class TournamentManager(models.Manager):
 					eliminatee_id = player.id
 				)
 				eliminations.append(elimination)
+		return eliminations
+
+	"""
+	split_eliminations: data for split eliminations.
+	Format:
+	[{
+      "eliminators": [
+	    "<player5>"
+	    "<player23>"
+      ],
+      "eliminatee":"<player8>"
+     },
+     {
+       "eliminators": [
+	     "<player6>"
+	     "<player23>"
+         "<player67>"
+       ],
+        "eliminatee":"<player9>"
+      }, ...
+      ]
+	"""
+	def build_split_eliminations_for_backfilled_tournament(self, tournament_id, split_eliminations):
+		eliminations = []
+		for elim_data in split_eliminations:
+			eliminators = elim_data['eliminators']
+			eliminatee = elim_data['eliminatee']
+			elimination = TournamentSplitElimination.objects.create_backfill_split_elimination(
+				tournament_id = tournament_id,
+				eliminators = eliminators,
+				eliminatee = eliminatee
+			)
+			eliminations.append(elimination)
 		return eliminations
 
 	"""
@@ -1095,11 +1193,11 @@ class TournamentSplitEliminationManager(models.Manager):
 	"""
 	Creates a TouramentSplitElimination for a backfilled tournament. Because its a backfill, the `is_backfill' flag is set to True.
 	"""
-	def create_backfill_split_elimination(self, tournament_id, eliminator_ids, eliminatee_id):
-		split_elimination = self.create__split_elimination(
+	def create_backfill_split_elimination(self, tournament_id, eliminators, eliminatee):
+		split_elimination = self.create_split_elimination(
 			tournament_id = tournament_id,
-			eliminator_ids = eliminator_ids,
-			eliminatee_id = eliminatee_id,
+			eliminator_ids = [eliminator.id for eliminator in eliminators],
+			eliminatee_id = eliminatee.id,
 		)
 		split_elimination.is_backfill = True
 		split_elimination.save()
@@ -1352,13 +1450,16 @@ class TournamentPlayerResultManager(models.Manager):
 		player_eliminations = TournamentElimination.objects.get_eliminations_by_eliminatee(
 			player_id = player.id
 		)
+		player_split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminatee(
+			player_id = player.id
+		)
 		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
 			player = player
 		)
-		if len(player_eliminations) == 0:
+		if len(player_eliminations) == 0 and len(player_split_eliminations) == 0:
 			# They were never eliminated
 			placement = 0
-		if len(player_eliminations) < len(rebuys) + 1:
+		if len(player_eliminations) + len(player_split_eliminations) < len(rebuys) + 1:
 			# The Tournament completed and they still had a rebuy remaining
 			placement = 0
 		if placement == None:
@@ -1373,6 +1474,16 @@ class TournamentPlayerResultManager(models.Manager):
 				elif elimination.eliminated_at > elimations_dict[elimination.eliminatee.id]:
 					# Only replace the value in the dictionary if the timestamp is newer (more recent)
 					elimations_dict[elimination.eliminatee.id] = elimination.eliminated_at
+			tournament_split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(
+				tournament_id = tournament.id
+			)
+			for split_elimination in tournament_split_eliminations:
+				if split_elimination.eliminatee.id not in elimations_dict.keys():
+					elimations_dict[split_elimination.eliminatee.id] = split_elimination.eliminated_at
+				elif split_elimination.eliminated_at > elimations_dict[split_elimination.eliminatee.id]:
+					# Only replace the value in the dictionary if the timestamp is newer (more recent)
+					elimations_dict[split_elimination.eliminatee.id] = split_elimination.eliminated_at
+
 			# Loop through the sorted list. Whatever index this player is in, thats what they placed
 			sorted_reversed_list = [k for k, v in sorted(elimations_dict.items(), key=lambda p: p[1], reverse=True)]
 			for i,player_id in enumerate(sorted_reversed_list):
@@ -1428,11 +1539,20 @@ class TournamentPlayerResultManager(models.Manager):
 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
 			player_id = player.id
 		)
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+			player_id = player.id
+		)
+
+		# Determine what fraction comes from split eliminations
+		split_eliminations_count = 0.00
+		for split_elimination in split_eliminations:
+			eliminators = split_elimination.eliminators.all()
+			split_eliminations_count += round(1.00 / len(eliminators), 2)
 
 		# -- Get bounty earnings (if this is a bounty tournament). Otherwise 0.00. --
 		bounty_earnings = None
 		if tournament.tournament_structure.bounty_amount != None:
-			bounty_earnings = len(eliminations) * tournament.tournament_structure.bounty_amount
+			bounty_earnings = round((Decimal(len(eliminations)) + Decimal(split_eliminations_count)) * Decimal(tournament.tournament_structure.bounty_amount), 2)
 		else:
 			bounty_earnings = round(Decimal(0.00), 2)
 

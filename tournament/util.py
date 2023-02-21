@@ -108,7 +108,24 @@ class PlayerTournamentData:
 	is_eliminated: bool
 
 """
-A player and all the players they eliminated.
+Summary eliminations data. This includes split eliminations.
+"""
+@dataclass
+class PlayerEliminationsSummaryData:
+	# id of the user who did the eliminating.
+	player_id: int
+
+	# username of the user who did the eliminating.
+	player_username: int
+
+	# Number of eliminations. Float b/c its possible to have a split elimination.
+	num_eliminations: float
+
+	# Amount earned from bounties
+	bounty_earnings: float
+
+"""
+A player and all the players they eliminated. This does not include split eliminations.
 """
 @dataclass
 class PlayerEliminationsData:
@@ -121,8 +138,19 @@ class PlayerEliminationsData:
 	# username's of the players that were eliminated.
 	eliminated_player_usernames: list[str]
 
-	# Amount earned from bounties
-	bounty_earnings: float
+"""
+A player and all the split eliminations they were part of.
+"""
+@dataclass
+class SplitEliminationsData:
+	# ids of the users who did the eliminating.
+	player_ids: list[int]
+
+	# usernames of the users who did the eliminating.
+	player_usernames: list[str]
+
+	# username of the player who was eliminated.
+	eliminated_player_username: str
 
 def build_placement_string(placement):
 	if placement == 0:
@@ -151,6 +179,33 @@ def payout_positions(percentages):
 	return placements
 
 """
+Builds a PlayerEliminationsSummaryData.
+"""
+def build_player_eliminations_summary_data_from_eliminations(eliminator, eliminations, split_eliminations):
+	eliminated_usernames = []
+	eliminations_count = 0.00
+	for elimination in eliminations:
+		eliminated_usernames.append(elimination.eliminatee.user.username)
+		eliminations_count += 1.00
+	for split_elimination in split_eliminations:
+		eliminated_usernames.append(split_elimination.eliminatee.user.username)
+		num_eliminators = len(split_elimination.eliminators.all())
+		eliminations_count += 1.00 / num_eliminators
+	if len(eliminated_usernames) > 0:
+		bounty_amount = eliminator.tournament.tournament_structure.bounty_amount
+		bounty_earnings = 0
+		if bounty_amount != None:
+			bounty_earnings = float(bounty_amount) * float(eliminations_count)
+		data = PlayerEliminationsSummaryData(
+			player_id = eliminator.id,
+			player_username = eliminator.user.username,
+			num_eliminations = round(eliminations_count, 2),
+			bounty_earnings = bounty_earnings
+		)
+		return data
+	return None
+
+"""
 Builds a PlayerEliminationsData.
 eliminator: The TournamentPlayer who did the eliminating.
 eliminations: List of TournamentElimination's for the eliminator.
@@ -162,18 +217,45 @@ def build_player_eliminations_data_from_eliminations(eliminator, eliminations):
 	for elimination in eliminations:
 		eliminated_usernames.append(elimination.eliminatee.user.username)
 	if len(eliminated_usernames) > 0:
-		bounty_amount = eliminator.tournament.tournament_structure.bounty_amount
-		bounty_earnings = 0
-		if bounty_amount != None:
-			bounty_earnings = float(bounty_amount) * float(len(eliminated_usernames))
 		data = PlayerEliminationsData(
 			player_id = eliminator.id,
 			player_username = eliminator.user.username,
 			eliminated_player_usernames = eliminated_usernames,
-			bounty_earnings = bounty_earnings
 		)
 		return data
 	return None
+
+"""
+Returns a list of SplitEliminationsData.
+split_eliminations: List of TournamentSplitElimination's in the entire tournament.
+"""
+def build_split_eliminations_data(split_eliminations):
+	split_eliminations_data = []
+	for elimination in split_eliminations:
+		eliminators = elimination.eliminators.all()
+		player_ids = [eliminator.id for eliminator in eliminators]
+		player_usernames = [eliminator.user.username for eliminator in eliminators]
+		eliminated_player_username = elimination.eliminatee.user.username
+		data = SplitEliminationsData(
+			player_ids = player_ids,
+			player_usernames = player_usernames,
+			eliminated_player_username = eliminated_player_username,
+		)
+		split_eliminations_data.append(data)
+	return split_eliminations_data
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

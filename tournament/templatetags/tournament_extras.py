@@ -41,7 +41,11 @@ def format_table_number(num_eliminations):
 	if num_eliminations == "0":
 		return "--"
 	else:
-		return f"{num_eliminations}"
+		if Decimal(num_eliminations) % 1 > 0:
+			return f"{num_eliminations}"
+		else:
+			return f"{num_eliminations}".split(".")[0]
+		
 
 """
 Used to format the placement color for a Player in the Tournemnt.
@@ -127,6 +131,32 @@ def keyvalue(dictionary, key):
 		return ''
 
 """
+Return true if an eliminator_id value exists in the list of dicts.
+data_list is used in 'tournament_backfill_view'. Format:
+[
+	{
+		'eliminator_number': '0',
+		'eliminator_id': '<playerid1>'
+	},
+	{
+		'eliminator_number': '1',
+		'eliminator_id': '<playerid8>'
+	},
+	...
+]
+
+"""
+@register.filter
+def keyvalue_in_list(data_list, eliminator_id):
+	for item in data_list:
+		try:
+			if item['eliminator_id'] == eliminator_id:
+				return True
+		except KeyError:
+			pass
+	return False
+
+"""
 Does a value exist in a list.
 """
 @register.filter
@@ -192,6 +222,23 @@ def build_loop_range(length, args):
 		range_list.append(counter)
 		counter += 1
 	return range_list
+
+"""
+Change value to a string.
+"""
+@register.filter
+def as_string(value):
+	return f"{value}"
+
+
+
+
+
+
+
+
+
+
 
 
 

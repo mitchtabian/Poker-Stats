@@ -18,6 +18,7 @@ class PlayerPlacementData:
 	bounty_earnings: str
 	rebuys: list[int] = field(default_factory=list)
 	eliminations: list[int] = field(default_factory=list)
+	split_eliminations: list[int] = field(default_factory=list)
 
 """
 Convenience function for adding players to a tournament in tests.

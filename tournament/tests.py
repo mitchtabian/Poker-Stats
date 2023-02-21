@@ -1287,7 +1287,7 @@ class TournamentTestCase(TransactionTestCase):
 		if bounty_amount == None:
 			bounty_amount = 0
 		expected_investment = round(buyin_amount + (buyin_amount * rebuy_count), 2)
-		expected_bounty_earnings = round(bounty_amount * eliminations_count, 2)
+		expected_bounty_earnings = round(bounty_amount * Decimal(eliminations_count), 2)
 		expected_placement_earnings = placement_earnings
 		expected_gross_earnings = round(expected_placement_earnings + expected_bounty_earnings, 2)
 		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
@@ -1296,13 +1296,20 @@ class TournamentTestCase(TransactionTestCase):
 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
 			player_id = result.player.id
 		)
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+			player_id = result.player.id
+		)
+		split_eliminations_count = 0.00
+		for split_elimination in split_eliminations:
+			eliminators = split_elimination.eliminators.all()
+			split_eliminations_count += round(1.00 / len(eliminators), 2)
 		self.assertEqual(result.investment, expected_investment)
 		self.assertEqual(build_placement_string(result.placement), placement_string)
 		self.assertEqual(result.placement_earnings, expected_placement_earnings)
 		self.assertEqual(len(rebuys), rebuy_count)
 		self.assertEqual(result.bounty_earnings, expected_bounty_earnings)
 		self.assertEqual(result.gross_earnings, expected_gross_earnings)
-		self.assertEqual(len(eliminations), eliminations_count)
+		self.assertEqual(round(len(eliminations) + split_eliminations_count, 2), eliminations_count)
 		self.assertEqual(result.net_earnings, round(expected_gross_earnings - Decimal(expected_investment), 2))
 		self.assertEqual(result.is_backfill, is_backfill)
 
@@ -2157,18 +2164,35 @@ class TournamentTestCase(TransactionTestCase):
 			9: [players[6]],
 		}
 
+		# --- Split Eliminations ----
+		split_eliminations = []
+		split_elim1 = {
+			'eliminatee': players[1],
+			'eliminators': [players[2], players[3]]
+		}
+		split_elim2 = {
+			'eliminatee': players[4],
+			'eliminators': [players[7], players[1], players[8]]
+		}
+		split_eliminations.append(split_elim1)
+		split_eliminations.append(split_elim2)
+
 		# Execute the backfill
 		Tournament.objects.complete_tournament_for_backfill(
 			user = tournament.admin,
 			tournament_id = tournament.id,
 			player_tournament_placements = player_tournament_placements,
-			elim_dict = elim_dict
+			elim_dict = elim_dict,
+			split_eliminations = split_eliminations
 		)
 
 		results = TournamentPlayerResult.objects.get_results_for_tournament(
 			tournament_id = tournament.id
 		)
 
+		# 1958.40
+		# bounties 198.9
+		# minus bounties 1759.50
 		buyin_amount = Decimal(115.20)
 		bounty_amount = Decimal(11.70)
 		for result in results:
@@ -2178,9 +2202,9 @@ class TournamentTestCase(TransactionTestCase):
 					result = result,
 					is_backfill = True,
 					placement_string = "2nd",
-					placement_earnings = Decimal("465.75"),
+					placement_earnings = Decimal("527.85"),
 					rebuy_count = 1,
-					eliminations_count = 1,
+					eliminations_count = 1.33,
 					buyin_amount = buyin_amount,
 					bounty_amount = bounty_amount
 				)
@@ -2191,7 +2215,7 @@ class TournamentTestCase(TransactionTestCase):
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
-					eliminations_count = 1,
+					eliminations_count = 1.33,
 					buyin_amount = buyin_amount,
 					bounty_amount = bounty_amount
 				)
@@ -2211,7 +2235,7 @@ class TournamentTestCase(TransactionTestCase):
 					result = result,
 					is_backfill = True,
 					placement_string = "3rd",
-					placement_earnings = Decimal("310.50"),
+					placement_earnings = Decimal("351.9"),
 					rebuy_count = 1,
 					eliminations_count = 0,
 					buyin_amount = buyin_amount,
@@ -2223,7 +2247,7 @@ class TournamentTestCase(TransactionTestCase):
 					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
-					rebuy_count = 0,
+					rebuy_count = 1,
 					eliminations_count = 3,
 					buyin_amount = buyin_amount,
 					bounty_amount = bounty_amount
@@ -2235,7 +2259,7 @@ class TournamentTestCase(TransactionTestCase):
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 1,
-					eliminations_count = 0,
+					eliminations_count = 0.5,
 					buyin_amount = buyin_amount,
 					bounty_amount = bounty_amount
 				)
@@ -2246,7 +2270,7 @@ class TournamentTestCase(TransactionTestCase):
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
 					rebuy_count = 0,
-					eliminations_count = 0,
+					eliminations_count = 0.5,
 					buyin_amount = buyin_amount,
 					bounty_amount = bounty_amount
 				)
@@ -2256,8 +2280,8 @@ class TournamentTestCase(TransactionTestCase):
 					is_backfill = True,
 					placement_string = "--",
 					placement_earnings = Decimal("0.00"),
-					rebuy_count = 0,
-					eliminations_count = 5,
+					rebuy_count = 1,
+					eliminations_count = 5.83,
 					buyin_amount = buyin_amount,
 					bounty_amount = bounty_amount
 				)
@@ -2266,7 +2290,7 @@ class TournamentTestCase(TransactionTestCase):
 					result = result,
 					is_backfill = True,
 					placement_string = "1st",
-					placement_earnings = Decimal("776.25"),
+					placement_earnings = Decimal("879.75"),
 					rebuy_count = 2,
 					eliminations_count = 3,
 					buyin_amount = buyin_amount,
@@ -2358,7 +2382,8 @@ class TournamentTestCase(TransactionTestCase):
 			user = tournament.admin,
 			tournament_id = tournament.id,
 			player_tournament_placements = player_tournament_placements,
-			elim_dict = elim_dict
+			elim_dict = elim_dict,
+			split_eliminations = [],
 		)
 
 		results = TournamentPlayerResult.objects.get_results_for_tournament(
@@ -2544,7 +2569,8 @@ class TournamentTestCase(TransactionTestCase):
 			user = tournament.admin,
 			tournament_id = tournament.id,
 			player_tournament_placements = player_tournament_placements,
-			elim_dict = elim_dict
+			elim_dict = elim_dict,
+			split_eliminations = [],
 		)
 
 		results = TournamentPlayerResult.objects.get_results_for_tournament(
@@ -2735,7 +2761,8 @@ class TournamentTestCase(TransactionTestCase):
 				user = tournament.admin,
 				tournament_id = tournament.id,
 				player_tournament_placements = player_tournament_placements,
-				elim_dict = elim_dict
+				elim_dict = elim_dict,
+				split_eliminations = [],
 			)
 		self.verify_tournament_reset(tournament.id)
 
@@ -2822,7 +2849,8 @@ class TournamentTestCase(TransactionTestCase):
 				user = tournament.admin,
 				tournament_id = tournament.id,
 				player_tournament_placements = player_tournament_placements,
-				elim_dict = elim_dict
+				elim_dict = elim_dict,
+				split_eliminations = [],
 			)
 		self.verify_tournament_reset(tournament.id)
 
@@ -2909,7 +2937,8 @@ class TournamentTestCase(TransactionTestCase):
 				user = tournament.admin,
 				tournament_id = tournament.id,
 				player_tournament_placements = player_tournament_placements,
-				elim_dict = elim_dict
+				elim_dict = elim_dict,
+				split_eliminations = [],
 			)
 		self.verify_tournament_reset(tournament.id)
 
@@ -3376,7 +3405,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 	Their placement is the key and PlayerPlacementData is the value.
 	This makes it much easier to verify the placements and earnings.
 	"""
-	def build_placement_dict(self, is_backfill, tournament, eliminatee_order, eliminator_order, debug=False):
+	def build_placement_dict(self, is_backfill, tournament, eliminatee_order, eliminator_order, split_eliminatee_order=[], split_eliminator_order=[], debug=False):
 		players = TournamentPlayer.objects.get_tournament_players(tournament.id)
 		placement_dict = {}
 
@@ -3392,6 +3421,9 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 			eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
 				player_id = player.id
 			)
+			split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+				player_id = player.id
+			)
 			rebuys = TournamentRebuy.objects.get_rebuys_for_player(
 				player = player
 			)
@@ -3401,6 +3433,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				placement_earnings = f"{result.placement_earnings}",
 				investment = f"{result.investment}",
 				eliminations = eliminations,
+				split_eliminations = split_eliminations,
 				bounty_earnings = f"{result.bounty_earnings}",
 				rebuys = rebuys,
 				gross_earnings = f"{result.gross_earnings}",
@@ -3925,12 +3958,25 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		# Start
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 
+		# Add some split eliminations
+		"""
+		1. 7 was split eliminated by 2, 5 and 9.
+		"""
+		split_eliminatee_order = [7]
+		split_eliminator_order = [
+			[2, 5, 9]
+		]
+		for index,eliminatee_id in enumerate(split_eliminatee_order):
+			split_eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_ids = split_eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
 		# Eliminate in a specific order so we can verify. 9 is the winner here.
 		# These arrays are the primary keys of the users.
-		# 5 elim 7, 9 elim 5, 9 elim 3, etc...
-		# So expected placement order is: [9, 6, 8, 4, 5, 3, 2, 1, 7]
-		eliminatee_order = [7, 1, 2, 3, 5, 4, 8, 6]
-		eliminator_order = [5, 9, 9, 9, 9, 9, 4, 9]
+		eliminatee_order = [1, 2, 3, 5, 4, 8, 6]
+		eliminator_order = [9, 9, 9, 9, 9, 4, 9]
 		for index,eliminatee_id in enumerate(eliminatee_order):
 			eliminate_player(
 				tournament_id = tournament.id,
@@ -3964,10 +4010,14 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(gross_earnings, f"{round(placement_earnings + bounty_earnings, 2)}")
 				self.assertEqual(placement_dict[place].placement_earnings, f"{round(Decimal(402.44), 2)}")
 				self.assertEqual(place, 0)
-				self.assertEqual(placement_dict[place].bounty_earnings, f"{round(Decimal(154.14), 2)}")
+				self.assertEqual(placement_dict[place].bounty_earnings, f"{round(Decimal(162.62), 2)}")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
 					[1, 2, 3, 5, 4, 6]
+				)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
+					[7]
 				)
 			elif placement_dict[place].user_id == 8:
 				gross_earnings = placement_dict[place].gross_earnings
@@ -4012,10 +4062,14 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				placement_earnings = Decimal(placement_dict[place].placement_earnings)
 				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
 				self.assertEqual(place, 4)
-				self.assertEqual(placement_dict[place].bounty_earnings, f"{round(Decimal(25.69), 2)}")
-				self.assertEqual(gross_earnings, f"{round(Decimal(25.69), 2)}")
+				self.assertEqual(placement_dict[place].bounty_earnings, f"{round(Decimal(8.48), 2)}")
+				self.assertEqual(gross_earnings, f"{round(Decimal(8.48), 2)}")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
+					[]
+				)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
 					[7]
 				)
 			elif placement_dict[place].user_id == 4:
@@ -4046,14 +4100,17 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 			elif placement_dict[place].user_id == 2:
 				gross_earnings = placement_dict[place].gross_earnings
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
-				self.assertEqual(placement_dict[place].gross_earnings, "0.00")
 				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
 				self.assertEqual(place, 6)
-				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
-				self.assertEqual(gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].bounty_earnings, "8.48")
+				self.assertEqual(gross_earnings, "8.48")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
 					[]
+				)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
+					[7]
 				)
 			elif placement_dict[place].user_id == 1:
 				gross_earnings = placement_dict[place].gross_earnings
@@ -4102,7 +4159,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 		# Manunally add some rebuys
 		# These are the player_id's of the players who rebought.
 		# So 1 has two rebuys. 5, 7 and 8 have one rebuy each.
-		rebuys = [1, 5, 7, 8, 1]
+		rebuys = [1, 5, 5, 7, 7, 8, 1]
 		for player_id in rebuys:
 			rebuy_for_test(
 				tournament_id = tournament.id,
@@ -4113,10 +4170,26 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 			tournament_id = tournament.id
 		)
 
+		# Add some split eliminations
+		"""
+		1. 7 was split eliminated by 2, 5 and 9.
+		2. 5 was split eliminated by 6 and 4
+		"""
+		split_eliminatee_order = [7, 5]
+		split_eliminator_order = [
+			[2, 5, 9],
+			[6, 4]
+		]
+		for index,eliminatee_id in enumerate(split_eliminatee_order):
+			split_eliminate_player(
+				tournament_id = tournament.id,
+				eliminator_ids = split_eliminator_order[index],
+				eliminatee_id = eliminatee_id
+			)
+
 		# Eliminate in a specific order so we can verify. 9 is the winner here.
 		# These arrays are the primary keys of the players.
 		# 2 elim 1, 5 elim 1, 9 elim 5, 7 elim 2, etc...
-		# So expected placement order is: [9, 7, 8, 1, 5, 6, 4, 3, 2]
 		eliminatee_order = [1, 1, 5, 2, 3, 4, 6, 5, 7, 8, 1, 8, 7]
 		eliminator_order = [2, 5, 9, 7, 8, 1, 1, 9, 8, 1, 9, 7, 9]
 		for index,eliminatee_id in enumerate(eliminatee_order):
@@ -4134,9 +4207,14 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 			tournament = tournament,
 			eliminatee_order = eliminatee_order,
 			eliminator_order = eliminator_order,
+			split_eliminatee_order = split_eliminatee_order,
+			split_eliminator_order = split_eliminator_order,
 			debug = False
 		)
 
+		# 1841.92
+		# minus bounty: 1430.88
+		# bounty: 411.04
 		# Verify results
 		for place in placement_dict.keys():
 			if placement_dict[place].user_id == 9:
@@ -4146,12 +4224,16 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				placement_earnings = Decimal(placement_dict[place].placement_earnings)
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - Decimal(expected_investment), 2)}")
 				self.assertEqual(gross_earnings, f"{round(placement_earnings + bounty_earnings, 2)}")
-				self.assertEqual(placement_dict[place].placement_earnings, "626.01")
+				self.assertEqual(placement_dict[place].placement_earnings, "715.44")
 				self.assertEqual(place, 0)
-				self.assertEqual(placement_dict[place].bounty_earnings, "102.76")
+				self.assertEqual(placement_dict[place].bounty_earnings, "111.24")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
 					[5, 5, 1, 7]
+				)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
+					[7]
 				)
 				self.assertEqual(placement_dict[place].investment, "115.12")
 				self.assertEqual(len(placement_dict[place].rebuys), 0)
@@ -4159,9 +4241,9 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				expected_investment = "230.24"
 				gross_earnings = placement_dict[place].gross_earnings
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - Decimal(expected_investment), 2)}")
-				self.assertEqual(placement_dict[place].placement_earnings, "187.80")
+				self.assertEqual(placement_dict[place].placement_earnings, "214.63")
 				self.assertEqual(place, 2)
-				self.assertEqual(gross_earnings, "239.18")
+				self.assertEqual(gross_earnings, "266.01")
 				self.assertEqual(placement_dict[place].bounty_earnings, "51.38")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
@@ -4171,11 +4253,11 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(len(placement_dict[place].rebuys), 1)
 				self.assertEqual(placement_dict[place].rebuys[0].player.id, 8)
 			elif placement_dict[place].user_id == 7:
-				expected_investment = "230.24"
+				expected_investment = "345.36"
 				gross_earnings = placement_dict[place].gross_earnings
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - Decimal(expected_investment), 2)}")
-				self.assertEqual(gross_earnings, "426.99")
-				self.assertEqual(placement_dict[place].placement_earnings, "375.61")
+				self.assertEqual(gross_earnings, "480.64")
+				self.assertEqual(placement_dict[place].placement_earnings, "429.26")
 				self.assertEqual(place, 1)
 				self.assertEqual(placement_dict[place].bounty_earnings, "51.38")
 				self.assertEqual(
@@ -4183,36 +4265,43 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 					[2, 8]
 				)
 				self.assertEqual(placement_dict[place].investment, expected_investment)
-				self.assertEqual(len(placement_dict[place].rebuys), 1)
+				self.assertEqual(len(placement_dict[place].rebuys), 2)
 				self.assertEqual(placement_dict[place].rebuys[0].player.id, 7)
 			elif placement_dict[place].user_id == 6:
 				expected_investment = "115.12"
 				gross_earnings = placement_dict[place].gross_earnings
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - Decimal(expected_investment), 2)}")
-				self.assertEqual(gross_earnings, placement_dict[place].placement_earnings)
 				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
 				self.assertEqual(place, 5)
-				self.assertEqual(placement_dict[place].bounty_earnings, "0.00")
-				self.assertEqual(gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].bounty_earnings, "12.84")
+				self.assertEqual(gross_earnings, "12.84")
 				self.assertEqual(len(placement_dict[place].eliminations), 0)
 				self.assertEqual(placement_dict[place].investment, expected_investment)
 				self.assertEqual(len(placement_dict[place].rebuys), 0)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
+					[5]
+				)
 			elif placement_dict[place].user_id == 5:
-				expected_investment = "230.24"
+				expected_investment = "345.36"
 				gross_earnings = placement_dict[place].gross_earnings
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - Decimal(expected_investment), 2)}")
 				bounty_earnings = Decimal(placement_dict[place].bounty_earnings)
 				placement_earnings = Decimal(placement_dict[place].placement_earnings)
 				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
 				self.assertEqual(place, 4)
-				self.assertEqual(placement_dict[place].bounty_earnings, "25.69")
-				self.assertEqual(gross_earnings, "25.69")
+				self.assertEqual(placement_dict[place].bounty_earnings, "34.17")
+				self.assertEqual(gross_earnings, "34.17")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
 					[1]
 				)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
+					[7]
+				)
 				self.assertEqual(placement_dict[place].investment, expected_investment)
-				self.assertEqual(len(placement_dict[place].rebuys), 1)
+				self.assertEqual(len(placement_dict[place].rebuys), 2)
 				self.assertEqual(placement_dict[place].rebuys[0].player.id, 5)
 			elif placement_dict[place].user_id == 4:
 				expected_investment = "115.12"
@@ -4223,10 +4312,15 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(placement_dict[place].gross_earnings, f"{round(placement_earnings + bounty_earnings, 2)}")
 				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
 				self.assertEqual(place, 6)
-				self.assertEqual(gross_earnings, "0.00")
+				self.assertEqual(placement_dict[place].bounty_earnings, "12.84")
+				self.assertEqual(gross_earnings, "12.84")
 				self.assertEqual(len(placement_dict[place].eliminations), 0)
 				self.assertEqual(placement_dict[place].investment, expected_investment)
 				self.assertEqual(len(placement_dict[place].rebuys), 0)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
+					[5]
+				)
 			elif placement_dict[place].user_id == 3:
 				expected_investment = "115.12"
 				gross_earnings = placement_dict[place].gross_earnings
@@ -4245,11 +4339,15 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - Decimal(expected_investment), 2)}")
 				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
 				self.assertEqual(place, 8)
-				self.assertEqual(placement_dict[place].bounty_earnings, "25.69")
-				self.assertEqual(gross_earnings, "25.69")
+				self.assertEqual(placement_dict[place].bounty_earnings, "34.17")
+				self.assertEqual(gross_earnings, "34.17")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
 					[1]
+				)
+				self.assertEqual(
+					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
+					[7]
 				)
 				self.assertEqual(placement_dict[place].investment, expected_investment)
 				self.assertEqual(len(placement_dict[place].rebuys), 0)
@@ -4257,8 +4355,8 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				expected_investment = "345.36"
 				gross_earnings = placement_dict[place].gross_earnings
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - Decimal(expected_investment), 2)}")
-				self.assertEqual(gross_earnings, "139.67")
-				self.assertEqual(placement_dict[place].placement_earnings, "62.60")
+				self.assertEqual(gross_earnings, "148.61")
+				self.assertEqual(placement_dict[place].placement_earnings, "71.54")
 				self.assertEqual(place, 3)
 				self.assertEqual(placement_dict[place].bounty_earnings, "77.07")
 				self.assertEqual(
