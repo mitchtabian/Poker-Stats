@@ -1479,7 +1479,7 @@ class TournamentPlayerResultManager(models.Manager):
 			)
 			for split_elimination in tournament_split_eliminations:
 				if split_elimination.eliminatee.id not in elimations_dict.keys():
-					elimations_dict[split_elimination.eliminatee.id] = elimination.eliminated_at
+					elimations_dict[split_elimination.eliminatee.id] = split_elimination.eliminated_at
 				elif split_elimination.eliminated_at > elimations_dict[split_elimination.eliminatee.id]:
 					# Only replace the value in the dictionary if the timestamp is newer (more recent)
 					elimations_dict[split_elimination.eliminatee.id] = split_elimination.eliminated_at

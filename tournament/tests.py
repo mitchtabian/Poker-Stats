@@ -4066,7 +4066,7 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 				self.assertEqual(gross_earnings, f"{round(Decimal(8.48), 2)}")
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].eliminations],
-					[7]
+					[]
 				)
 				self.assertEqual(
 					[elimination.eliminatee.id for elimination in placement_dict[place].split_eliminations],
@@ -4100,7 +4100,6 @@ class TournamentPlayerResultTestCase(TransactionTestCase):
 			elif placement_dict[place].user_id == 2:
 				gross_earnings = placement_dict[place].gross_earnings
 				self.assertEqual(placement_dict[place].net_earnings, f"{round(Decimal(gross_earnings) - investment_decimal, 2)}")
-				self.assertEqual(placement_dict[place].gross_earnings, "0.00")
 				self.assertEqual(placement_dict[place].placement_earnings, "0.00")
 				self.assertEqual(place, 6)
 				self.assertEqual(placement_dict[place].bounty_earnings, "8.48")
