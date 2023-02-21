@@ -462,39 +462,38 @@ def render_tournament_view(request, tournament_id):
 	# --- Build timeline ---
 	# Note: Only build a timeline if this is not a backfill tournament and the state is either ACTIVE or COMPLETED.
 	eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
+	split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament.id)
 	events = []
-	if len(eliminations):
-		if not eliminations[0].is_backfill:
-			if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
-				# Get all the TournamentElimination's and TournamentRebuyEvent's and add to the context as an event.
-				# Sort on timestamp. This is for building the timeline.
-				# Eliminations
-				for elimination in eliminations:
-					event = build_elimination_event(elimination)
-					events.append(event)
-				# Rebuys
-				rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(tournament.id)
-				for rebuy in rebuys:
-					event = build_rebuy_event(rebuy)
-					events.append(event)
+	if (len(eliminations) > 0 and not eliminations[0].is_backfill) or (len(split_eliminations) > 0 and not split_eliminations[0].is_backfill):
+		if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
+			# Get all the TournamentElimination's and TournamentRebuyEvent's and add to the context as an event.
+			# Sort on timestamp. This is for building the timeline.
+			# Eliminations
+			for elimination in eliminations:
+				event = build_elimination_event(elimination)
+				events.append(event)
+			# Rebuys
+			rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(tournament.id)
+			for rebuy in rebuys:
+				event = build_rebuy_event(rebuy)
+				events.append(event)
 
-				# If the tournament is completed, build the completion event.
-				if results != None:
-					winning_player_result = results.filter(placement=0)[0]
-					event = build_completion_event(
-						completed_at = tournament.completed_at,
-						winning_player = winning_player_result.player
-					)
-					events.append(event)
-				else:
-					# if it's not completed, add a "TournamentInProgressEvent"
-					event = build_in_progress_event(
-						started_at = tournament.started_at
-					)
-					events.append(event)
+			# If the tournament is completed, build the completion event.
+			if results != None:
+				winning_player_result = results.filter(placement=0)[0]
+				event = build_completion_event(
+					completed_at = tournament.completed_at,
+					winning_player = winning_player_result.player
+				)
+				events.append(event)
+			else:
+				# if it's not completed, add a "TournamentInProgressEvent"
+				event = build_in_progress_event(
+					started_at = tournament.started_at
+				)
+				events.append(event)
 	
 	# SPLIT ELIMINATIONS for timeline
-	split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament.id)
 	if len(split_eliminations) > 0:
 		if not split_eliminations[0].is_backfill:
 			if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:

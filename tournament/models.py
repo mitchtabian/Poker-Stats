@@ -1450,13 +1450,16 @@ class TournamentPlayerResultManager(models.Manager):
 		player_eliminations = TournamentElimination.objects.get_eliminations_by_eliminatee(
 			player_id = player.id
 		)
+		player_split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminatee(
+			player_id = player.id
+		)
 		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
 			player = player
 		)
-		if len(player_eliminations) == 0:
+		if len(player_eliminations) == 0 and len(player_split_eliminations) == 0:
 			# They were never eliminated
 			placement = 0
-		if len(player_eliminations) < len(rebuys) + 1:
+		if len(player_eliminations) + len(player_split_eliminations) < len(rebuys) + 1:
 			# The Tournament completed and they still had a rebuy remaining
 			placement = 0
 		if placement == None:
@@ -1471,6 +1474,16 @@ class TournamentPlayerResultManager(models.Manager):
 				elif elimination.eliminated_at > elimations_dict[elimination.eliminatee.id]:
 					# Only replace the value in the dictionary if the timestamp is newer (more recent)
 					elimations_dict[elimination.eliminatee.id] = elimination.eliminated_at
+			tournament_split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(
+				tournament_id = tournament.id
+			)
+			for split_elimination in tournament_split_eliminations:
+				if split_elimination.eliminatee.id not in elimations_dict.keys():
+					elimations_dict[split_elimination.eliminatee.id] = elimination.eliminated_at
+				elif split_elimination.eliminated_at > elimations_dict[split_elimination.eliminatee.id]:
+					# Only replace the value in the dictionary if the timestamp is newer (more recent)
+					elimations_dict[split_elimination.eliminatee.id] = split_elimination.eliminated_at
+
 			# Loop through the sorted list. Whatever index this player is in, thats what they placed
 			sorted_reversed_list = [k for k, v in sorted(elimations_dict.items(), key=lambda p: p[1], reverse=True)]
 			for i,player_id in enumerate(sorted_reversed_list):
@@ -1526,11 +1539,20 @@ class TournamentPlayerResultManager(models.Manager):
 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
 			player_id = player.id
 		)
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+			player_id = player.id
+		)
+
+		# Determine what fraction comes from split eliminations
+		split_eliminations_count = 0.00
+		for split_elimination in split_eliminations:
+			eliminators = split_elimination.eliminators.all()
+			split_eliminations_count += round(1.00 / len(eliminators), 2)
 
 		# -- Get bounty earnings (if this is a bounty tournament). Otherwise 0.00. --
 		bounty_earnings = None
 		if tournament.tournament_structure.bounty_amount != None:
-			bounty_earnings = len(eliminations) * tournament.tournament_structure.bounty_amount
+			bounty_earnings = round((Decimal(len(eliminations)) + Decimal(split_eliminations_count)) * Decimal(tournament.tournament_structure.bounty_amount), 2)
 		else:
 			bounty_earnings = round(Decimal(0.00), 2)
 
