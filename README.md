@@ -15,14 +15,9 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Add a notes field to the tournament. 
-	- That way I can write a note saying: "data is slightly wrong becuase a split elimination occurred between x players or whatver"
-1. Split eliminations?
-	- Need new data structure for this?... `TournamentSplitElimination`? contains a list of eliminators?
 1. Split winners
 	- Need to think about this.
 1. Send an email when invited to tournament
-1. Need a way to backfill if the eliminations data is unknown but its a bounty tournament with rebuys. (june 10 tournament)
 1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Google signin issue? Not working for people to sign up with google account (See screenshot saved)
 	- Seems to be from opening pokerstats.lol from within another app. Can I fix this easily?
@@ -38,10 +33,11 @@ This is a notes section for me personally.
 		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
 1. Design a landing page
 	1. On mobile optimize for quickly creating or joining a tournament
-
 1. TournamentGroup? Think this through with some diagrams
 1. Analaytics based on TournamentGroup
 	- Basically this would just extend the per-user analytics
+1. Add a notes field to the tournament. 
+	- That way I can write a note saying: "data is slightly wrong becuase a split elimination occurred between x players or whatver"
 
 ## TODO (after app is fully functional)
 1. Optimize everything for mobile. (I think this is already done, but confirm)
