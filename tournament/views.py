@@ -24,7 +24,6 @@ from tournament.util import (
 	PlayerTournamentData,
 	payout_positions,
 	PlayerEliminationsData,
-	build_player_eliminations_data_from_eliminations,
 	build_placement_string,
 	PlayerTournamentPlacement,
 	DID_NOT_PLACE_VALUE,
@@ -32,7 +31,10 @@ from tournament.util import (
 	build_rebuy_event,
 	build_completion_event,
 	build_in_progress_event,
-	build_split_elimination_event
+	build_split_elimination_event,
+	build_split_eliminations_data,
+	build_player_eliminations_data_from_eliminations,
+	build_player_eliminations_summary_data_from_eliminations
 )
 from user.models import User
 
@@ -406,21 +408,50 @@ def render_tournament_view(request, tournament_id):
 		context['results'] = results.order_by("placement")
 		context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
 
-		# --- Build PlayerEliminationsData for each player ---
+		
+		eliminations_summary_data = []
 		eliminations_data = []
 		for result in results:
 			# Determine who they eliminated in this tournament.
 			eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
 				player_id = result.player.id
 			)
+			split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+				player_id = result.player.id
+			)
+			# --- Build PlayerEliminationsSummaryData for each player ---
+			if len(eliminations) > 0 or len(split_eliminations) > 0:
+				data = build_player_eliminations_summary_data_from_eliminations(
+					eliminator = result.player,
+					eliminations = eliminations,
+					split_eliminations = split_eliminations
+				)
+				if data != None:
+					eliminations_summary_data.append(data)
+
+			# --- Build PlayerEliminationsData for each player ---
 			if len(eliminations) > 0:
 				data = build_player_eliminations_data_from_eliminations(
 					eliminator = result.player,
-					eliminations = eliminations
+					eliminations = eliminations,
 				)
 				if data != None:
 					eliminations_data.append(data)
+
+		# --- Build SplitEliminationsData for the tournament ---
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(
+			tournament_id = tournament.id
+		)
+		if len(split_eliminations) > 0:
+			data = build_split_eliminations_data(
+				split_eliminations = split_eliminations
+			)
+			if data != None:
+				context['split_eliminations_data'] = data
+
+		context['eliminations_summary_data'] = eliminations_summary_data
 		context['eliminations_data'] = eliminations_data
+
 
 		# --- Add a "Warning" section if not all TournamentPlayers have joined the Tournament. ---
 		has_all_joined = Tournament.objects.have_all_players_joined_tournament(
@@ -653,7 +684,7 @@ Payload:
     },
     "eliminations":[
        {
-          "eliminator_id":"<player_id>",
+          "eliminator_id": "<player_id>",
           "eliminatee_id":"<player_id>"
        },
        {
@@ -661,7 +692,31 @@ Payload:
           "eliminatee_id":"<player_id>"
        },
        ...
-    ]
+    ],
+    "split_eliminations":[
+       {
+          "eliminator_ids": [
+			"<player_id5>"
+			"<player_id23>"
+          ],
+          "eliminatee_id":"<player_id>"
+       },
+       {
+          "eliminator_ids": [
+			"<player_id6>"
+			"<player_id23>"
+			"<player_id12>"
+          ],
+          "eliminatee_id":"<player_id>"
+       },
+       ...
+    ],
+    "selected_eliminatee_id": "1" <--- Currently selected eliminatee for a split elimination. Defaults to -1.
+    "selected_eliminator_ids": { <--- currently selected eliminators
+       "0": "<player_id5",
+       "1": "<player_id7",
+       ...
+     }
 }
 """
 @login_required
@@ -721,6 +776,40 @@ def tournament_backfill_view(request, *args, **kwargs):
 						elim_dict[eliminator_id] = current_values
 					else:
 						elim_dict[eliminator_id] = [player]
+
+			# parse the json selected eliminatee data so its more readable in the view.
+			selected_eliminatee_player_id = None
+			if "selected_eliminatee_id" in json_dict:
+				selected_eliminatee_player_id = json_dict['selected_eliminatee_id']
+				context['selected_eliminatee_id'] = int(selected_eliminatee_player_id)
+
+			# parse the json selected eliminators data so its more readable in the view.
+			eliminator_data_list = []
+			if "selected_eliminator_ids" in json_dict:
+				for eliminator_number in json_dict['selected_eliminator_ids']:
+					eliminator_id = int(json_dict['selected_eliminator_ids'][eliminator_number])
+					eliminator_data = {
+						'eliminator_number': int(eliminator_number),
+						'eliminator_id': eliminator_id
+					}
+					eliminator_data_list.append(eliminator_data)
+				context['selected_eliminator_ids'] = eliminator_data_list
+
+			split_eliminations = []
+			if "split_eliminations" in json_dict:
+				for split_elimination in json_dict['split_eliminations']:
+					eliminator_players = []
+					for player_id in split_elimination['eliminator_ids']:
+						player = TournamentPlayer.objects.get_by_id(int(player_id))
+						eliminator_players.append(player)
+					eliminatee_player = TournamentPlayer.objects.get_by_id(int(split_elimination['eliminatee_id']))
+					split_elim_dict = {
+						'eliminatee': eliminatee_player,
+						'eliminators': eliminator_players
+					}
+					split_eliminations.append(split_elim_dict)
+
+			context['split_eliminations'] = split_eliminations
 		# --- END: Update Eliminations and Placements with htmx ---
 
 		context['elim_dict'] = elim_dict
@@ -770,11 +859,14 @@ def tournament_backfill_view(request, *args, **kwargs):
 				user = request.user,
 				tournament_id = tournament.id,
 				player_tournament_placements = player_tournament_placements.values(),
-				elim_dict = elim_dict
+				elim_dict = elim_dict,
+				split_eliminations = split_eliminations
 			)
 
 			return redirect("tournament:tournament_view", pk=tournament.id)
 	except Exception as e:
+		if "Split Elimination Error" in e.args[0]:
+			context['split_elimination_error'] = e.args[0]
 		messages.error(request, e.args[0])
 	return render(request=request, template_name="tournament/tournament_backfill.html", context=context)
 

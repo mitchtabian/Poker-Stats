@@ -1,6 +1,6 @@
 {% load tournament_extras %}
 
-{% if results and eliminations_data|length > 0 %}
+{% if results and eliminations_summary_data|length > 0 %}
 
 <div class="eliminations-summary-table table-responsive">
 	<p class="eliminations-summary-table-header">Elimination Summary</p>
@@ -23,7 +23,7 @@
       </tr>
     </thead>
     <tbody>
-    	{% for data in eliminations_data %}
+    	{% for data in eliminations_summary_data %}
 	    <tr>
 	      <td scope="row">
 	      	<div class="eliminations-summary-table-row">
@@ -32,7 +32,7 @@
 	      		</div>
 	      	</div>
       	</td>
-	      <td><div class="eliminations-summary-table-row">{{data.eliminated_player_usernames|length|format_table_number}}</div></td>
+	      <td><div class="eliminations-summary-table-row">{{data.num_eliminations|format_table_number}}</div></td>
 	      {% if tournament.tournament_structure.bounty_amount != None %}
 	      <td>
 	      	<div class="eliminations-summary-table-row earnings-row" style="color: {{data.bounty_earnings|format_table_number_color}}; font-weight: {{data.bounty_earnings|format_number_weight}}">
