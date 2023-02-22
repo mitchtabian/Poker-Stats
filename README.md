@@ -15,7 +15,6 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. set a vector icon for the website (can i use a vector?)
 1. Update all the views to not be so narrow (like tournament_list.html was updated)
 1. Send an email when invited to tournament
 1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
