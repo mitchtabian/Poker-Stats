@@ -704,7 +704,7 @@ class TournamentPlayerManager(models.Manager):
 		if tournament.admin == player.user:
 			raise ValidationError("The admin cannot be removed from a Tournament.")
 
-		if tournament.admin != removed_by_user and player.id != player_id:
+		if tournament.admin != removed_by_user and removed_user != removed_by_user:
 			raise ValidationError("Only the admin can remove players.")
 
 		if tournament.completed_at != None:
@@ -713,7 +713,12 @@ class TournamentPlayerManager(models.Manager):
 		if tournament.started_at != None:
 			raise ValidationError("You can't remove players from a Tournment that is started.")
 
+		if player.tournament != tournament:
+			raise ValidationError(f"{player.user.username} is not part of this tournament.")
+
 		player.delete()
+
+		return removed_user
 
 
 	# from tournament.models import TournamentPlayer
@@ -808,7 +813,7 @@ class TournamentPlayerManager(models.Manager):
 A player associated with specific tournament.
 """
 class TournamentPlayer(models.Model):
-	user					= models.ForeignKey(User, on_delete=models.CASCADE)	
+	user							= models.ForeignKey(User, on_delete=models.CASCADE)	
 	tournament				= models.ForeignKey(Tournament, on_delete=models.CASCADE)
 	
 	objects = TournamentPlayerManager()
@@ -903,6 +908,8 @@ class TournamentInviteManager(models.Manager):
 			user_id = uninvite_user.id
 		)
 		player.delete()
+
+		return uninvite_user
 
 
 	# Return a queryset containing any pending invites for a user and a tournament.

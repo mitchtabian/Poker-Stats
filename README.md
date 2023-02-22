@@ -15,7 +15,6 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Make "join" button work with htmx and stay on same page (tournament_list)
 1. Need some kind of a backup or archived tournament process.
 	1. It would be really bad if someone accidentally "undo-completion" and lost their data. 
 	1. The tournament should be archived instead of totally deleted.

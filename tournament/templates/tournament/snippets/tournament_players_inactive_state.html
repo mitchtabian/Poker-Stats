@@ -25,9 +25,9 @@
         <td class="player-row">Joined</td>
         <td class="player-row">
           {% if request.user == tournament.admin and player.user != tournament.admin %}
-          <button class="btn btn-danger player-action-button btn-sm" data-bs-toggle="modal" data-bs-target="#id_remove_modal_{{player.id}}">Remove</button>
+          <button class="btn btn-danger player-action-button btn-sm" data-bs-toggle="modal" data-bs-target="#id_remove_modal_{{player.user.id}}">Remove</button>
           {% elif request.user != tournament.admin and request.user == player.user %}
-          <a hx-post="{% url 'tournament:remove_player' player_id=player.user.id tournament_id=player.tournament.id %}" hx-target="#body_container" hx-swap="innerHTML" class="btn btn-danger btn-sm player-action-button">Leave</a>
+          <a hx-post="{% url 'tournament:remove_player' user_id=player.user.id tournament_id=player.tournament.id %}" hx-target="#body_container" hx-swap="innerHTML" class="btn btn-danger btn-sm player-action-button">Leave</a>
           {% elif request.user == tournament.admin and request.user == player.user %}
           <span style="font-weight: bold;">admin</span>
           {% endif %}

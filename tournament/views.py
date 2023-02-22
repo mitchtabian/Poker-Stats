@@ -66,28 +66,29 @@ def tournament_create_view(request, *args, **kwargs):
 @login_required
 def tournament_list_view(request, *args, **kwargs):
 	context = {}
+	try:
+		# The tournament where they are the admin
+		context['tournaments'] = Tournament.objects.get_by_user(
+			user=request.user
+		).order_by("started_at")
 
-	# The tournament where they are the admin
-	context['tournaments'] = Tournament.objects.get_by_user(
-		user=request.user
-	).order_by("started_at")
+		# The tournaments they have joined (with accepted invite) but are not admin
+		joined_tournaments = Tournament.objects.get_joined_tournaments(
+			user_id = request.user.id
+		)
+		joined_tournaments.sort(
+			key=get_tournament_started_at
+		)
+		
+		context['joined_tournaments'] = joined_tournaments
 
-	# The tournaments they have joined (with accepted invite) but are not admin
-	joined_tournaments = Tournament.objects.get_joined_tournaments(
-		user_id = request.user.id
-	)
-	joined_tournaments.sort(
-		key=get_tournament_started_at
-	)
-	
-	context['joined_tournaments'] = joined_tournaments
-
-	# pending invites
-	invites = TournamentInvite.objects.find_pending_invites_for_user(
-		send_to_user_id = request.user.id
-	)
-	context['invites'] = invites
-
+		# pending invites
+		invites = TournamentInvite.objects.find_pending_invites_for_user(
+			send_to_user_id = request.user.id
+		)
+		context['invites'] = invites
+	except Exception as e:
+		messages.error(request, e.args[0])
 	return render(request=request, template_name="tournament/tournament_list.html", context=context)
 
 @login_required
@@ -194,11 +195,11 @@ def join_tournament(request, *args, **kwargs):
 		TournamentPlayer.objects.join_tournament(
 			player = player
 		)
-		return redirect("tournament:tournament_view", pk=invite.tournament.id)
-
+		messages.success(request, f"Joined {player.tournament.title}.")
+		# return redirect("tournament:tournament_view", pk=invite.tournament.id)
 	except Exception as e:
 		messages.error(request, e.args[0])
-	return redirect("home")
+	return redirect(request.META['HTTP_REFERER'])
 
 """
 Uninvite a player from a tournament.
@@ -210,11 +211,12 @@ def uninvite_player_from_tournament(request, *args, **kwargs):
 	player_id = kwargs['player_id']
 	tournament_id = kwargs['tournament_id']
 	try:
-		TournamentInvite.objects.uninvite_player_from_tournament(
+		uninvited_user = TournamentInvite.objects.uninvite_player_from_tournament(
 			admin_id = user.id,
 			uninvite_user_id = player_id,
 			tournament_id = tournament_id
 		)
+		messages.success(request, f"Uninvited {uninvited_user.username}.")
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return render_tournament_view(request, tournament_id)
@@ -227,18 +229,18 @@ HTMX request for tournament_view
 @login_required
 def remove_player_from_tournament(request, *args, **kwargs):
 	user = request.user
-	player_id = kwargs['player_id']
+	user_id = kwargs['user_id']
 	tournament_id = kwargs['tournament_id']
 	try:
-		player = TournamentPlayer.objects.get_by_id(player_id)
-		TournamentPlayer.objects.remove_player_from_tournament(
+		removed_user = TournamentPlayer.objects.remove_player_from_tournament(
 			removed_by_user_id= user.id,
-			removed_user_id=player.user.id,
+			removed_user_id=user_id,
 			tournament_id=tournament_id
 		)
+		messages.success(request, f"Removed {removed_user.username}.")
 	except Exception as e:
 		messages.error(request, e.args[0])
-	return render_tournament_view(request, tournament_id)
+	return redirect(request.META['HTTP_REFERER'])
 
 """
 Invite a player to a tournament.
