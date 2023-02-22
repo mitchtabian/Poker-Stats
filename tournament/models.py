@@ -923,7 +923,7 @@ class TournamentInviteManager(models.Manager):
 		return invites
 
 class TournamentInvite(models.Model):
-	send_to 				= models.ForeignKey(User, on_delete=models.CASCADE)
+	send_to 					= models.ForeignKey(User, on_delete=models.CASCADE)
 	tournament 				= models.ForeignKey(Tournament, on_delete=models.CASCADE)
 
 	objects = TournamentInviteManager()

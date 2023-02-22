@@ -1969,10 +1969,26 @@ class TournamentTestCase(TransactionTestCase):
 			structure = structure
 		)
 
+		# Send an invite to "dog""
+		dog = User.objects.get_by_username("dog")
+		TournamentInvite.objects.send_invite(
+			sent_from_user_id = cat.id,
+			send_to_user_id = dog.id,
+			tournament_id = tournament.id
+		)
+
 		# Verify the state is ACTIVE
 		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
 		tournament = Tournament.objects.get_by_id(tournament.id)
 		self.assertEqual(tournament.get_state(), TournamentState.ACTIVE)
+
+		# Verify pending invites were not deleted.
+		invites = TournamentInvite.objects.find_pending_invites_for_tournament(
+			tournament_id = tournament.id
+		)
+		self.assertEqual(len(invites), 1)
+		self.assertEqual(invites[0].send_to, dog)
+		self.assertEqual(invites[0].tournament, tournament)
 
 	"""
 	Verify cannot calculate tournament value until tournament is complete
