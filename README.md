@@ -15,7 +15,10 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Update all the views to not be so narrow (like tournament_list.html was updated)
+1. Need some kind of a backup or archived tournament process.
+	1. It would be really bad if someone accidentally "undo-completion" and lost their data. 
+	1. The tournament should be archived instead of totally deleted.
+	1. Maybe add an `achived` field to tournament? I don't think any other changes are necessary since all the other models have a reference to the tournament (elims, rebuys, playerresults, etc...)
 1. Send an email when invited to tournament
 1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Analytics for user
