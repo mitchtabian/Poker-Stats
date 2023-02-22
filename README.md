@@ -57,6 +57,11 @@ This is a notes section for me personally.
 	- Also for backfilling, not everyone may have registered or something
 	- Also need some kind of mechanism for going back into a completed Tournament and assigning a user to a guest. Like if you finished a tournament with a guest you could go back and assign a real user to it
 	- Ability to give the Guest a temporary name. Just a string.
+1. Backfill a tournament where the eliminations were not tracked and bounties are not enabled.
+	- A nice feature would be the ability to backfill a tournament when the eliminations aren't known. Then just backfilled based on how many players rebought?
+	- The data wouldn't be great but at least you'd see placement data.
+	- I have a spike branch thats incomplete https://github.com/pokerstats/Poker-Stats/tree/backfill-no-bounties-rebuys-enabled
+		- Would just need to create a new function instead of using `complete_tournament_for_backfill`. That does not take in elim_dict and instead accepts the dict of rebuys.
 
 # Resources
 1. django-allauth
