@@ -15,22 +15,20 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Split winners
-	- Need to think about this.
-1. Send an email when invited to tournament
-1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
-1. Google signin issue? Not working for people to sign up with google account (See screenshot saved)
-	- Seems to be from opening pokerstats.lol from within another app. Can I fix this easily?
-1. Setup bugsnag
-1. Create a pokerstats.lol email for verifications and other stuff
 1. Do not remove pending invites when activating tournament.
 	- This will get annoying in practice. So allow tournaments to be filled out and completed without a person confirming.
 	- Think about this more...?
-1. Setup Jira for further feature work
+1. Order tournaments by date and show timestamp in list item in tournament view
+1. Send an email when invited to tournament
+1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Analytics for user
 	1. Accessible from profile
 	1. Shows summary across games
 		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
+1. Split winners
+	- Need to think about this.
+1. Setup bugsnag
+1. Setup Jira for further feature work
 1. Design a landing page
 	1. On mobile optimize for quickly creating or joining a tournament
 1. TournamentGroup? Think this through with some diagrams
@@ -38,6 +36,8 @@ This is a notes section for me personally.
 	- Basically this would just extend the per-user analytics
 1. Add a notes field to the tournament. 
 	- That way I can write a note saying: "data is slightly wrong becuase a split elimination occurred between x players or whatver"
+1. Google signin issue? Not working for people to sign up with google account (See screenshot saved)
+	- Seems to be from opening pokerstats.lol from within another app. Can I fix this easily?
 
 ## TODO (after app is fully functional)
 1. Optimize everything for mobile. (I think this is already done, but confirm)
