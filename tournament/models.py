@@ -204,22 +204,30 @@ class TournamentManager(models.Manager):
 	Format:
 	[{
       "eliminators": [
-	    "<player5>"
-	    "<player23>"
+	    	"<player5>"
+	    	"<player23>"
       ],
       "eliminatee":"<player8>"
      },
      {
        "eliminators": [
-	     "<player6>"
-	     "<player23>"
-         "<player67>"
+		     "<player6>"
+		     "<player23>"
+	       "<player67>"
        ],
         "eliminatee":"<player9>"
       }, ...
-      ]
+    ]
+
+    rebuys_dict_input: data for rebuys. Only exists if it was not a bounty tournament and rebuys were enabled.
+    Format:
+    	{
+				"<player_id4": "<num_rebuys>",
+				"<player_id1": "<num_rebuys>",
+				"<player_id1": "<num_rebuys>",
+    	}
 	"""
-	def complete_tournament_for_backfill(self, user, tournament_id, player_tournament_placements, elim_dict, split_eliminations):
+	def complete_tournament_for_backfill(self, user, tournament_id, player_tournament_placements, elim_dict, split_eliminations, rebuys_dict_input):
 		tournament = self.get(pk=tournament_id)
 		if tournament.admin != user:
 			raise ValidationError("You cannot update a Tournament if you're not the admin.")
@@ -264,51 +272,55 @@ class TournamentManager(models.Manager):
 			if player_tournament_placement.placement == 0:
 				winning_player = TournamentPlayer.objects.get_by_id(player_tournament_placement.player_id)
 
-		"""
-		Add the rebuys. First we need to determine who needs rebuys from the elim_dict and split_eliminations.
-			'rebuys' is a dict of player id's as the key and a an integer representing the number 
-			of rebuys they need.
-		Format:
-		{
-			'<player_id>': <num_rebuys>
-		}
-		"""
+		# Rebuys are only calculated if it was a bounty tournament with rebuys
 		rebuys_dict = {}
-		# Rebuys from eliminations
-		for player_id in elim_dict:
-			for eliminated_player in elim_dict[player_id]:
-				if eliminated_player.id not in rebuys_dict:
+		if tournament.tournament_structure.bounty_amount != None and tournament.tournament_structure.allow_rebuys == True:
+			"""
+			Add the rebuys. First we need to determine who needs rebuys from the elim_dict and split_eliminations.
+				'rebuys' is a dict of player id's as the key and a an integer representing the number 
+				of rebuys they need.
+			Format:
+			{
+				'<player_id>': <num_rebuys>
+			}
+			"""
+			# Rebuys from eliminations
+			for player_id in elim_dict:
+				for eliminated_player in elim_dict[player_id]:
+					if eliminated_player.id not in rebuys_dict:
+						# First time they were eliminated. Add an entry to the dict with a value of 0
+						# since the initial buyin does not count as a rebuy.
+						if eliminated_player.id == winning_player.id:
+							# Start the winning players rebuy counter at 1 since a rebuy won't be added
+							# because they get populated based on eliminations.
+							rebuys_dict[eliminated_player.id] = 1
+						else:
+							rebuys_dict[eliminated_player.id] = 0
+					else:
+						# They already exist in the rebuys_dict. Increment the value.
+						num_rebuys = rebuys_dict[eliminated_player.id]
+						num_rebuys += 1
+						rebuys_dict[eliminated_player.id] = num_rebuys
+			# Rebuys from split eliminations
+			for elim_data in split_eliminations:
+				eliminatee = elim_data['eliminatee']
+				if eliminatee.id not in rebuys_dict:
 					# First time they were eliminated. Add an entry to the dict with a value of 0
 					# since the initial buyin does not count as a rebuy.
-					if eliminated_player.id == winning_player.id:
+					if eliminatee.id == winning_player.id:
 						# Start the winning players rebuy counter at 1 since a rebuy won't be added
 						# because they get populated based on eliminations.
-						rebuys_dict[eliminated_player.id] = 1
+						rebuys_dict[eliminatee.id] = 1
 					else:
-						rebuys_dict[eliminated_player.id] = 0
+						rebuys_dict[eliminatee.id] = 0
 				else:
 					# They already exist in the rebuys_dict. Increment the value.
-					num_rebuys = rebuys_dict[eliminated_player.id]
+					num_rebuys = rebuys_dict[eliminatee.id]
 					num_rebuys += 1
-					rebuys_dict[eliminated_player.id] = num_rebuys
-		# Rebuys from split eliminations
-		for elim_data in split_eliminations:
-			eliminatee = elim_data['eliminatee']
-			if eliminatee.id not in rebuys_dict:
-				# First time they were eliminated. Add an entry to the dict with a value of 0
-				# since the initial buyin does not count as a rebuy.
-				if eliminatee.id == winning_player.id:
-					# Start the winning players rebuy counter at 1 since a rebuy won't be added
-					# because they get populated based on eliminations.
-					rebuys_dict[eliminatee.id] = 1
-				else:
-					rebuys_dict[eliminatee.id] = 0
+					rebuys_dict[eliminatee.id] = num_rebuys
 			else:
-				# They already exist in the rebuys_dict. Increment the value.
-				num_rebuys = rebuys_dict[eliminatee.id]
-				num_rebuys += 1
-				rebuys_dict[eliminatee.id] = num_rebuys
-
+				# Otherwise, the rebuys were filled out in the view and we can just read them.
+				rebuys_dict = rebuys_dict_input
 
 		# DEBUG
 		# for player_id in rebuys_dict:

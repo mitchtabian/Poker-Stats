@@ -129,6 +129,8 @@ def keyvalue(dictionary, key):
 		return dictionary[f'{key}']
 	except KeyError:
 		return ''
+	except TypeError:
+		return ''
 
 """
 Return true if an eliminator_id value exists in the list of dicts.
@@ -229,6 +231,13 @@ Change value to a string.
 @register.filter
 def as_string(value):
 	return f"{value}"
+
+"""
+Get id of TournamentPlayer from a queryset of TournamentPlayers.
+"""
+@register.filter
+def get_ids(players):
+	return [player.id for player in players]
 
 
 

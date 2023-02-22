@@ -15,7 +15,7 @@ Otherwise use player_admin_table_simple.html
   <div class="player-table-container">
     <div class="d-flex flex-row justify-content-between player-action-button">
       <p class="player-table-username">{{player_data.username}}</p>
-      <div class="">
+      <div>
         {% if player_data.is_eliminated == True %}
         <button class="btn btn-success player-action-button" data-bs-toggle="modal" data-bs-target="#id_rebuy_modal_{{player_data.player_id}}">Rebuy</button>
         {% else %}

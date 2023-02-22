@@ -367,144 +367,146 @@ def rebuy_player_in_tournament(request, *args, **kwargs):
 Common function shared between tournament_view and htmx requests used in that view.
 """
 def render_tournament_view(request, tournament_id):
-	context = {}
-	tournament = Tournament.objects.get_by_id(tournament_id)
-	context['tournament'] = tournament
-	context['tournament_state'] = tournament.get_state()
+	try:
+		context = {}
+		tournament = Tournament.objects.get_by_id(tournament_id)
+		context['tournament'] = tournament
+		context['tournament_state'] = tournament.get_state()
 
-	# Get all the players that have joined the Tournament. They are a TournamentPlayer
-	players = TournamentPlayer.objects.get_tournament_players(tournament.id)
-	context['players'] = players
+		# Get all the players that have joined the Tournament. They are a TournamentPlayer
+		players = TournamentPlayer.objects.get_tournament_players(tournament.id)
+		context['players'] = players
 
-	# Get the pending invites
-	invites = TournamentInvite.objects.find_pending_invites_for_tournament(tournament.id)
-	context['invites'] = invites
-	
-	# Search for users with htmx
-	search = request.GET.get("search")
-	if search != None and search != "":
-		users = User.objects.all().filter(username__icontains=search)
-		# Exclude the admin,
-		users = users.exclude(email__iexact=request.user.email)
-		# Exclude pending invites
-		for invite in invites:
-			users = users.exclude(email__iexact=invite.send_to.email)
-		# Exclude users who have already joined
-		for player in players:
-			users = users.exclude(email__iexact=player.user.email)
-		context['users'] = users
-		context['search'] = search
-
-	context['is_bounty_tournament'] = tournament.tournament_structure.bounty_amount != None
-	context['allow_rebuys'] = tournament.tournament_structure.allow_rebuys
-	context['player_tournament_data'] = get_player_tournament_data(tournament_id)
-
-	# If it's completed, determine the results
-	results = None
-	if tournament.get_state() == TournamentState.COMPLETED:
-		results = TournamentPlayerResult.objects.get_results_for_tournament(
-			tournament_id = tournament.id
-		)
-		context['results'] = results.order_by("placement")
-		context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
-
+		# Get the pending invites
+		invites = TournamentInvite.objects.find_pending_invites_for_tournament(tournament.id)
+		context['invites'] = invites
 		
-		eliminations_summary_data = []
-		eliminations_data = []
-		for result in results:
-			# Determine who they eliminated in this tournament.
-			eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
-				player_id = result.player.id
+		# Search for users with htmx
+		search = request.GET.get("search")
+		if search != None and search != "":
+			users = User.objects.all().filter(username__icontains=search)
+			# Exclude the admin,
+			users = users.exclude(email__iexact=request.user.email)
+			# Exclude pending invites
+			for invite in invites:
+				users = users.exclude(email__iexact=invite.send_to.email)
+			# Exclude users who have already joined
+			for player in players:
+				users = users.exclude(email__iexact=player.user.email)
+			context['users'] = users
+			context['search'] = search
+
+		context['is_bounty_tournament'] = tournament.tournament_structure.bounty_amount != None
+		context['allow_rebuys'] = tournament.tournament_structure.allow_rebuys
+		context['player_tournament_data'] = get_player_tournament_data(tournament_id)
+
+		# If it's completed, determine the results
+		results = None
+		if tournament.get_state() == TournamentState.COMPLETED:
+			results = TournamentPlayerResult.objects.get_results_for_tournament(
+				tournament_id = tournament.id
 			)
-			split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
-				player_id = result.player.id
+			context['results'] = results.order_by("placement")
+			context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
+
+			
+			eliminations_summary_data = []
+			eliminations_data = []
+			for result in results:
+				# Determine who they eliminated in this tournament.
+				eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+					player_id = result.player.id
+				)
+				split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+					player_id = result.player.id
+				)
+				# --- Build PlayerEliminationsSummaryData for each player ---
+				if len(eliminations) > 0 or len(split_eliminations) > 0:
+					data = build_player_eliminations_summary_data_from_eliminations(
+						eliminator = result.player,
+						eliminations = eliminations,
+						split_eliminations = split_eliminations
+					)
+					if data != None:
+						eliminations_summary_data.append(data)
+
+				# --- Build PlayerEliminationsData for each player ---
+				if len(eliminations) > 0:
+					data = build_player_eliminations_data_from_eliminations(
+						eliminator = result.player,
+						eliminations = eliminations,
+					)
+					if data != None:
+						eliminations_data.append(data)
+
+			# --- Build SplitEliminationsData for the tournament ---
+			split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(
+				tournament_id = tournament.id
 			)
-			# --- Build PlayerEliminationsSummaryData for each player ---
-			if len(eliminations) > 0 or len(split_eliminations) > 0:
-				data = build_player_eliminations_summary_data_from_eliminations(
-					eliminator = result.player,
-					eliminations = eliminations,
+			if len(split_eliminations) > 0:
+				data = build_split_eliminations_data(
 					split_eliminations = split_eliminations
 				)
 				if data != None:
-					eliminations_summary_data.append(data)
+					context['split_eliminations_data'] = data
 
-			# --- Build PlayerEliminationsData for each player ---
-			if len(eliminations) > 0:
-				data = build_player_eliminations_data_from_eliminations(
-					eliminator = result.player,
-					eliminations = eliminations,
-				)
-				if data != None:
-					eliminations_data.append(data)
+			context['eliminations_summary_data'] = eliminations_summary_data
+			context['eliminations_data'] = eliminations_data
 
-		# --- Build SplitEliminationsData for the tournament ---
-		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(
-			tournament_id = tournament.id
-		)
-		if len(split_eliminations) > 0:
-			data = build_split_eliminations_data(
-				split_eliminations = split_eliminations
+
+			# --- Add a "Warning" section if not all TournamentPlayers have joined the Tournament. ---
+			has_all_joined = Tournament.objects.have_all_players_joined_tournament(
+				tournament_id = tournament.id
 			)
-			if data != None:
-				context['split_eliminations_data'] = data
+			context['have_all_players_joined_tournament'] = has_all_joined
 
-		context['eliminations_summary_data'] = eliminations_summary_data
-		context['eliminations_data'] = eliminations_data
-
-
-		# --- Add a "Warning" section if not all TournamentPlayers have joined the Tournament. ---
-		has_all_joined = Tournament.objects.have_all_players_joined_tournament(
-			tournament_id = tournament.id
-		)
-		context['have_all_players_joined_tournament'] = has_all_joined
-
-	# --- Build timeline ---
-	# Note: Only build a timeline if this is not a backfill tournament and the state is either ACTIVE or COMPLETED.
-	eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
-	split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament.id)
-	events = []
-	if (len(eliminations) > 0 and not eliminations[0].is_backfill) or (len(split_eliminations) > 0 and not split_eliminations[0].is_backfill):
-		if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
-			# Get all the TournamentElimination's and TournamentRebuyEvent's and add to the context as an event.
-			# Sort on timestamp. This is for building the timeline.
-			# Eliminations
-			for elimination in eliminations:
-				event = build_elimination_event(elimination)
-				events.append(event)
-			# Rebuys
-			rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(tournament.id)
-			for rebuy in rebuys:
-				event = build_rebuy_event(rebuy)
-				events.append(event)
-
-			# If the tournament is completed, build the completion event.
-			if results != None:
-				winning_player_result = results.filter(placement=0)[0]
-				event = build_completion_event(
-					completed_at = tournament.completed_at,
-					winning_player = winning_player_result.player
-				)
-				events.append(event)
-			else:
-				# if it's not completed, add a "TournamentInProgressEvent"
-				event = build_in_progress_event(
-					started_at = tournament.started_at
-				)
-				events.append(event)
-	
-	# SPLIT ELIMINATIONS for timeline
-	if len(split_eliminations) > 0:
-		if not split_eliminations[0].is_backfill:
+		# --- Build timeline ---
+		# Note: Only build a timeline if this is not a backfill tournament and the state is either ACTIVE or COMPLETED.
+		eliminations = TournamentElimination.objects.get_eliminations_by_tournament(tournament.id)
+		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(tournament.id)
+		events = []
+		if (len(eliminations) > 0 and not eliminations[0].is_backfill) or (len(split_eliminations) > 0 and not split_eliminations[0].is_backfill):
 			if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
-				for split_elimination in split_eliminations:
-					event = build_split_elimination_event(split_elimination)
+				# Get all the TournamentElimination's and TournamentRebuyEvent's and add to the context as an event.
+				# Sort on timestamp. This is for building the timeline.
+				# Eliminations
+				for elimination in eliminations:
+					event = build_elimination_event(elimination)
+					events.append(event)
+				# Rebuys
+				rebuys = TournamentRebuy.objects.get_rebuys_for_tournament(tournament.id)
+				for rebuy in rebuys:
+					event = build_rebuy_event(rebuy)
 					events.append(event)
 
-	if len(events) > 0:
-		events.sort(key=lambda event: event.timestamp)
-		context['events'] = events
+				# If the tournament is completed, build the completion event.
+				if results != None:
+					winning_player_result = results.filter(placement=0)[0]
+					event = build_completion_event(
+						completed_at = tournament.completed_at,
+						winning_player = winning_player_result.player
+					)
+					events.append(event)
+				else:
+					# if it's not completed, add a "TournamentInProgressEvent"
+					event = build_in_progress_event(
+						started_at = tournament.started_at
+					)
+					events.append(event)
+		
+		# SPLIT ELIMINATIONS for timeline
+		if len(split_eliminations) > 0:
+			if not split_eliminations[0].is_backfill:
+				if tournament.get_state() == TournamentState.ACTIVE or tournament.get_state() == TournamentState.COMPLETED:
+					for split_elimination in split_eliminations:
+						event = build_split_elimination_event(split_elimination)
+						events.append(event)
 
+		if len(events) > 0:
+			events.sort(key=lambda event: event.timestamp)
+			context['events'] = events
+	except Exception as e:
+		messges.error(request, e.args[0])
 	return render(request=request, template_name="tournament/tournament_view.html", context=context)
 
 
@@ -751,6 +753,7 @@ def tournament_backfill_view(request, *args, **kwargs):
 		num_payout_positions = len(tournament.tournament_structure.payout_percentages)
 		context['num_payout_positions_iterator'] = range(0, num_payout_positions)
 		placements_dict = {}
+		rebuys_dict = {}
 		if data_json != None and len(data_json) > 0:
 			json_dict = json.loads(data_json)
 			# Return the json data to the view. That is the source of truth.
@@ -809,7 +812,15 @@ def tournament_backfill_view(request, *args, **kwargs):
 					split_eliminations.append(split_elim_dict)
 
 			context['split_eliminations'] = split_eliminations
-		# --- END: Update Eliminations and Placements with htmx ---
+
+			if "rebuys" in json_dict:
+				for player_id in json_dict['rebuys']:
+					rebuy_value = float(json_dict['rebuys'][player_id])
+					if not rebuy_value.is_integer():
+						raise ValidationError("Rebuy values must be integers")
+					else:
+						rebuys_dict[player_id] = json_dict['rebuys'][player_id]
+				context['rebuys_dict'] = rebuys_dict
 
 		context['elim_dict'] = elim_dict
 		context['placements_dict'] = placements_dict
@@ -853,13 +864,14 @@ def tournament_backfill_view(request, *args, **kwargs):
 			# 	player = TournamentPlayer.objects.get_by_id(player_id)
 			# 	print(f"{player.user.username} placed {player_tournament_placements[player_id].placement}")
 
-			# Complete the backfilled Tournament
+			#Complete the backfilled Tournament
 			Tournament.objects.complete_tournament_for_backfill(
 				user = request.user,
 				tournament_id = tournament.id,
 				player_tournament_placements = player_tournament_placements.values(),
 				elim_dict = elim_dict,
-				split_eliminations = split_eliminations
+				split_eliminations = split_eliminations,
+				rebuys_dict_input = rebuys_dict
 			)
 
 			return redirect("tournament:tournament_view", pk=tournament.id)

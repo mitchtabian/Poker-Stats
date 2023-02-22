@@ -43,138 +43,24 @@
         {% endfor %}
       </div>
 
-      {% if tournament.tournament_structure.bounty_amount != None %}
-      <!-- Eliminations -->
-      <h2 class="backfill-display-group-header">Eliminations</h2>
+      <!-- Eliminations and Split Eliminations -->
+      {% include 'tournament/snippets/backfill_eliminations_snippet.html' %}
+
+      <!-- Rebuys if not a bounty tournament -->
+      <!-- Pull this our into a snippet -->
+      {% if tournament.tournament_structure.bounty_amount == None and tournament.tournament_structure.allow_rebuys == True %}
+      <h2 class="backfill-display-group-header">Rebuys</h2>
       <hr>
-      <div class="backfill-display-group">
-        {% for player in players %}
-        <div class="player-eliminations-header d-flex flex-row {% if forloop.counter0 > 0 %}mt-3{% endif %}">
-          <div class="player-eliminations-header-username">{{player.user.username}}</div>
-          {% for eliminator_id,eliminated_players in elim_dict.items %}
-          {% if eliminator_id == player.id %}
-          <button class="btn eliminations-reset-btn" onclick="resetEliminations('{{player.id}}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-arrow-clockwise " viewBox="0 0 16 16">
-              <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-            </svg>
-          </button>
-          {% endif %}
-          {% endfor %}
-        </div>
-
-        <div class="player-eliminations-group">
-          {% for eliminator_id,eliminated_players in elim_dict.items %}
-          {% if eliminator_id == player.id %}
-            <ul class="list-group player-eliminations-list">
-            {% for eliminated_player in eliminated_players %}
-            <li class="list-group-item elimination-list-group-item">
-              <div class="elimination-username">{{eliminated_player.user.username}}<div>
-            </li>
-            {% endfor %}
-            </ul>
-          {% endif %}
-          {% endfor %}
-        </div>
-        <!-- Empty selector for adding more -->
-        <div class="elim-selector-group mt-3">
-          <select class="form-select" aria-label="Selected eliminations for {{player.user.username}}" id="id_{{player.id}}_new_elim" onchange="selectElimination('{{player.id}}')">
-            <option value="-1" selected> -------- </option>
-            {% for player_selector_value in players %}
-            {% if player.id != player_selector_value.id %}
-            <option value="{{player_selector_value.id}}">{{player_selector_value.user.username}}</option>
-            {% endif %}
-            {% endfor %}
-          </select>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      {% if tournament.tournament_structure.bounty_amount != None %}
-      <!-- Split Eliminations -->
-      <h2 class="backfill-display-group-header d-flex flex-row">
-        Split Eliminations
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center split-eliminations-info-icon" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Multiple players eliminating a single player.">
-            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-        </svg>
-      </h2>
-      <hr>
-
-      {% if split_elimination_error %}
-      <div class="split-elimination-error">
-        {{split_elimination_error}}
-      </div>
-      {% endif %}
-
-      <!-- Split eliminations that were submitted -->
-      {% if split_eliminations|length > 0 %}
-        <div class="split-eliminations-list-container">
-          {% include 'tournament/snippets/split_eliminations_list_snippet.html' with split_eliminations=split_eliminations %}
-        </div>
-      {% endif %}
-
-      <!-- Input for new split eliminations -->
-      <div class="backfill-display-group">
-        <div class="split-elimination-input-form">
-          <div class="eliminatee-selector-for-split-header">Who was eliminated?</div>
-          <select class="form-select" aria-label="Select eliminatee for split elimination" id="id_split_eliminatee" onchange="selectEliminateeForSplit()">
-            {% if selected_eliminatee_id == None or selected_eliminatee_id == -1 %}
-              <option value="-1" selected> -------- </option>
-            {% else %}
-              {% for p in players %}
-                {% if selected_eliminatee_id == p.id %}
-                  <option value="{{p.id}}" selected>{{p.user.username}}</option>
-                {% endif %}
-              {% endfor %}
-              <option value="-1"> -------- </option>
-            {% endif %}
-            {% for inner_player in players %}
-              {% if selected_eliminatee_id != inner_player.id %}
-                <option value="{{inner_player.id}}">{{inner_player.user.username}}</option>
-              {% endif %}
-            {% endfor %}
-          </select>
-        </div>
-
-        <!-- Add animation to this appearing / disappearing? -->
-        {% if selected_eliminatee_id != None and selected_eliminatee_id != -1 %}
-        <div class="split-elimination-input-form">
-          <div class="eliminator-selector-for-split-header">Who eliminated them?</div>
-          {% for player in players %}
-            {% if selected_eliminatee_id != player.id %}
-              <select class="form-select mb-3" aria-label="Select eliminator for split elimination" id="id_split_eliminator_{{player.id}}" onchange="selectEliminatorForSplit('{{forloop.counter0}}', '{{player.id}}')">
-                <option value="-1" selected> -------- </option>
-                {% for inner_player in players %}
-
-                  <!-- If there are selected eliminators -->
-                  {% if selected_eliminator_ids %}
-                    {% for eliminator_data in selected_eliminator_ids %}
-                      {% if eliminator_data.eliminator_id == inner_player.id and eliminator_data.eliminator_number == forloop.parentloop.parentloop.counter0 %}
-                        <option value="{{inner_player.id}}" selected>{{inner_player.user.username}}</option>
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-
-                  {% if selected_eliminatee_id != inner_player.id %}
-                    {% if not selected_eliminator_ids|keyvalue_in_list:inner_player.id %}
-                      <option value="{{inner_player.id}}">{{inner_player.user.username}}</option>
-                    {% endif %}
-                  {% endif %}
-                {% endfor %}
-              </select>
-            {% endif %}
-          {% endfor %}
-          <div class="d-flex flex-row justify-content-end">
-            <!-- Submitting a new split elimination -->
-            <button class="btn btn-danger split-elimination-submit-btn" onclick="submitSplitElimination()">Add Split Elimination</button>
+      {% for player in players %}
+        <div class="backfill-display-group mb-4">
+          <p class="rebuy-player-username">{{player.user.username}}</p>
+          <div class="input-group rebuys-input">
+            <span class="input-group-text">Rebuys</span>
+            <input class="form-control" aria-label="Rebuys" id="{{player.id}}_rebuy_input" type="number" onchange="updateRebuys('{{player.id}}')" value="{{rebuys_dict|keyvalue:player.id}}">
           </div>
+          <div class="rebuy-input-error" id="{{player.id}}_rebuy_input_error"></div>
         </div>
-        {% endif %}
-      </div>
-      {% endif %}
-
+      {% endfor %}
 
       <!-- Submit button for saving -->
       <h2 class="backfill-display-group-header">Save</h2>
@@ -183,10 +69,38 @@
         {% csrf_token %}
         <!-- Hidden htmx input -->
         <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#body_container" name="data_json" value="{{json_dict}}">
+
+        <!-- Hidden actual submit button -->
+        <!-- todo remove-->
+        <button class="d-none" id="id_real_submit_btn" type="submit">...</button>
+
+      </form>
+
+      <div class="d-flex flex-row justify-content-start">
+        <button class="btn btn-primary backfill-submit-btn" id="id_fake_submit_btn" onclick="trySubmitForm()">Submit backfill data</button>
+      </div>
+
+      <!-- todo remove -->
+      <!-- Fake submit button for performing validation for a tournament with rebuys enabled and bounties disabled. -->
+     <!--  <div class="d-flex flex-row justify-content-start">
+        <button class="btn btn-primary backfill-submit-btn" id="id_fake_submit_btn" onclick="trySubmitForm()">Submit backfill data</button>
+      </div> -->
+
+      {% else %} <!-- This is a bounty tournament -->
+      <!-- todo pull this out into a snippet -->
+      <!-- Submit button for saving -->
+      <h2 class="backfill-display-group-header">Save</h2>
+      <hr>
+      <form method="POST">
+        {% csrf_token %}
+        <!-- Hidden htmx input -->
+        <input class="d-none" id="id_hidden_htmx_data" hx-get="{% url 'tournament:tournament_backfill' pk=tournament.id %}" hx-trigger="click" hx-target="#body_container" name="data_json" value="{{json_dict}}">
+
         <div class="d-flex flex-row justify-content-start">
           <button class="btn btn-primary backfill-submit-btn" type="submit">Submit backfill data</button>
         </div>
       </form>
+      {% endif %}
 
     </div>
   </div>
@@ -195,7 +109,6 @@
 <script src="https://unpkg.com/htmx.org@1.8.5"></script>
 
 <script type="text/javascript">
-
   // Initialize tooltip plugin
   $(function () {
     $('[data-toggle="tooltip"]').tooltip()
@@ -249,16 +162,97 @@
    *       "eliminatee_id": "25"
    *      },
    *       ... etc
-   *    ]
+   *    ],
    *
    *    "selected_eliminatee_id": "1", <-- The currently selected eliminatee for split.
    *    "selected_eliminator_ids": {
    *      "0": "<player_id5",
    *      "1": "<player_id7",
    *      ...
+   *    },
+   *
+   *    "rebuys": {
+   *      "<player_id2>": "2",
+   *      "<player_id6>": "1",
+   *      "<player_id1>": "2",
    *    }
    * }
    * */
+
+  function validateRebuyInputs() {
+    {% for player in players %}
+      var player_id = "{{player.id}}"
+      input_element = document.getElementById(player_id + "_rebuy_input")
+      element_value = input_element.value
+      error_element = document.getElementById(player_id + "_rebuy_input_error")
+      error_element.innerHTML = ""
+      var are_all_numbers = true
+      if (element_value.length > 0) {
+        if (isNaN(element_value)) {
+          // That is not a number.
+          error_element.innerHTML = "That is not a number."
+          are_all_numbers = false
+        } else if (Number(element_value) % 1 != 0) {
+          // Rebuy values must be whole numbers.
+          error_element.innerHTML = "Rebuy values must be whole numbers."
+          are_all_numbers = false
+        }
+      }
+      if(!are_all_numbers) {
+        document.getElementById("id_fake_submit_btn").classList.add("disabled")
+      }
+    {% endfor %}
+    return are_all_numbers
+  }
+
+  function updateRebuys(player_id) {
+    setTimeout(function() {
+      document.getElementById("id_fake_submit_btn").classList.remove("disabled")
+      console.log("updateRebuys")
+      input_element = document.getElementById(player_id + "_rebuy_input")
+      element_value = input_element.value
+      error_element = document.getElementById(player_id + "_rebuy_input_error")
+      error_element.innerHTML = ""
+      var are_all_numbers = true
+      if (element_value.length > 0) {
+        if (isNaN(element_value)) {
+          // That is not a number.
+          error_element.innerHTML = "That is not a number."
+          are_all_numbers = false
+        } else if (Number(element_value) % 1 != 0) {
+          // Rebuy values must be whole numbers.
+          error_element.innerHTML = "Rebuy values must be whole numbers."
+          are_all_numbers = false
+        } else {
+          var htmx_button = document.getElementById("id_hidden_htmx_data")
+          var jsonData = getJsonFromHtmxField()
+          if (jsonData == null) {
+            jsonData = buildNewDataJson()
+          }
+          jsonData['rebuys'][player_id] = element_value
+          htmx_button.value = JSON.stringify(jsonData)
+          htmx_button.click()
+          console.log("jsonData: " + JSON.stringify(jsonData))
+        }
+      }
+      if(!are_all_numbers) {
+        console.log("Disabled or something?")
+        document.getElementById("id_fake_submit_btn").classList.add("disabled")
+      }
+    }, 50);
+  }
+
+  function trySubmitForm() {
+    console.log("trySubmitForm")
+    // Delay the submission of the form in case the rebuy fields have errors. The button gets disabled.
+    setTimeout(function() {
+      console.log("validateRebuyInputs: " + validateRebuyInputs())
+      if (validateRebuyInputs()) {
+        document.getElementById("id_real_submit_btn").click()
+      }
+    }, 200);
+  }
+
 
   function submitSplitElimination() {
     var htmx_button = document.getElementById("id_hidden_htmx_data")
@@ -343,6 +337,7 @@
         } else {
           jsonData['placements'][placement] = player_id
         }
+        console.log("jsonData: " + JSON.stringify(jsonData))
         htmx_button.value = JSON.stringify(jsonData)
         htmx_button.click()
         break
@@ -370,10 +365,6 @@
         break
       }
     }
-  }
-
-  function buildNewDataJson() {
-    return JSON.parse('{ "placements": {}, "eliminations": [], "split_eliminations" : [], "selected_eliminatee_id": "-1", "selected_eliminator_ids": {} }')
   }
 
   function resetEliminations(player_id) {
@@ -406,6 +397,10 @@
       valueJson = null
     }
     return valueJson
+  }
+
+  function buildNewDataJson() {
+    return JSON.parse('{ "placements": {}, "eliminations": [], "split_eliminations" : [], "selected_eliminatee_id": "-1", "selected_eliminator_ids": {}, "rebuys": {} }')
   }
 
 </script>
@@ -531,6 +526,25 @@
       padding: 16px;
       font-size: 16px;
     }
+
+    .rebuy-container {
+      margin-bottom: 12px;
+    }
+
+    .rebuy-player-username {
+      font-size: 14px;
+      margin-bottom: 8px;
+      font-weight: 450;
+      max-width: 200px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .rebuy-input-error {
+      padding: 8px;
+      color: #d9534f;
+    }
   }
 
   @media only screen and (min-width: 501px) {
@@ -625,6 +639,24 @@
       border-radius: 4px;
       padding: 16px;
       font-size: 16px;
+    }
+    .rebuy-container {
+      margin-bottom: 12px;
+    }
+
+    .rebuy-player-username {
+      font-size: 16px;
+      margin-bottom: 8px;
+      font-weight: 450;
+      max-width: 350px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .rebuy-input-error {
+      padding: 8px;
+      color: #d9534f;
     }
   }
 
