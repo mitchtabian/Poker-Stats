@@ -1,11 +1,18 @@
 import json
 from decimal import Decimal
 from django.db import models
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
+from django.core.mail import EmailMessage
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
 from enum import Enum
+from io import StringIO
+from itertools import chain
 
 from user.models import User
 
@@ -155,6 +162,121 @@ class TournamentManager(models.Manager):
 
 		return tournament
 
+	# from tournament.models import Tournament
+	# Tournament.objects.email_tournament_results(1)
+	"""
+	Email the results of a tournament to all the players.
+	This is mainly for data backup reasons. Like if for some reason an admin accidentally "undo-completion" and 
+	their data is lost. At least they'll have this text backup.
+	"""
+	def email_tournament_results(self, tournament_id):
+		try:
+			tournament = self.get(pk=tournament_id)
+			subject = f"{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} results for tournament."
+			message = f"Here are the results for the Tournament you played on {tournament.completed_at}."
+			payout_string = '('
+			for i, pct in enumerate(tournament.tournament_structure.payout_percentages):
+				if i != 0:
+					payout_string += ', '
+				payout_string += f'{build_placement_string(i)}: {pct}%'
+			payout_string += ')'
+			is_bounty_tournament = f'{tournament.tournament_structure.buyin_amount != None}'
+			allow_rebuys = f'{tournament.tournament_structure.allow_rebuys}'
+			buyin_amount = f'${tournament.tournament_structure.buyin_amount}'
+			bounty_amount = tournament.tournament_structure.bounty_amount
+			if bounty_amount == None:
+				bounty_amount = "N/A"
+			else:
+				bounty_amount = f"${bounty_amount}"
+			
+			players = TournamentPlayer.objects.get_tournament_players(
+				tournament_id = tournament.id
+			)
+			players_string = ''
+			total_players = 0
+			player_rebuys_string = '\n'
+			total_rebuys = 0
+			for i, player in enumerate(players):
+				total_players += 1
+				if i != 0:
+					players_string += ', '
+				players_string += f'{player.user.username}'
+				rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+					player = player
+				)
+				if len(rebuys) > 0:
+					total_rebuys += len(rebuys)
+					player_rebuys_string += f'\t\t\t\t{player.user.username}: ({len(rebuys)})\n'
+
+			if not tournament.tournament_structure.allow_rebuys:
+				player_rebuys_string = "N/A"
+
+			eliminations = TournamentElimination.objects.get_eliminations_by_tournament(
+				tournament_id = tournament.id,
+			)
+			split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_tournament(
+				tournament_id = tournament.id,
+			)
+			combined_eliminations = list(chain(eliminations, split_eliminations))
+			combined_eliminations.sort(key=lambda elimination: elimination.eliminated_at)
+			player_eliminations_string = '\n'
+			total_eliminations = 0
+			for elimination in combined_eliminations:
+				total_eliminations += 1
+				if type(elimination) is TournamentElimination:
+					player_eliminations_string += f'\t\t\t\t{elimination.eliminator.user.username}: eliminated {elimination.eliminatee.user.username} at {elimination.eliminated_at}\n'
+				if type(elimination) is TournamentSplitElimination:
+					player_split_elimination_string = [f"{player.user.username}, " for player in elimination.eliminators.all()]
+					player_eliminations_string += f'\t\t\t\t{player_split_elimination_string}: eliminated {elimination.eliminatee.user.username} at {elimination.eliminated_at}\n'
+			
+			results = TournamentPlayerResult.objects.get_results_for_tournament(
+				tournament_id = tournament.id
+			).order_by("placement")
+			placement_string = '\n'
+			for result in results:
+				placement_string += f'\t\t\t\t{build_placement_string(result.placement)}: {result.player.user.username}\n'
+				
+			total_pot_value = f'${round(Decimal((len(players) + total_rebuys) * tournament.tournament_structure.buyin_amount), 2)}'
+
+			f = StringIO()
+			f.write(f'''\n
+				Tournament Title: {tournament.title}\n
+				Completed on: {tournament.completed_at}\n
+				Bounty Tournament? {is_bounty_tournament}\n
+				Allow rebuys? {allow_rebuys}\n
+				Payout percentages: {payout_string}\n
+				Buyin amount: {buyin_amount}\n
+				Bounty amount: {bounty_amount}\n
+				Players: {players_string}\n
+				Num players: {total_players}\n
+				Placements: {placement_string}
+				Num rebuys: {total_rebuys}\n
+				Player rebuys: {player_rebuys_string}
+				Player Eliminations: {player_eliminations_string}
+				Total Tournament value: {total_pot_value}
+				\n''')
+			f.seek(0)
+			msg = MIMEBase('application', "octet-stream")
+			msg.set_payload(f.read())
+			encoders.encode_base64(msg)
+			msg.add_header(
+				'Content-Disposition',
+				'attachment',
+				filename='tournament_summary.txt'
+			)
+			players = TournamentPlayer.objects.get_tournament_players(
+				tournament_id = tournament.id
+			)
+			# for player in players:
+			emails = [player.user.email for player in players]
+			mail = EmailMessage(subject, message, settings.EMAIL_HOST_USER, emails)
+			mail.attach(msg)
+			mail.send()
+		except Exception as e:
+			# Fail silently.
+			# TODO add bugsnag call here.
+			pass
+
 	def complete_tournament(self, user, tournament_id):
 		tournament = self.get(pk=tournament_id)
 		try:
@@ -173,6 +295,9 @@ class TournamentManager(models.Manager):
 
 			# Calculate the TournamentPlayerResultData for each player. These are saved to db.
 			results = TournamentPlayerResult.objects.build_results_for_tournament(tournament_id)
+
+			# Email the results to all the players
+			self.email_tournament_results(tournament.id)
 
 			return tournament
 		except Exception as e:
@@ -621,15 +746,15 @@ class TournamentState(Enum):
 	COMPLETED = 2
 
 class Tournament(models.Model):
-	title 					= models.CharField(max_length=254, blank=False, null=False)
-	admin					= models.ForeignKey(User, on_delete=models.CASCADE)
-	tournament_structure	= models.ForeignKey(TournamentStructure, on_delete=models.CASCADE)
+	title										= models.CharField(max_length=254, blank=False, null=False)
+	admin										= models.ForeignKey(User, on_delete=models.CASCADE)
+	tournament_structure		= models.ForeignKey(TournamentStructure, on_delete=models.CASCADE)
 
 	# Set once the tournament has started.
-	started_at				= models.DateTimeField(null=True, blank=True)
+	started_at							= models.DateTimeField(null=True, blank=True)
 
 	# Set once the tournament has finished.
-	completed_at			= models.DateTimeField(null=True, blank=True)
+	completed_at						= models.DateTimeField(null=True, blank=True)
 
 	objects = TournamentManager()
 

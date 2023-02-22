@@ -1,3 +1,11 @@
+<div class="overlay d-none" id="id_tournament_complete_spinner">
+  <div class="d-flex justify-content-center">
+    <div class="spinner-border" style="width: 70px; height: 70px;" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+</div>
+
 <div class="tournament-state-container">
   <!-- COMPLETED -->
   {% if tournament_state.value == 2 %}
@@ -19,9 +27,9 @@
     {% if request.user == tournament.admin %}
       <div class="reopen-container mb-4">
         <p>Need to add/remove players or edit the Tournament Structure?</p>
-        <button class="btn btn-warning state-action-button" data-bs-toggle="modal" data-bs-target="#id_undo_activate_confirm">De-activate</button>
+        <button class="btn btn-warning state-action-button" data-bs-toggle="modal" data-bs-target="#id_undo_activate_confirm" id="id_deactivate_btn">De-activate</button>
       </div>
-      <a class="btn btn-primary state-action-button" href="{% url 'tournament:complete' pk=tournament.id %}" >Complete Tournament</a>
+      <a class="btn btn-primary state-action-button" id="id_complete_tournament_btn" href="{% url 'tournament:complete' pk=tournament.id %}" onclick="onClickCompleteTournament()">Complete Tournament</a>
     {% endif %}
 
   <!-- INACTIVE -->
@@ -85,7 +93,26 @@
   </div>
 </div>
 
+<script type="text/javascript">
+  function onClickCompleteTournament(){
+    document.getElementById("id_tournament_complete_spinner").classList.remove("d-none")
+    document.getElementById("id_complete_tournament_btn").classList.add("disabled")
+    document.getElementById("id_deactivate_btn").classList.add("disabled")
+  }
+</script>
+
 <style type="text/css">
+  .overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    top: 40%;
+    left: 0px;
+    opacity: 1;
+    filter: alpha(opacity=50);
+  }
+
   @media only screen and (max-width: 500px) {
     .reopen-container {
       padding-top: 8px;
@@ -117,10 +144,6 @@
   }
 
 </style>
-
-<script type="text/javascript">
-
-</script>
 
 
 
