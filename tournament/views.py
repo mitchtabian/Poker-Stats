@@ -34,7 +34,8 @@ from tournament.util import (
 	build_split_elimination_event,
 	build_split_eliminations_data,
 	build_player_eliminations_data_from_eliminations,
-	build_player_eliminations_summary_data_from_eliminations
+	build_player_eliminations_summary_data_from_eliminations,
+	get_tournament_started_at
 )
 from user.models import User
 
@@ -75,7 +76,10 @@ def tournament_list_view(request, *args, **kwargs):
 	joined_tournaments = Tournament.objects.get_joined_tournaments(
 		user_id = request.user.id
 	)
-	joined_tournaments.sort(key=lambda tournament: tournament.started_at)
+	joined_tournaments.sort(
+		key=get_tournament_started_at
+	)
+	
 	context['joined_tournaments'] = joined_tournaments
 
 	# pending invites

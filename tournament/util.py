@@ -244,7 +244,11 @@ def build_split_eliminations_data(split_eliminations):
 		split_eliminations_data.append(data)
 	return split_eliminations_data
 
-
+def get_tournament_started_at(tournament):
+	if tournament.started_at != None:
+		return tournament.started_at
+	else:
+		return timezone.now()
 
 
 
