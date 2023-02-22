@@ -498,17 +498,6 @@ class TournamentManager(models.Manager):
 		if tournament.completed_at is not None:
 			raise ValidationError("You can't start a Tournament that has already been completed.")
 
-		# Delete all the pending invites
-		invites = TournamentInvite.objects.find_pending_invites_for_tournament(tournament.id)
-		for invite in invites:
-			invite.delete()
-			# Delete TournamentPlayer that is associated with the pending invite.
-			TournamentPlayer.objects.remove_player_from_tournament(
-				removed_by_user_id = tournament.admin.id,
-				removed_user_id = invite.send_to.id,
-				tournament_id = tournament.id
-			)
-
 		tournament.started_at = timezone.now()
 		tournament.save(using=self._db)
 		return tournament

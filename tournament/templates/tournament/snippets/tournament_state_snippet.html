@@ -29,7 +29,7 @@
     {% include 'tournament/snippets/tournament_state_text_snippet.html' with tournament=tournament tournament_state=tournament_state %}
     {% if request.user == tournament.admin %}
     <div class="d-flex flex-row justify-content-between">
-      <button class="mt-3 btn btn-warning state-action-button" data-bs-toggle="modal" data-bs-target="#id_activate_confirm">Activate Tournament</button>
+      <a href="{% url 'tournament:start' pk=tournament.id %}" class="mt-3 btn btn-warning state-action-button" >Activate Tournament</a>
       <span style="width: 16px"></span>
       <a class="mt-3 btn btn-primary state-action-button" href="{% url 'tournament:tournament_backfill' pk=tournament.id %}">Backfill Tournament</a>
     </div>
@@ -53,27 +53,6 @@
       </div>
       <div class="modal-footer" id="id_elim_model_button_container">
         <a href="{% url 'tournament:undo_complete' pk=tournament.id %}" class="btn btn-warning">Undo Completion</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Activate confirm modal -->
-<div class="modal fade" id="id_activate_confirm" tabindex="-1" aria-labelledby="Activate Tournament Modal" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          Activate
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body d-flex flex-column">
-        <p>Are you sure?</p>
-        <p class="text-danger" style="font-weight: bold;">All the pending invites will be removed.</p>
-      </div>
-      <div class="modal-footer" id="id_elim_model_button_container">
-        <a href="{% url 'tournament:start' pk=tournament.id %}" class="btn btn-warning">Activate</a>
       </div>
     </div>
   </div>
