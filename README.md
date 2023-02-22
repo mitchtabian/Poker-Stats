@@ -15,10 +15,8 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Do not remove pending invites when activating tournament.
-	- This will get annoying in practice. So allow tournaments to be filled out and completed without a person confirming.
-	- Think about this more...?
 1. Order tournaments by date and show timestamp in list item in tournament view
+1. set a vector icon for the website (can i use a vector?)
 1. Send an email when invited to tournament
 1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Analytics for user

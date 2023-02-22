@@ -67,13 +67,21 @@ def tournament_list_view(request, *args, **kwargs):
 	context = {}
 
 	# The tournament where they are the admin
-	context['tournaments'] = Tournament.objects.get_by_user(user=request.user)
+	context['tournaments'] = Tournament.objects.get_by_user(
+		user=request.user
+	).order_by("started_at")
 
 	# The tournaments they have joined (with accepted invite) but are not admin
-	context['joined_tournaments'] = Tournament.objects.get_joined_tournaments(request.user.id)
+	joined_tournaments = Tournament.objects.get_joined_tournaments(
+		user_id = request.user.id
+	)
+	joined_tournaments.sort(key=lambda tournament: tournament.started_at)
+	context['joined_tournaments'] = joined_tournaments
 
 	# pending invites
-	invites = TournamentInvite.objects.find_pending_invites_for_user(request.user.id)
+	invites = TournamentInvite.objects.find_pending_invites_for_user(
+		send_to_user_id = request.user.id
+	)
 	context['invites'] = invites
 
 	return render(request=request, template_name="tournament/tournament_list.html", context=context)

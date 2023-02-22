@@ -230,7 +230,14 @@ Change value to a string.
 def as_string(value):
 	return f"{value}"
 
-
+"""
+If 'None', format to empty string.
+"""
+@register.filter
+def none_as_empty(value):
+	if value == None:
+		return ''
+	return value
 
 
 
