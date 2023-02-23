@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.test import TransactionTestCase
+from unittest import mock
 
 from tournament.models import (
 	TournamentInvite,
@@ -1555,8 +1556,10 @@ class TournamentTestCase(TransactionTestCase):
 
 	"""
 	Verify cannot complete a Tournament if not the admin.
+	Using @mock to verify 'email_tournament_results' is called when a Tournament is successfully completed.
 	"""
-	def test_cannot_complete_tournament_if_not_admin(self):
+	@mock.patch.object(Tournament.objects, "email_tournament_results")
+	def test_cannot_complete_tournament_if_not_admin(self, mock):
 		# Build a structure made by cat
 		cat = User.objects.get_by_username("cat")
 		structure = self.build_structure(
@@ -1603,6 +1606,9 @@ class TournamentTestCase(TransactionTestCase):
 					tournament_id = tournament.id
 				)
 				self.assertTrue(tournament.completed_at != None)
+
+				# Verify the 'email_tournament_results' function is called when a Tournament is successfully completed.
+				mock.assert_called()
 			else:
 				with self.assertRaisesMessage(ValidationError, "You cannot update a Tournament if you're not the admin."):
 					Tournament.objects.complete_tournament(

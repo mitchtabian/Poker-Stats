@@ -267,7 +267,6 @@ class TournamentManager(models.Manager):
 			players = TournamentPlayer.objects.get_tournament_players(
 				tournament_id = tournament.id
 			)
-			# for player in players:
 			emails = [player.user.email for player in players]
 			mail = EmailMessage(subject, message, settings.EMAIL_HOST_USER, emails)
 			mail.attach(msg)
