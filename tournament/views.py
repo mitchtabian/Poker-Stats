@@ -112,6 +112,7 @@ def start_tournament(request, *args, **kwargs):
 		tournament = Tournament.objects.start_tournament(user=user, tournament_id=tournament_id)
 	except Exception as e:
 		messages.error(request, e.args[0])
+		return redirect(request.META['HTTP_REFERER'])
 	return redirect("tournament:tournament_view", pk=tournament_id)
 
 @login_required
@@ -130,7 +131,7 @@ def complete_tournament(request, *args, **kwargs):
 		tournament = Tournament.objects.complete_tournament(user, tournament_id)
 	except Exception as e:
 		messages.error(request, e.args[0])
-	
+		return redirect(request.META['HTTP_REFERER'])
 	return redirect("tournament:tournament_view", pk=tournament_id)
 
 @login_required
@@ -152,6 +153,7 @@ def undo_completed_at(request, *args, **kwargs):
 		)
 	except Exception as e:
 		messages.error(request, e.args[0])
+		return redirect(request.META['HTTP_REFERER'])
 	return redirect("tournament:tournament_view", pk=tournament_id)
 
 @login_required
@@ -172,6 +174,7 @@ def undo_started_at(request, *args, **kwargs):
 		)
 	except Exception as e:
 		messages.error(request, e.args[0])
+		return redirect(request.META['HTTP_REFERER'])
 	return redirect("tournament:tournament_view", pk=tournament_id)
 
 """

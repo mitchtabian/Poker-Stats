@@ -154,15 +154,15 @@ class SplitEliminationsData:
 
 def build_placement_string(placement):
 	if placement == 0:
-		return "1st"
+		return '1st'
 	elif placement == 1:
-		return "2nd"
+		return '2nd'
 	elif placement == 2:
-		return "3rd"
+		return '3rd'
 	elif placement == DID_NOT_PLACE_VALUE:
-		return "--"
+		return '--'
 	else:
-		return f"{placement + 1}th"
+		return f'{placement + 1}th'
 
 """
 Used in a template to apply styling based on placement.
