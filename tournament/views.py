@@ -424,7 +424,6 @@ def render_tournament_view(request, tournament_id):
 		)
 		context['results'] = results.order_by("placement")
 		context['payout_positions'] = payout_positions(tournament.tournament_structure.payout_percentages)
-
 		
 		eliminations_summary_data = []
 		eliminations_data = []

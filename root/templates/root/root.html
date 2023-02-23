@@ -4,15 +4,11 @@
 
 {% block content %}
 
-<div class="container">
-  <div class="row">
-    <div class="offset-md-1 col-md-10">
-			<div class='alert alert-warning' role="alert">
-        This website is still in development.
-      </div>
-		</div>
-  </div>
+<div class='alert alert-warning m-2' role="alert">
+  This website is still in development.
 </div>
+
+{% include 'tournament_analytics/snippets/tournament_totals.html' with tournament_totals=tournament_totals %}
 
 {% endblock content %}
 

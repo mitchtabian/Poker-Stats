@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, reverse
 
 from tournament.models import TournamentInvite, TournamentPlayer,TournamentState
+from tournament_analytics.models import TournamentTotals
 
 def root_view(request):
 	user = request.user
@@ -18,6 +19,12 @@ def root_view(request):
 		for player in tournament_players:
 			tournaments.append(player.tournament)
 		context['tournaments'] = tournaments
+
+		# Get TournamentTotals
+		tournament_totals = TournamentTotals.objects.get_or_build_tournament_totals_by_user_id(user_id = user.id)
+		tournament_totals = sorted(tournament_totals, key=lambda x: x.timestamp, reverse=False)
+		context['tournament_totals'] = tournament_totals
+
 		return render(request, "root/root.html", context=context)
 	else:
 		return redirect("/accounts/login/")
