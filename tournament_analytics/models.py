@@ -170,7 +170,9 @@ class TournamentTotalsManager(models.Manager):
 """
 Summary of all the tournaments a particular user has played in.
 
-TODO talk about hash
+rebuild_hash: A has generated from the tournament ids and tournament completed at date. So if a user participates in a new tournament or 
+the tournment data has changed, a new hash will be generated which will result in new TournamentTotals data for this user. 
+Essentially the has is a mechanism to prevent unnecessary rebuilding.
 """
 class TournamentTotals(models.Model):
 	user					= models.ForeignKey(User, on_delete=models.CASCADE)
