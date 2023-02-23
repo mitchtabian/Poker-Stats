@@ -40,9 +40,10 @@ ALLOWED_HOSTS = ['pokerstats.lol', 'www.pokerstats.lol', '67.205.147.15', 'local
 
 INSTALLED_APPS = [
     # My apps
-    'tournament',
-    'user',
     'root',
+    'tournament',
+    'tournament_analytics',
+    'user',
 
     # Third party apps
     'allauth',

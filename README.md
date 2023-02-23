@@ -15,12 +15,6 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. Need some kind of a backup or archived tournament process.
-	1. It would be really bad if someone accidentally "undo-completion" and lost their data. 
-	1. The tournament should be archived instead of totally deleted.
-	1. Maybe add an `achived` field to tournament? I don't think any other changes are necessary since all the other models have a reference to the tournament (elims, rebuys, playerresults, etc...)
-1. Send an email when invited to tournament
-1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Analytics for user
 	1. Accessible from profile
 	1. Shows summary across games
@@ -34,6 +28,11 @@ This is a notes section for me personally.
 1. TournamentGroup? Think this through with some diagrams
 1. Analaytics based on TournamentGroup
 	- Basically this would just extend the per-user analytics
+1. Performance improvements?
+	1. tournament view renders pretty slow in production.
+		- Why is it not slow on my computer?
+1. Send an email when invited to tournament
+1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Add a notes field to the tournament. 
 	- That way I can write a note saying: "data is slightly wrong becuase a split elimination occurred between x players or whatver"
 1. Google signin issue? Not working for people to sign up with google account (See screenshot saved)

@@ -486,7 +486,7 @@ class TournamentManager(models.Manager):
 			tournament.completed_at = timezone.now()
 			tournament.save(using=self._db)
 
-			# Calculate the TournamentPlayerResultData for each player. These are saved to db.
+			# Calculate the TournamentPlayerResult data for each player. These are saved to db.
 			results = TournamentPlayerResult.objects.build_results_for_backfilled_tournament(
 				player_tournament_placements = player_tournament_placements,
 				tournament_id = tournament_id
@@ -927,8 +927,8 @@ class TournamentPlayerManager(models.Manager):
 		eliminations = TournamentElimination.objects.get_eliminations_by_eliminatee(player_id = player.id)
 		split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminatee(player_id = player.id)
 		rebuys = TournamentRebuy.objects.get_rebuys_for_player(
-					player = player
-				)
+			player = player
+		)
 		if len(eliminations) + len(split_eliminations) > len(rebuys):
 			return True
 		return False
@@ -1714,6 +1714,9 @@ class TournamentPlayerResultManager(models.Manager):
 		)
 		result.save(using=self._db)
 		return result
+
+	def get_results_by_player(self, player):
+		return super().get_queryset().filter(player=player)
 
 class TournamentPlayerResult(models.Model):
 	player 				 		= models.ForeignKey(TournamentPlayer, on_delete=models.CASCADE)
