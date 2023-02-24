@@ -14,17 +14,32 @@
 <div class="charts-container d-none" id="id_charts_container">
 	<div class="net-earnings-vs-losses-container">
 		<canvas id="netEarningsVsLossesChartId"></canvas>
-		<div class="chart-desciption-container">
-			<span>This is a running summary of (1) Net Earnings (2) Gross Earnings and (3) Net Losses over time.</span>
-		</div>
+	</div>
+	<div class="mb-5" id="id_chart_spacing">
+
+	</div>
+	<div class="eliminations-and-rebuys-container">
+		<canvas id="eliminationsAndRebuysChartId"></canvas>
 	</div>
 </div>
 
 
 <style type="text/css">
+
 	.net-earnings-vs-losses-container {
 		margin:auto;
+		border-radius: 8px;
+		border: 1px solid #c3c3c3;
+		padding: 16px;
 	}
+
+	.eliminations-and-rebuys-container {
+		margin:auto;
+		border-radius: 8px;
+		border: 1px solid #c3c3c3;
+		padding: 16px;
+	}
+
 	@media only screen and (max-width: 500px) {
 		.chart-desciption-container {
 			display: flex;
@@ -67,41 +82,119 @@
 		}
 	}
 
+	@media only screen and (min-width: 1400px) {
+		.chart-desciption-container {
+			display: flex;
+			flex-direction: column;
+			padding: 16px;
+			margin: 16px;
+			border-radius: 8px;
+			background-color: #f2f2f2;
+			margin-top: 16px;
+			font-size: 14px;
+			color: #4d4d4d;
+		}
+		.charts-container {
+			display: flex;
+			direction: row;
+		}
+	}
+
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- Eliminations and rebuys -->
+<script type="text/javascript">
+	const eliminationsAndRebuysContext = document.getElementById('eliminationsAndRebuysChartId');
+	const eliminationsAndRebuysLabels = [];
+	const eliminations_data = []
+	const rebuys_data = []
+
+	function buildEliminationsAndRebuysData() {
+		{% for key in rebuys_and_eliminations %}
+			var timestamp = "{{rebuys_and_eliminations|keyvalue:key|keyvalue:'completed_at'|naturalday}}"
+			eliminationsAndRebuysLabels.push(timestamp)
+
+			var eliminations = "{{rebuys_and_eliminations|keyvalue:key|keyvalue:'eliminations'}}"
+			eliminations_data.push(eliminations)
+
+			var rebuys = "{{rebuys_and_eliminations|keyvalue:key|keyvalue:'rebuys'}}"
+			rebuys_data.push(rebuys)
+
+		{% endfor %}
+	}
+
+	buildEliminationsAndRebuysData()
+
+	const eliminationsAndRebuysData = {
+		labels: eliminationsAndRebuysLabels,
+		datasets: [
+			{
+				label: 'Eliminations',
+				data: eliminations_data,
+				borderColor: '#5cb85c',
+				backgroundColor: '#5cb85c',
+			},
+			{
+				label: 'Rebuys',
+				data: rebuys_data,
+				borderColor: '#d9534f',
+				backgroundColor: '#d9534f',
+			},
+		]
+	};
+
+	const eliminationsAndRebuysChart = new Chart(eliminationsAndRebuysContext, {
+	  type: 'bar',
+	  data: eliminationsAndRebuysData,
+	  options: {
+	  	maintainAspectRatio: false,
+	  	responsive: true,
+	  	plugins: {
+			legend: {
+				position: 'top',
+			},
+			title: {
+				display: true,
+				text: 'Eliminations and Rebuys'
+			},
+		},
+    	onClick: (e) => {
+	    }
+	  }
+	});
+</script>
+
+<!-- Net earnings and losses -->
 <script>
+	const netEarningsVsLossesContext = document.getElementById('netEarningsVsLossesChartId');
+	const netEarningsAndLossesLabels = [];
+	const net_earnings_data = []
+	const losses_data = []
+	const gross_earnings_data = []
 
-  	const netEarningsVsLossesContext = document.getElementById('netEarningsVsLossesChartId');
+	function buildTournamentTotalsData() {
+		{% for total in tournament_totals %}
+			var timestamp = '{{total.timestamp|naturalday}}'
+			netEarningsAndLossesLabels.push(timestamp)
 
-  	const labels = [];
-  	const net_earnings_data = []
-  	const losses_data = []
-  	const gross_earnings_data = []
+			var net_earnings = '{{total.net_earnings}}'
+			net_earnings_data.push(net_earnings)
 
-  	function buildTournamentTotalsData() {
-  		{% for total in tournament_totals %}
-  			var timestamp = '{{total.timestamp|naturalday}}'
-  			labels.push(timestamp)
+			var losses = '{{total.losses}}'
+			losses_data.push(losses)
 
-  			var net_earnings = '{{total.net_earnings}}'
-  			net_earnings_data.push(net_earnings)
+			var gross_earnings = '{{total.gross_earnings}}'
+			gross_earnings_data.push(gross_earnings)
 
-  			var losses = '{{total.losses}}'
-  			losses_data.push(losses)
+		{% endfor %}
+	}
 
-  			var gross_earnings = '{{total.gross_earnings}}'
-  			gross_earnings_data.push(gross_earnings)
+	buildTournamentTotalsData()
 
-  		{% endfor %}
-  		return labels
-  	}
-
-  	buildTournamentTotalsData()
-
-	const data = {
-		labels: labels,
+	const netEarningsAndLossesData = {
+		labels: netEarningsAndLossesLabels,
 		datasets: [
 			{
 				label: 'Net Earnings',
@@ -126,7 +219,7 @@
 
 	const netEarningsVsLossesChart = new Chart(netEarningsVsLossesContext, {
 	  type: 'line',
-	  data: data,
+	  data: netEarningsAndLossesData,
 	  options: {
 	  	maintainAspectRatio: false,
 	  	responsive: true,
@@ -168,6 +261,10 @@
 	  }
 	});
 
+</script>
+
+<!-- Common -->
+<script type="text/javascript">
 	// Height / Width
 	const chartAspectRatio = .7;
 
@@ -183,11 +280,17 @@
 			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
 			netEarningsVsLossesChart.canvas.parentNode.style.width = chartWidth + "px";
 			netEarningsVsLossesChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsAndRebuysChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsAndRebuysChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
 		} else {
 			// Set constant width of 700px - padding if the window is bigger than 700px
 			const chartWidth = (700 - (2 * chartPaddingSmall))
 			netEarningsVsLossesChart.canvas.parentNode.style.width = chartWidth + "px";
 			netEarningsVsLossesChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsAndRebuysChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsAndRebuysChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
 		}
 		onFinishedLoadingCharts()
 	})
@@ -199,6 +302,9 @@
 			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
 			netEarningsVsLossesChart.canvas.parentNode.style.width = chartWidth + "px";
 			netEarningsVsLossesChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsAndRebuysChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsAndRebuysChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
 		}
 	}
 
@@ -206,7 +312,6 @@
 		document.getElementById("id_tournament_complete_spinner").classList.add("d-none")
 		document.getElementById("id_charts_container").classList.remove("d-none")
 	}
-
 </script>
 {% else %}
 	{% include 'tournament_analytics/snippets/participate_in_more_tournaments_warning.html' %}

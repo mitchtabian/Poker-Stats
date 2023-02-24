@@ -250,7 +250,11 @@ def get_tournament_started_at(tournament):
 	else:
 		return timezone.now()
 
-
+def get_value_or_default(value, default):
+	if value != None:
+		return value
+	else:
+		return default
 
 
 
