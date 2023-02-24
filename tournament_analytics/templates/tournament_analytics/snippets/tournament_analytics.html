@@ -395,6 +395,11 @@
 								label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
 							}
 							return label;
+						},
+						title: function(context) {
+							let title = context[0].label
+							let index = tournamentPlayerResultsLabels.indexOf(title)
+							return rawTournamentPlayerResultLabels[index]
 						}
 					},
 				}
