@@ -42,6 +42,8 @@ This is a notes section for me personally.
 1. Optimize everything for mobile. (I think this is already done, but confirm)
 	- 99% of the time this is going to be used from a phone.
 1. Remove CDNs
+	1. Chart.js: tournament_totals.html
+	1. base.html
 1. Add recaptcha to registration/login https://pypi.org/project/django-recaptcha/
 	- Or maybe just delete accounts after X days if they have not be verified?
 1. Screenshot tests?
