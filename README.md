@@ -16,18 +16,17 @@ Project for tracking poker stats from tournaments.
 # TODO
 This is a notes section for me personally.
 1. Analytics for user
-	1. Accessible from profile
-	1. Shows summary across games
-		- Make which tournaments you want to get summary for selectable. Like if I've been in 10 but only want summary of 8.
+1. Build the graphs so they can stand-alone and not require a view
+	1. Do fetch requests in whatever view uses the graph and fetch the data they need.
 1. Split winners
 	- Need to think about this.
 1. Setup bugsnag
 1. Setup Jira for further feature work
-1. Design a landing page
-	1. On mobile optimize for quickly creating or joining a tournament
 1. TournamentGroup? Think this through with some diagrams
 1. Analaytics based on TournamentGroup
 	- Basically this would just extend the per-user analytics
+1. Prevent analytics from considering tournaments you did not join
+	- everything in tournament_analytics.html
 1. Performance improvements?
 	1. tournament view renders pretty slow in production.
 		- Why is it not slow on my computer?
@@ -72,7 +71,8 @@ This is a notes section for me personally.
 	1. https://medium.com/@ksarthak4ever/django-custom-user-model-allauth-for-oauth-20c84888c318
 1. django-bootstrap-v5
 	1. doc: https://django-bootstrap-v5.readthedocs.io/en/latest/index.html
-
+1. Chart.js
+	1. https://www.chartjs.org/docs
 
 
 

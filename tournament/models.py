@@ -1719,30 +1719,30 @@ class TournamentPlayerResultManager(models.Manager):
 		return super().get_queryset().filter(player=player)
 
 class TournamentPlayerResult(models.Model):
-	player 				 		= models.ForeignKey(TournamentPlayer, on_delete=models.CASCADE)
-	tournament 					= models.ForeignKey(Tournament, on_delete=models.CASCADE)
+	player			 						= models.ForeignKey(TournamentPlayer, on_delete=models.CASCADE)
+	tournament							= models.ForeignKey(Tournament, on_delete=models.CASCADE)
 
 	# Total amount invested into this tournament. Initial buyin + rebuys
-	investment 					= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
+	investment							= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
 	# Placement in the tournament (1st, 2nd, etc). Nullable for backfill Tournaments where it's possible only the paid 
 	# placements show.
-	placement 					= models.IntegerField(blank=True, null=True)
+	placement								= models.IntegerField(blank=True, null=True)
 
 	# Earnings strictle from placement
-	placement_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
+	placement_earnings			= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
 	# Earnings from eliminations (Defaults to 0.00 if not a bounty tournament)
-	bounty_earnings 			= models.DecimalField(max_digits=9, decimal_places=2, blank=True, null=True)
+	bounty_earnings					= models.DecimalField(max_digits=9, decimal_places=2, blank=True, null=True)
 
 	# bounty_earnings + placement_earnings
-	gross_earnings 				= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
+	gross_earnings					= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
 	# gross_earnings - investment
-	net_earnings 				= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
+	net_earnings						= models.DecimalField(max_digits=9, decimal_places=2, blank=False, null=False)
 
 	# Were these results produced from a Tournament backfill?
-	is_backfill 				= models.BooleanField(default=False)
+	is_backfill							= models.BooleanField(default=False)
 
 	objects = TournamentPlayerResultManager()
 
