@@ -8,7 +8,7 @@
   This website is still in development.
 </div>
 
-{% include 'tournament_analytics/snippets/tournament_totals.html' with tournament_totals=tournament_totals %}
+{% include 'tournament_analytics/snippets/tournament_analytics.html' with tournament_totals=tournament_totals tournament_player_results=tournament_player_results rebuys_and_eliminations=rebuys_and_eliminations %}
 
 {% endblock content %}
 

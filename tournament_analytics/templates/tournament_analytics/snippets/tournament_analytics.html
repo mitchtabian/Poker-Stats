@@ -1,0 +1,732 @@
+{% load tournament_extras %}
+{% load humanize %}
+
+{% if tournament_totals|length > 1 %}
+<!-- Loading spinner to show before charts finished sizing and rendering -->
+<div class="overlay" id="id_tournament_complete_spinner">
+  <div class="d-flex justify-content-center">
+    <div class="spinner-border" style="width: 70px; height: 70px;" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+</div>
+
+<!-- <div class="parent-chart-container d-none" id="id_charts_container">
+	<div class="first-charts-container">
+		<div class="net-earnings-vs-losses-container">
+			<canvas id="netEarningsVsLossesChartId"></canvas>
+		</div>
+		<div class="mb-4" id="id_chart_spacing">
+
+		</div>
+		<div class="eliminations-and-rebuys-container">
+			<canvas id="eliminationsAndRebuysChartId"></canvas>
+		</div>
+	</div>
+
+	<div class="mb-4" id="id_chart_spacing">
+
+	</div>
+
+	<div class="second-charts-container">
+		<div class="tournament-player-results-container">
+			<canvas id="tournamentPlayerResultsChartId"></canvas>
+		</div>
+	</div>
+</div> -->
+
+<div class="parent-chart-container d-none" id="id_charts_container">
+	<div class="first-charts-container" id="id_first_charts_container">
+		<div class="net-earnings-vs-losses-container">
+			<canvas id="netEarningsVsLossesChartId"></canvas>
+		</div>
+		<div class="mb-4" id="id_chart_spacing"></div>
+		<div class="tournament-player-results-container">
+			<canvas id="tournamentPlayerResultsChartId"></canvas>
+		</div>
+	</div>
+
+	<div class="mb-4" id="id_chart_spacing"></div>
+
+	<div class="second-charts-container" id="id_second_charts_container">
+		<div class="eliminations-and-rebuys-container" >
+			<canvas id="eliminationsAndRebuysChartId"></canvas>
+		</div>
+		<div class="mb-4" id="id_chart_spacing"></div>
+		<div class="eliminations-container">
+			<canvas id="eliminationsChartId"></canvas>
+		</div>
+	</div>
+</div>
+
+<style type="text/css">
+
+	.net-earnings-vs-losses-container {
+		margin:auto;
+		border-radius: 8px;
+		border: 1px solid #c3c3c3;
+		padding: 16px;
+	}
+
+	.eliminations-and-rebuys-container {
+		border-radius: 8px;
+		border: 1px solid #c3c3c3;
+		padding: 16px;
+	}
+
+	.tournament-player-results-container {
+		margin:auto;
+		border-radius: 8px;
+		border: 1px solid #c3c3c3;
+		padding: 16px;
+	}
+
+	.eliminations-container {
+		margin:auto;
+		border-radius: 8px;
+		border: 1px solid #c3c3c3;
+		padding: 16px;
+	}
+
+	.first-charts-container {
+		margin:auto;
+	}
+
+	.second-charts-container {
+		margin:auto;
+	}
+
+	@media only screen and (max-width: 500px) {
+	}
+
+	@media only screen and (min-width: 501px) {
+	}
+
+	@media only screen and (min-width: 700px) {
+	}
+
+	@media only screen and (min-width: 1400px) {
+		.first-charts-container {
+			display: flex;
+			direction: column;
+		}
+		.second-charts-container {
+			display: flex;
+			direction: column;
+		}
+	}
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Common -->
+<script type="text/javascript">
+	const primary = "#0275d8"
+	const green = "#5cb85c"
+	const red = "#d9534f"
+	const black = "#292b2c"
+
+	// Height / Width
+	const chartAspectRatio = .7;
+
+	// The point at which the chart size will become constant.
+	const windowWidthInflectionPoint = 700;
+
+	const chartPaddingSmall = 16;
+
+	$(document).ready(function() {
+		const windowHeight = window.innerHeight;
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			netEarningsVsLossesChart.canvas.parentNode.style.width = chartWidth + "px";
+			netEarningsVsLossesChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsAndRebuysChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsAndRebuysChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			tournamentPlayerResultsChart.canvas.parentNode.style.width = chartWidth + "px";
+			tournamentPlayerResultsChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+		} else {
+			// Set constant width of 700px - padding if the window is bigger than 700px
+			const chartWidth = (700 - (2 * chartPaddingSmall))
+			netEarningsVsLossesChart.canvas.parentNode.style.width = chartWidth + "px";
+			netEarningsVsLossesChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsAndRebuysChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsAndRebuysChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			tournamentPlayerResultsChart.canvas.parentNode.style.width = chartWidth + "px";
+			tournamentPlayerResultsChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+		}
+		onFinishedLoadingCharts()
+
+		var net_earnings_vs_losses_container = $('.net-earnings-vs-losses-container');
+		$('.eliminations-and-rebuys-container').offset({
+			left: net_earnings_vs_losses_container.offset().left
+		});
+
+		var tournament_player_results_container = $('.tournament-player-results-container');
+		$('.eliminations-container').offset({
+			left: tournament_player_results_container.offset().left
+		});
+	})
+
+	window.onresize = function() {
+		const windowHeight = window.innerHeight;
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			netEarningsVsLossesChart.canvas.parentNode.style.width = chartWidth + "px";
+			netEarningsVsLossesChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsAndRebuysChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsAndRebuysChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			tournamentPlayerResultsChart.canvas.parentNode.style.width = chartWidth + "px";
+			tournamentPlayerResultsChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+
+			eliminationsChart.canvas.parentNode.style.width = chartWidth + "px";
+			eliminationsChart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+		}
+
+		var net_earnings_vs_losses_container = $('.net-earnings-vs-losses-container');
+		$('.eliminations-and-rebuys-container').offset({
+			left: net_earnings_vs_losses_container.offset().left
+		});
+
+		var tournament_player_results_container = $('.tournament-player-results-container');
+		$('.eliminations-container').offset({
+			left: tournament_player_results_container.offset().left
+		});
+	}
+
+	function onFinishedLoadingCharts(){
+		document.getElementById("id_tournament_complete_spinner").classList.add("d-none")
+		document.getElementById("id_charts_container").classList.remove("d-none")
+	}
+</script>
+
+<!-- Player eliminations (who they eliminated) -->
+<script type="text/javascript">
+	const eliminationsContext = document.getElementById('eliminationsChartId');
+	const username_small_data = []
+	const usernames_data = []
+	const elimination_count_data = []
+	const colors_data = []
+
+	function buildEliminationsData() {
+		{% for key in eliminations_dict %}
+			var fullUsername = "{{key}}"
+			usernames_data.push(fullUsername)
+
+			var small_username = "{{key|concatenate_string:15}}"
+			username_small_data.push(small_username)
+
+			var elimination_count = "{{eliminations_dict|keyvalue:key}}"
+			elimination_count_data.push(elimination_count)
+		{% endfor %}
+
+		{% for color in elimination_colors %}
+			var color = '{{color}}'
+			colors_data.push(color)
+		{% endfor %}
+
+	}
+
+	buildEliminationsData()
+
+	const eliminationsData = {
+		labels: username_small_data,
+		datasets: [
+			{
+				label: 'Elimination count',
+				data: elimination_count_data,
+				backgroundColor: colors_data,
+			},
+		],
+	};
+
+	const eliminationsChart = new Chart(eliminationsContext, {
+	  type: 'bar',
+	  data: eliminationsData,
+	  options: {
+	  	indexAxis: 'y',
+	  	maintainAspectRatio: false,
+	  	responsive: true,
+	  	plugins: {
+				legend: {
+					display: false,
+				},
+				title: {
+					display: true,
+					text: 'Eliminations'
+				},
+				tooltip: {
+					callbacks: {
+						title: function(context) {
+							let title = context[0].label
+							let index = username_small_data.indexOf(title)
+							return usernames_data[index]
+						}
+					},
+				}
+			},
+	    onClick: (e) => {
+	    }
+	  }
+	});
+
+</script>
+
+<!-- TournamentPlayerResults chart -->
+<script type="text/javascript">
+	const tournamentPlayerResultsContext = document.getElementById('tournamentPlayerResultsChartId');
+	const rawTournamentPlayerResultLabels = []
+	const tournamentPlayerResultCompletedAtDates = []
+	const tournamentPlayerResultsLabels = [];
+	const tournament_placements_data = []
+	const tournament_net_earnings_data = []
+	const tournament_gross_earnings_data = []
+	const tournament_losses_data = []
+	const tournament_titles = []
+	const tournament_result_eliminations_data = []
+	const tournament_result_rebuys_data = []
+
+	// Need to track the mouse position to display title tooltips.
+	var mouseX = 0;
+	var mouseY = 0;
+
+	function buildTournamentResultsData() {
+		{% for key in tournament_player_results %}
+			var dict_length = Number("{{tournament_player_results|length}}")
+			var title = "T{{forloop.counter}}"
+			tournamentPlayerResultsLabels.push(title)
+			rawTournamentPlayerResultLabels.push("{{tournament_player_results|keyvalue:key|keyvalue:'tournament_title'}}")
+
+			var completed_at = "{{tournament_player_results|keyvalue:key|keyvalue:'completed_at'|naturalday}}"
+			tournamentPlayerResultCompletedAtDates.push(completed_at)
+
+			var placement = "{{tournament_player_results|keyvalue:key|keyvalue:'placement'}}"
+			tournament_placements_data.push(placement)
+
+			var netEarnings = "{{tournament_player_results|keyvalue:key|keyvalue:'net_earnings'}}"
+			tournament_net_earnings_data.push(netEarnings)
+
+			var grossEarnings = "{{tournament_player_results|keyvalue:key|keyvalue:'gross_earnings'}}"
+			tournament_gross_earnings_data.push(grossEarnings)
+
+			var losses = "{{tournament_player_results|keyvalue:key|keyvalue:'losses'}}"
+			tournament_losses_data.push(losses)
+
+			var eliminations = "{{tournament_player_results|keyvalue:key|keyvalue:'eliminations'}}"
+			tournament_result_eliminations_data.push(eliminations)
+
+			var rebuys = "{{tournament_player_results|keyvalue:key|keyvalue:'rebuys'}}"
+			tournament_result_rebuys_data.push(rebuys)
+
+		{% endfor %}
+	}
+
+	buildTournamentResultsData()
+
+	const tournamentPlayerResultsData = {
+		labels: tournamentPlayerResultsLabels,
+		datasets: [
+			{
+				label: 'Losses',
+				data: tournament_losses_data,
+				borderColor: red,
+				backgroundColor: red,
+			},
+			{
+				label: 'Gross Earnings',
+				data: tournament_gross_earnings_data,
+				borderColor: primary,
+				backgroundColor: primary,
+			},
+			{
+				label: 'Eliminations',
+				data: tournament_result_eliminations_data,
+				borderColor: black,
+				backgroundColor: black,
+			},
+			{
+				label: 'Net Earnings',
+				data: tournament_net_earnings_data,
+				borderColor: green,
+				backgroundColor: green,
+			},
+		]
+	};
+
+	const tournamentPlayerResultsChart = new Chart(tournamentPlayerResultsContext, {
+	  type: 'bar',
+	  data: tournamentPlayerResultsData,
+	  options: {
+	  	maintainAspectRatio: false,
+	  	responsive: true,
+    	onClick: (e) => {
+	    },
+	    plugins: {
+				legend: {
+					position: 'top',
+				},
+				title: {
+					display: true,
+					text: 'Tournament Results'
+				},
+	    	tooltip: {
+					callbacks: {
+						label: function(context) {
+							let label = context.dataset.label || '';
+
+							if (label) {
+								label += ': ';
+							}
+							if (context.parsed.y !== null) {
+								label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+							}
+							return label;
+						},
+						title: function(context) {
+							let title = context[0].label
+							let index = tournamentPlayerResultsLabels.indexOf(title)
+							return rawTournamentPlayerResultLabels[index]
+						}
+					},
+				}
+	    },
+	    scales: {
+				y: {
+					ticks: {
+						callback: function(value, index, ticks) {
+							return '$' + value;
+						}
+					},
+				},
+			},
+	  },
+	  plugins: [
+		  {
+		  	id: 'customHover',
+				afterEvent: (chart, event, opts) => {
+					const evt = event.event;
+
+					if (evt.type !== 'mousemove') {
+					return;
+					}
+
+					const [found, label] = findLabel(getLabelHitboxes(tournamentPlayerResultsChart.scales), evt);
+
+					// Find the actual tournament title from the raw labels
+					if (found && tournamentPlayerResultsLabels.includes(label)) {
+					var labelIndex = tournamentPlayerResultsLabels.indexOf(label)
+					var tournamentTitle = rawTournamentPlayerResultLabels[labelIndex]
+					var date = tournamentPlayerResultCompletedAtDates[labelIndex]
+						showTooltip(chart, tournamentTitle, date)
+					} else {
+						hideTooltip(chart)
+					}
+				},
+			},
+	  ]
+	});
+
+	function hideTooltip(context) {
+	  let tooltipEl = document.getElementById('chartjs-tooltip');
+
+	  // Create element on first render
+	  if (!tooltipEl) {
+	    tooltipEl = document.createElement('div');
+	    tooltipEl.id = 'chartjs-tooltip';
+	    tooltipEl.innerHTML = '<table></table>';
+	    document.body.appendChild(tooltipEl);
+	  }
+	  tooltipEl.classList.add("d-none")
+	}
+
+	function showTooltip(context, label, completed_at){
+		// Tooltip Element
+    let tooltipEl = document.getElementById('chartjs-tooltip');
+
+    // Create element on first render
+    if (!tooltipEl) {
+        tooltipEl = document.createElement('div');
+        tooltipEl.id = 'chartjs-tooltip';
+        tooltipEl.innerHTML = '<table></table>';
+        document.body.appendChild(tooltipEl);
+    }
+    tooltipEl.classList.remove("d-none")
+
+    const tooltipModel = context.tooltip;
+
+    // Set caret Position
+    tooltipEl.classList.remove('above', 'below', 'no-transform');
+    if (tooltipModel.yAlign) {
+        tooltipEl.classList.add(tooltipModel.yAlign);
+    } else {
+        tooltipEl.classList.add('no-transform');
+    }
+
+    // Set Text
+		const titleLines = [label]
+    const bodyLines = [completed_at];
+
+    let innerHtml = '<thead>';
+
+    titleLines.forEach(function(title) {
+        innerHtml += '<tr><th>' + title + '</th></tr>';
+    });
+    innerHtml += '</thead><tbody>';
+
+    bodyLines.forEach(function(body, i) {
+      innerHtml += '<tr><td><span>' + body + '</span></td></tr>';
+    });
+    innerHtml += '</tbody>';
+
+    let tableRoot = tooltipEl.querySelector('table');
+    tableRoot.innerHTML = innerHtml;
+
+    const position = context.canvas.getBoundingClientRect();
+
+    const bodyFont = Chart.helpers.toFont(tooltipModel.options.bodyFont);
+
+    // Display, position, and set styles for font
+    tooltipEl.style.opacity = .75;
+    tooltipEl.style.position = 'absolute';
+    tooltipEl.style.left = mouseX + 'px';
+    tooltipEl.style.top = mouseY + 'px';
+    tooltipEl.style.font = bodyFont.string;
+    tooltipEl.style.padding = '10px';
+    tooltipEl.style.backgroundColor = '#000';
+    tooltipEl.style.color = '#fff';
+    tooltipEl.style.borderRadius = '8px';
+    tooltipEl.style.pointerEvents = 'none';
+	}
+
+	const findLabel = (labels, evt) => {
+	  let found = false;
+	  let res = null;
+
+	  labels.forEach(l => {
+		    l.labels.forEach(label => {
+		      if (evt.x > label.x && evt.x < label.x2 && evt.y > label.y && evt.y < label.y2) {
+		        res = label.label;
+		        found = true;
+		      }
+		    });
+		  });
+
+	  return [found, res];
+	};
+
+	const getLabelHitboxes = (scales) => (Object.values(scales).map((s) => ({
+		  scaleId: s.id,
+		  labels: s._labelItems.map((labelItem, i) => ({
+		    x: labelItem.options.translation[0] - s._labelSizes.widths[i] / 2,
+		    x2: labelItem.options.translation[0] + s._labelSizes.widths[i] / 2,
+		    y: labelItem.options.translation[1] - s._labelSizes.heights[i],
+		    y2: labelItem.options.translation[1] + s._labelSizes.heights[i],
+		    label: labelItem.label,
+		    index: i
+		  }))
+	})));
+
+	function mouseCoordinates(event){
+		mouseX = event.clientX + window.pageXOffset;
+		mouseY = event.clientY + window.pageYOffset;
+	}
+
+	document.onmousemove = mouseCoordinates;
+</script>
+
+<!-- Eliminations and rebuys -->
+<script type="text/javascript">
+	const eliminationsAndRebuysContext = document.getElementById('eliminationsAndRebuysChartId');
+	const eliminationsAndRebuysLabels = [];
+	const eliminations_data = []
+	const rebuys_data = []
+
+	function buildEliminationsAndRebuysData() {
+		{% for key in rebuys_and_eliminations %}
+			var timestamp = "{{rebuys_and_eliminations|keyvalue:key|keyvalue:'completed_at'|naturalday}}"
+			eliminationsAndRebuysLabels.push(timestamp)
+
+			var eliminations = "{{rebuys_and_eliminations|keyvalue:key|keyvalue:'eliminations'}}"
+			eliminations_data.push(eliminations)
+
+			var rebuys = "{{rebuys_and_eliminations|keyvalue:key|keyvalue:'rebuys'}}"
+			rebuys_data.push(rebuys)
+
+		{% endfor %}
+	}
+
+	buildEliminationsAndRebuysData()
+
+	const eliminationsAndRebuysData = {
+		labels: eliminationsAndRebuysLabels,
+		datasets: [
+			{
+				label: 'Eliminations',
+				data: eliminations_data,
+				borderColor: black,
+				backgroundColor: black,
+			},
+			{
+				label: 'Rebuys',
+				data: rebuys_data,
+				borderColor: red,
+				backgroundColor: red,
+			},
+		]
+	};
+
+	const eliminationsAndRebuysChart = new Chart(eliminationsAndRebuysContext, {
+	  type: 'bar',
+	  data: eliminationsAndRebuysData,
+	  options: {
+	  	maintainAspectRatio: false,
+	  	responsive: true,
+	  	plugins: {
+			legend: {
+				position: 'top',
+			},
+			title: {
+				display: true,
+				text: 'Eliminations and Rebuys'
+			},
+		},
+    	onClick: (e) => {
+	    }
+	  }
+	});
+</script>
+
+<!-- Net earnings and losses -->
+<script>
+	const netEarningsVsLossesContext = document.getElementById('netEarningsVsLossesChartId');
+	const netEarningsAndLossesLabels = [];
+	const net_earnings_data = []
+	const losses_data = []
+	const gross_earnings_data = []
+
+	function buildTournamentTotalsData() {
+		{% for total in tournament_totals %}
+			var timestamp = '{{total.timestamp|naturalday}}'
+			netEarningsAndLossesLabels.push(timestamp)
+
+			var net_earnings = '{{total.net_earnings}}'
+			net_earnings_data.push(net_earnings)
+
+			var losses = '{{total.losses}}'
+			losses_data.push(losses)
+
+			var gross_earnings = '{{total.gross_earnings}}'
+			gross_earnings_data.push(gross_earnings)
+
+		{% endfor %}
+	}
+
+	buildTournamentTotalsData()
+
+	const netEarningsAndLossesData = {
+		labels: netEarningsAndLossesLabels,
+		datasets: [
+			{
+				label: 'Net Earnings',
+				data: net_earnings_data,
+				borderColor: green,
+				backgroundColor: green,
+			},
+			{
+				label: 'Losses',
+				data: losses_data,
+				borderColor: red,
+				backgroundColor: red,
+			},
+			{
+				label: 'Gross Earnings',
+				data: gross_earnings_data,
+				borderColor: primary,
+				backgroundColor: primary,
+			}
+		]
+	};
+
+	const netEarningsVsLossesChart = new Chart(netEarningsVsLossesContext, {
+	  type: 'line',
+	  data: netEarningsAndLossesData,
+	  options: {
+	  	maintainAspectRatio: false,
+	  	responsive: true,
+	  	plugins: {
+				legend: {
+					position: 'top',
+				},
+				title: {
+					display: true,
+					text: 'Net Earnings, Gross Earnings and Losses of all Tournaments played'
+				},
+				tooltip: {
+					callbacks: {
+						label: function(context) {
+							let label = context.dataset.label || '';
+
+							if (label) {
+								label += ': ';
+							}
+							if (context.parsed.y !== null) {
+								label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+							}
+							return label;
+						}
+					},
+				}
+			},
+			scales: {
+				y: {
+					ticks: {
+						callback: function(value, index, ticks) {
+							return '$' + value;
+						}
+					},
+				},
+			},
+	    onClick: (e) => {
+	    }
+	  }
+	});
+
+</script>
+
+
+{% else %}
+	{% include 'tournament_analytics/snippets/participate_in_more_tournaments_warning.html' %}
+{% endif %} <!-- if tournament_totals|length > 0 -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

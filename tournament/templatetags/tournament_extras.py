@@ -1,7 +1,6 @@
 from decimal import Decimal
 from django import template
 from django.template.defaultfilters import stringfilter
-
 from tournament.models import TournamentPlayer, TournamentRebuy, TournamentElimination
 from tournament.util import (
 	build_placement_string,
@@ -239,9 +238,14 @@ def none_as_empty(value):
 		return ''
 	return value
 
-
-
-
+"""
+Concatenate a string to length of 'length'
+"""
+@register.filter
+def concatenate_string(string, length):
+	if len(string) > length:
+		return f"{string[:length]}..."
+	return string
 
 
 
