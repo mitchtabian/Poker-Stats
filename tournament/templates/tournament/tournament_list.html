@@ -9,8 +9,9 @@
     <div class="offset-md-1 col-md-10">
 
       <!-- Create a new tournament -->
-      <div class="tournament-list-group">
+      <div class="tournament-list-group d-flex flex-row justify-content-between">
         <a class="btn btn-primary" href="{% url 'tournament:create_tournament' %}">Create Tournament</a>
+        <a class="btn btn-info" href="{% url 'tournament_group:create' %}">Create Tournament Group</a>
       </div>
 
       <!-- Tournament invites -->

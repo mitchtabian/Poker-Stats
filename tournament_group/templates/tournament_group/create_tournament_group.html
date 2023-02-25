@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block head_title %}Create Tournament Group{% endblock %}
+
+{% load bootstrap5 %}
+
+{% block content %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-md-1 col-md-10">
+      <h1 class="mb-3">Create Tournament Group</h1>
+      <form method="POST">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        <button class="btn btn-primary" type="submit">Create</button>
+      </form>
+	</div>
+  </div>
+</div>
+
+{% endblock content %}

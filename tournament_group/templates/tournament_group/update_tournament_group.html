@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block head_title %}Update Tournament Group{% endblock %}
+
+{% load bootstrap5 %}
+
+{% block content %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-md-1 col-md-10">
+      <!-- TODO make the title editable? -->
+      <h1 class="mb-3">{{tournament_group.title}}</h1>
+
+      <!-- Users -->
+      <h5>Users</h5>
+      <hr>
+      <div class="tournament-group-section-container">
+
+        <!-- Display the users who have already been added -->
+        <!-- TODO need a way to remove users (just like tournaments below) -->
+        {% if current_users %}
+          {% include 'tournament_group/snippets/display_user_list_snippet.html' with users=current_users %}
+        {% endif %}
+
+        <!-- Adding new users -->
+        {% if request.user == tournament_group.admin %}
+          <div class="add-new-container">
+            <h6>Add New User</h6>
+            <input hx-get="{% url 'tournament_group:update' pk=tournament_group.id %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="input delay:0.3s" type="text" name="search" id="id_search" class="form-control mt-3" placeholder="Add players" aria-label="Add users" value="{{search}}">
+            {% include 'tournament_group/snippets/user_search_results.html' with users=search_result_users %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Tournaments -->
+      <h5>Tournaments</h5>
+      <hr>
+      <div class="tournament-group-section-container">
+
+        <!-- TODO need a way to remove tournaments. So can't use this snippet. Need one with a leading icon or something -->
+        {% if current_tournaments %}
+        <div class="mt-4">
+          <!-- Display the tournaments that have already been added -->
+          {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=current_tournaments %}
+        </div>
+        {% endif %}
+
+
+        <!-- Adding new tournaments -->
+        {% if request.user == tournament_group.admin %}
+          <div class="add-new-container">
+            <h6>
+              <div class="d-flex flex-row">
+                <div style="margin-right: 4px;">Add New Tournament</div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" id="id_earnings_info_icon" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Only tournaments that the users have played in can be added to the Tournament Group">
+                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                  <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                </svg>
+              </div>
+            </h6>
+            <input hx-get="{% url 'tournament_group:update' pk=tournament_group.id %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="input delay:0.3s" type="text" name="search_tournaments" id="id_search_tournaments" class="form-control mt-3" placeholder="Add tournament" aria-label="Add Tournaments" value="{{search_tournaments}}">
+            {% include 'tournament_group/snippets/tournament_search_results.html' with tournaments=tournament_search_result %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .add-new-container {
+    padding: 16px;
+    background-color: #f2f2f2;
+    border-radius: 8px;
+    margin-top: 16px;
+  }
+
+  @media only screen and (max-width: 500px) {
+    .tournament-group-section-container {
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+
+    .admin-btn {
+      font-size: 12px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .tournament-group-section-container {
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+  }
+</style>
+
+<script src="https://unpkg.com/htmx.org@1.8.5"></script>
+
+<script type="text/javascript">
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+
+  document.body.addEventListener('htmx:configRequest', (event) => {
+    event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+  })
+
+
+</script>
+
+{% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
