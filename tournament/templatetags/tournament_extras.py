@@ -261,5 +261,3 @@ def concatenate_string(string, length):
 
 
 
-
-

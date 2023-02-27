@@ -21,7 +21,7 @@ def tournament_group_create_view(request, *args, **kwargs):
 				)
 				messages.success(request, "Tournament Group Created!")
 
-				return redirect('tournament_group:update', pk=tournament_group.id)
+				return redirect('tournament_group:view', pk=tournament_group.id)
 		else:
 			form = CreateTournamentGroupForm()
 		context['form'] = form

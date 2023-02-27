@@ -20,6 +20,6 @@ urlpatterns = [
     path('create/', tournament_group_create_view, name="create"),
     path('remove_user_from_group/<int:user_id>/<int:tournament_group_id>/', remove_user_from_group, name="remove_user_from_group"),
     path('update/<int:pk>/', tournament_group_update_view, name="update"),
-    path('update_tournament_group_title/<int:tournament_group_id>/<str:title>/', update_tournament_group_title, name="update_tournament_group_title"),
+    path('update_tournament_group_title/<int:tournament_group_id>/<path:title>/', update_tournament_group_title, name="update_tournament_group_title"),
     path('view_tournament_group/<int:pk>/', view_tournament_group, name="view"),
 ]

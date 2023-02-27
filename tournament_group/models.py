@@ -18,6 +18,7 @@ class TournamentGroupManager(models.Manager):
 		)
 		group.save(using=self._db)
 		group.users.add(*[admin])
+		group.save()
 		return group
 
 	def add_users_to_group(self, admin, group, users):

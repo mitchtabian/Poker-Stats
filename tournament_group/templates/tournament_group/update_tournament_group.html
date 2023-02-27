@@ -2,6 +2,7 @@
 
 {% block head_title %}Update Tournament Group{% endblock %}
 
+{% load tournament_extras %}
 {% load bootstrap5 %}
 
 {% block content %}
@@ -26,7 +27,7 @@
         <div class="input-group">
           <input type="text" class="form-control" id="id_tournament_title_input" name="new_title" value="{{new_title}}" aria-label="Tournament Group title" hx-post="{% url 'tournament_group:update' pk=tournament_group.id %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="input delay:0.3s">
           <div class="input-group-append" >
-            <button type="button" class="btn btn-outline-primary {% if not if_title_save_btn_enabled %}disabled{% endif %}" id="tournament_title_save_btn" hx-get="{% url 'tournament_group:update_tournament_group_title' tournament_group_id=tournament_group.id title=new_title %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="click">Save</button>
+            <button type="button" class="btn btn-outline-primary {% if not if_title_save_btn_enabled %}disabled{% endif %}" id="tournament_title_save_btn" hx-post="{% url 'tournament_group:update_tournament_group_title' tournament_group_id=tournament_group.id title=new_title %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="click">Save</button>
           </div>
         </div>
       </div>
