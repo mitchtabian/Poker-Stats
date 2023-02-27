@@ -198,7 +198,7 @@ class TournamentGroup(models.Model):
 		"""
 
 	def get_tournaments(self):
-		return self.tournaments.all().order_by("started_at")
+		return self.tournaments.all().order_by("-started_at")
 
 	def get_users(self):
 		return self.users.all()
