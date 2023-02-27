@@ -1,0 +1,176 @@
+{% load humanize %}
+{% load tournament_extras %}
+
+{% if tournaments %}
+  <ul class="list-group">
+  {% for tournament in tournaments %}
+  {% if edit_mode %}
+  <div class="list-group-item d-flex flex-row justify-content-between">
+  {% else %}
+  <a href="{% url 'tournament:tournament_view' pk=tournament.id %}" class="list-group-item list-group-item-action d-flex flex-row justify-content-between">
+  {% endif %}
+    <div class="d-flex flex-row ">
+      {% if edit_mode %}
+      <a class="align-self-center" href="{% url 'tournament_group:remove_tournament_from_group' tournament_id=tournament.id tournament_group_id=tournament_group.id %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-x-square remove-user-icon" viewBox="0 0 16 16">
+          <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+          <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+        </svg>
+      </a>
+      <div class="tournament-title">
+        <a href="{% url 'tournament:tournament_view' pk=tournament.id %}">
+          {{tournament.title}}
+        </a>
+      </div>
+      {% else %}
+      <div class="tournament-title">{{tournament.title}}</div>
+      {% endif %}
+    </div>
+    <div class="d-flex flex-column tournament-date-container">
+      <div>{{tournament.started_at|naturalday|none_as_empty}}</div>
+      <div class="tournament-state" style="font-weight: bold; color: {% if tournament.get_state_string == 'INACTIVE' %}#5cb85c;{% elif tournament.get_state_string == 'COMPLETED' %}#d9534f;{% else %}#0275d8;{% endif %}">
+        {{tournament.get_state_string}}
+      </div>
+    </div>
+  {% if edit_mode %}
+  </div>
+  {% else %}
+  </a>
+  {% endif %}
+
+
+  {% endfor %}
+</ul>
+{% endif %}
+
+<style type="text/css">
+
+  .tournament-title {
+    align-self: center;
+  }
+
+  .tournament-date-container{
+    align-self: center;
+  }
+
+  @media only screen and (max-width: 500px) {
+    .tournament-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      max-width: 200px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .tournament-date-container {
+      font-size: 13px;
+      width: 100px;
+    }
+
+    .tournament-state {
+      font-size: 11px;
+    }
+  }
+
+  @media only screen and (min-width: 500px) and (max-width: 600px) {
+    .tournament-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      max-width: 200px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .tournament-date-container {
+      font-size: 13px;
+      width: 100px;
+    }
+
+    .tournament-state {
+      font-size: 11px;
+    }
+  }
+
+  @media only screen and (min-width: 600px) and (max-width: 768px) {
+    .tournament-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      max-width: 320px;
+      text-align: left;
+      font-size: 16px;
+    }
+
+    .tournament-date-container {
+      font-size: 16px;
+      width: 120px;
+    }
+
+    .tournament-state {
+      font-size: 14px;
+    }
+  }
+
+  @media only screen and (min-width: 768px) and (max-width: 992px) {
+    .tournament-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      max-width: 380px;
+      text-align: left;
+      font-size: 16px;
+    }
+
+    .tournament-date-container {
+      font-size: 16px;
+      width: 120px;
+    }
+
+    .tournament-state {
+      font-size: 14px;
+    }
+  }
+
+  @media only screen and (min-width: 992px) and (max-width: 1200px) {
+    .tournament-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      max-width: 480px;
+      text-align: left;
+      font-size: 16px;
+    }
+
+    .tournament-date-container {
+      font-size: 16px;
+      width: 120px;
+    }
+
+    .tournament-state {
+      font-size: 14px;
+    }
+  }
+
+  @media only screen and (min-width: 1200px) {
+    .tournament-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      max-width: 700px;
+      text-align: left;
+      font-size: 16px;
+    }
+
+    .tournament-date-container {
+      font-size: 16px;
+      width: 120px;
+    }
+
+    .tournament-state {
+      font-size: 14px;
+    }
+  }
+
+</style>

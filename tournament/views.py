@@ -8,6 +8,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils import timezone
 
+from tournament_group.models import TournamentGroup
 from tournament.forms import CreateTournamentForm, CreateTournamentStructureForm, EditTournamentForm
 from tournament.models import (
 	Tournament,
@@ -87,6 +88,12 @@ def tournament_list_view(request, *args, **kwargs):
 			send_to_user_id = request.user.id
 		)
 		context['invites'] = invites
+
+		# Tourament Groups
+		tournament_groups = TournamentGroup.objects.get_tournament_groups(
+			user_id = request.user.id
+		)
+		context['tournament_groups'] = tournament_groups
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return render(request=request, template_name="tournament/tournament_list.html", context=context)

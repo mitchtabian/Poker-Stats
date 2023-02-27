@@ -62,3 +62,4 @@ jobs:
       run: |
         python manage.py test tournament/
         python manage.py test tournament_analytics/tests
+        python manage.py test tournament_group/tests

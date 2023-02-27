@@ -1,3 +1,4 @@
+from itertools import chain
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -9,17 +10,19 @@ from tournament.models import (
 from user.models import User
 
 class TournamentGroupManager(models.Manager):
+
 	def create_tournament_group(self, admin, title):
 		group = self.model(
 			admin = admin,
 			title = title
 		)
 		group.save(using=self._db)
+		group.users.add(*[admin])
 		return group
 
 	def add_users_to_group(self, admin, group, users):
 		if group.admin != admin:
-			raise ValidationError(f"You're not the admin of that TournamentGroup.")
+			raise ValidationError("You're not the admin of that TournamentGroup.")
 
 		user_set = set(users)
 		if len(user_set) != len(users):
@@ -35,15 +38,6 @@ class TournamentGroupManager(models.Manager):
 		updated_group.users.add(*users)
 		updated_group.save()
 		return updated_group
-
-	def create_tournament_group(self, admin, title):
-		group = self.model(
-			admin = admin,
-			title = title
-		)
-		group.save(using=self._db)
-		group.users.add(*[admin])
-		return group
 
 	def remove_user_from_group(self, admin, group, user):
 		if group.admin != admin:
@@ -100,7 +94,7 @@ class TournamentGroupManager(models.Manager):
 
 	def add_tournaments_to_group(self, admin, group, tournaments):
 		if group.admin != admin:
-			raise ValidationError(f"You're not the admin of that TournamentGroup.")
+			raise ValidationError("You're not the admin of that TournamentGroup.")
 
 		tournament_set = set(tournaments)
 		if len(tournament_set) != len(tournaments):
@@ -122,7 +116,7 @@ class TournamentGroupManager(models.Manager):
 
 	def remove_tournament_from_group(self, admin, group, tournament):
 		if group.admin != admin:
-			raise ValidationError(f"You're not the admin of that TournamentGroup.")
+			raise ValidationError("You're not the admin of that TournamentGroup.")
 
 		current_tournaments = group.get_tournaments()
 		if not tournament in current_tournaments:
@@ -132,6 +126,20 @@ class TournamentGroupManager(models.Manager):
 		updated_group.tournaments.remove(*[tournament])
 		updated_group.save()
 		return updated_group
+
+
+	def update_tournament_group_title(self, admin, group, title):
+		if group.admin != admin:
+			raise ValidationError(f"You're not the admin of that TournamentGroup.")
+
+		if title == None:
+			raise ValidationError("Tournament Group title cannot be empty.")
+
+		updated_group = group
+		updated_group.title = title
+		updated_group.save()
+		return updated_group
+
 
 	"""
 	Determine if at least one of the users in the TournamentGroup have played in the given tournament.
@@ -155,6 +163,22 @@ class TournamentGroupManager(models.Manager):
 			return tournament_group
 		except TournamentGroup.DoesNotExist:
 			return None
+
+	"""
+	Get TournamentGroup's that this user is part of.
+	"""
+	def get_tournament_groups(self, user_id):
+		user = User.objects.get_by_id(user_id)
+		groups = super().get_queryset().filter(users__in=[user])
+		return groups
+
+	def get_by_id(self, id):
+		try:
+			tournament_group = self.get(id = id)
+			return tournament_group
+		except TournamentGroup.DoesNotExist:
+			return None
+
 
 class TournamentGroup(models.Model):
 	admin					= models.ForeignKey(User, on_delete=models.CASCADE)

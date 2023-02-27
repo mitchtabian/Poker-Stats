@@ -94,12 +94,13 @@ def build_player_eliminations_data(players):
 			split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
 				player_id = player.id
 			)
+			split_eliminations_count = 0
 			for split_elimination in split_eliminations:
 				split_eliminations_count += 1.00 / len(split_elimination.eliminators.all())
-				if f"{split_eliminations_count.eliminatee.user.username}" in eliminations_dict:
-					eliminations_dict[f"{split_eliminations_count.eliminatee.user.username}"] += split_eliminations_count
+				if f"{split_elimination.eliminatee.user.username}" in eliminations_dict:
+					eliminations_dict[f"{split_elimination.eliminatee.user.username}"] += split_eliminations_count
 				else:
-					eliminations_dict[f"{split_eliminations_count.eliminatee.user.username}"] = split_eliminations_count
+					eliminations_dict[f"{split_elimination.eliminatee.user.username}"] = split_eliminations_count
 	return eliminations_dict
 
 
