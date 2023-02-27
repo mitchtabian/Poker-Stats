@@ -55,8 +55,10 @@ def eliminate_players_and_complete_tournament(admin, tournament):
 """
 Convenience function for building a tournament in tests.
 """
-def build_tournament(structure):
-	admin = User.objects.get_by_username("cat")
+def build_tournament(structure, admin_user=None):
+	admin = admin_user
+	if admin == None:
+		admin = User.objects.get_by_username("cat")
 
 	# Build a Tournament with the only structure available.
 	tournament = Tournament.objects.create_tournament(

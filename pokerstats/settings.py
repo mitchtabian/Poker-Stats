@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'root',
     'tournament',
     'tournament_analytics',
+    'tournament_group',
     'user',
 
     # Third party apps

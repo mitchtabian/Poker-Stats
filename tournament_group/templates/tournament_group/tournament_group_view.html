@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block head_title %}Tournament Group{% endblock %}
+
+{% load bootstrap5 %}
+
+{% block content %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-md-1 col-md-10">
+      <div class="d-flex flex-row justify-content-between align-items-center mb-4">
+        <h2 class="tournament-group-title">{{tournament_group.title}}</h2>
+        {% if request.user == tournament_group.admin %}
+        <a href="{% url 'tournament_group:update' pk=tournament_group.id %}" class="btn btn-outline-primary">Edit</a>
+        {% endif %}
+      </div>
+
+      <!-- Users -->
+      <h5>Users</h5>
+      <hr>
+      <div class="tournament-group-section-container">
+        <!-- Display the users who have already been added -->
+        {% if users %}
+          {% include 'tournament_group/snippets/display_user_list_snippet.html' with users=users %}
+        {% endif %}
+      </div>
+
+      <!-- Tournaments -->
+      <h5>Tournaments</h5>
+      <hr>
+      <div class="tournament-group-section-container">
+        {% if tournaments %}
+        <div class="mt-4">
+          <!-- Display the tournaments that have already been added -->
+          {% include 'tournament_group/snippets/tournament_list_snippet.html' with tournaments=tournaments %}
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+  hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  @media only screen and (max-width: 500px) {
+    .tournament-group-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      text-align: left;
+      font-size: 16px;
+      margin-right: 16px;
+    }
+    .tournament-group-section-container {
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+  }
+
+  @media only screen and (min-width: 501px) {
+    .tournament-group-title {
+      overflow: hidden;
+      white-space: wrap;
+      text-overflow: ellipsis;
+      text-align: left;
+      font-size: 24px;
+      margin-right: 16px;
+    }
+    .tournament-group-section-container {
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+
+  }
+</style>
+
+{% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

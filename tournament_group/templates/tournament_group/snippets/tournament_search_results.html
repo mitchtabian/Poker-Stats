@@ -1,0 +1,31 @@
+<div id="id-tournament-search-results">
+  {% if tournaments %}
+    <ul class="list-group tournament-list-group">
+    {% for tournament in tournaments %}
+      <div class="tournament-list-item d-flex justify-content-between list-group-item list-group-item-action">
+        <span class="tournament-title">{{tournament.title}}</span>
+        {% if request.user == tournament_group.admin %}
+        <a hx-post="{% url 'tournament_group:add_tournament_to_group' tournament_id=tournament.id tournament_group_id=tournament_group.id %}" hx-target="#body_container" hx-swap="innerHTML" class="btn btn-primary btn-sm" style="margin-left: 16px">Add</a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+
+<style type="text/css">
+  .tournament-list-item {
+    margin: auto;
+  }
+  .tournament-title {
+    display: inline-flex;
+    align-items: center;
+  }
+  .tournament-list-group {
+    position: absolute;
+    width: inherit;
+    background: #fff;
+    z-index: 9;
+    min-width: 350px;
+  }
+</style>

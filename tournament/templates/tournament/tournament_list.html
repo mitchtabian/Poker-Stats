@@ -8,9 +8,15 @@
   <div class="row">
     <div class="offset-md-1 col-md-10">
 
-      <!-- Create a new tournament -->
+      <h2>Tournament Groups</h2>
+      <hr>
       <div class="tournament-list-group">
-        <a class="btn btn-primary" href="{% url 'tournament:create_tournament' %}">Create Tournament</a>
+        {% if tournament_groups %}
+          {% include 'tournament_group/snippets/tournament_groups_list_snippet.html' with tournament_groups=tournament_groups %}
+        {% endif %}
+        <div class="d-flex flex-row mt-3">
+           <a class="btn btn-info action-button" href="{% url 'tournament_group:create' %}">Create Tournament Group</a>
+        </div>
       </div>
 
       <!-- Tournament invites -->
@@ -22,16 +28,20 @@
       </div>
       {% endif %}
 
-
       <!-- My Tournaments (is admin) -->
-      {% if tournaments %}
       <h2>My Tournaments</h2>
       <hr>
       <div class="tournament-list-group">
-        <p>These are Tournaments that you're the admin of.</p>
-        {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=tournaments %}
+        {% if tournaments %}
+          <p>These are Tournaments that you're the admin of.</p>
+          {% include 'tournament/snippets/tournaments_list_snippet.html' with tournaments=tournaments %}
+        {% else %}
+          <p>There are no Tournaments that you're the admin of.</p>
+        {% endif %}
+        <div class="d-flex flex-row mt-3">
+          <a class="btn btn-primary action-button" href="{% url 'tournament:create_tournament' %}">Create Tournament</a>
+        </div>
       </div>
-      {% endif %}
 
       <!-- Tournaments they've joined (not admin) -->
       {% if joined_tournaments %}
@@ -57,8 +67,12 @@
 
   @media only screen and (max-width: 500px) {
     .tournament-list-group {
-      margin-bottom: 16px;
+      margin-bottom: 28px;
       font-size: 12px;
+    }
+
+    .action-button {
+      font-size: 13px;
     }
   }
 
@@ -66,7 +80,7 @@
     .tournament-list-group {
       padding-left: 16px;
       padding-right: 16px;
-      margin-bottom: 16px;
+      margin-bottom: 28px;
       font-size: 16px;
     }
   }
