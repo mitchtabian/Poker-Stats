@@ -137,7 +137,6 @@ def fetch_tournament_group_net_earnings_data(request, *args, **kwargs):
 		net_earnings_data = TournamentGroup.objects.build_group_net_earnings_data(
 			group = tournament_group
 		)
-		# context['net_earnings_data'] = net_earnings_data
 		context['net_earnings_data'] = build_json_from_net_earnings_data(net_earnings_data)
 	except Exception as e:
 		error = {

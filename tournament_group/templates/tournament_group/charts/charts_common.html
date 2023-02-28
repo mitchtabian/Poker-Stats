@@ -14,44 +14,6 @@
 
 	const chartPaddingSmall = 16;
 
-	function setChartContainerSize(element) {
-		const windowHeight = window.innerHeight;
-		const windowWidth = window.innerWidth;
-		if (windowWidth <= windowWidthInflectionPoint) {
-			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
-			element.style.width = chartWidth + "px";
-			element.style.height = (chartWidth * chartAspectRatio) + "px"
-		} else {
-			// Set constant width of 700px - padding if the window is bigger than 700px
-			const chartWidth = (700 - (2 * chartPaddingSmall))
-			element.style.width = chartWidth + "px";
-			element.style.height = (chartWidth * chartAspectRatio) + "px"
-		}
-	}
-
-	function setInitialSizeOfChart(chart) {
-		const windowWidth = window.innerWidth;
-		if (windowWidth <= windowWidthInflectionPoint) {
-			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
-			chart.canvas.parentNode.style.width = chartWidth + "px";
-			chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
-		} else {
-			// Set constant width of 700px - padding if the window is bigger than 700px
-			const chartWidth = (700 - (2 * chartPaddingSmall))
-			chart.canvas.parentNode.style.width = chartWidth + "px";
-			chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
-		}
-	}
-
-	function setSizeOfChart(chart) {
-		const windowWidth = window.innerWidth;
-		if (windowWidth <= windowWidthInflectionPoint) {
-			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
-			chart.canvas.parentNode.style.width = chartWidth + "px";
-			chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
-		}
-	}
-
 	const findLabel = (labels, evt) => {
 	  let found = false;
 	  let res = null;

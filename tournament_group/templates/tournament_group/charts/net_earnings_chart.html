@@ -40,6 +40,76 @@
 <!-- Hidden field with fetch rbg colors url -->
 <input class="d-none" id="id_hidden_fetch_rbg_colors_url" value="{% url 'tournament_group:fetch_rbg_colors' num_colors=users|length %}">
 
+<!-- chart sizing -->
+<script type="text/javascript">
+	function setNetEarningsChartContainerSize(element, num_users) {
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			element.style.width = chartWidth + "px";
+			if (num_users <= 9) {
+				element.style.height = (chartWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = num_users * 10
+				element.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		} else {
+			// Set constant width of 700px - padding if the window is bigger than 700px
+			const chartWidth = (700 - (2 * chartPaddingSmall))
+			element.style.width = chartWidth + "px";
+			if (num_users <= 9) {
+				element.style.height = (chartWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = num_users * 10
+				element.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		}
+	}
+
+	function setInitialSizeOfNetEarningsChart(chart, num_users) {
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			chart.canvas.parentNode.style.width = chartWidth + "px";
+			if (num_users <= 9) {
+				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = num_users * 10
+				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		} else {
+			// Set constant width of 700px - padding if the window is bigger than 700px
+			const chartWidth = (700 - (2 * chartPaddingSmall))
+			chart.canvas.parentNode.style.width = chartWidth + "px";
+			if (num_users <= 9) {
+				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = num_users * 10
+				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		}
+	}
+
+	function setSizeOfNetEarningsChart(chart, num_users) {
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			chart.canvas.parentNode.style.width = chartWidth + "px";
+			if (num_users <= 9) {
+				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = num_users * 10
+				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		}
+	}
+</script>
+
 <!-- Net earnings and losses -->
 <script>
 	var netEarningsChart = null
@@ -50,11 +120,11 @@
 	const colors_data = []
 
 	window.onresize = function() {
-		setSizeOfChart(netEarningsChart)
+		setSizeOfNetEarningsChart(netEarningsChart, "{{users|length}}")
 	}
 
 	function init() {
-		setChartContainerSize(document.getElementById("id_net_earnings_container"))
+		setNetEarningsChartContainerSize(document.getElementById("id_net_earnings_container"), "{{users|length}}")
 		generateUserColorsData()
 	}
 
@@ -162,6 +232,7 @@
 		  type: 'bar',
 		  data: netEarningsData,
 		  options: {
+		  	indexAxis: 'y',
 		  	maintainAspectRatio: false,
 		  	responsive: true,
 		  	plugins: {
@@ -180,8 +251,8 @@
 							if (label) {
 								label += ': ';
 							}
-							if (context.parsed.y !== null) {
-								label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+							if (context.parsed.x !== null) {
+								label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.x);
 							}
 							return label;
 						},
@@ -194,7 +265,7 @@
 				}
 			},
 			scales: {
-				y: {
+				x: {
 					ticks: {
 						callback: function(value, index, ticks) {
 							return '$' + value;
@@ -228,7 +299,7 @@
 		  	],
 		});
 
-		setInitialSizeOfChart(netEarningsChart)
+		setInitialSizeOfNetEarningsChart(netEarningsChart, "{{users|length}}")
 	}
 
 
