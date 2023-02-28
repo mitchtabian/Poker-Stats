@@ -21,6 +21,7 @@ This is a notes section for me personally.
 1. Build the graphs so they can stand-alone and not require a view
 	1. Do fetch requests in whatever view uses the graph and fetch the data they need.
 1. Add footer
+1. Add start_date and end_date to TournamentGroup? Then I can build a progress bar in the TournamentGroup view.
 1. Create invite system for TournamentGroups. Just like with Tournaments.
 1. Split winners
 	- Need to think about this.
