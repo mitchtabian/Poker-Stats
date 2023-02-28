@@ -121,23 +121,6 @@ def view_tournament_group(request, *args, **kwargs):
 		context['tournaments'] = tournaments
 
 		context['edit_mode'] = False
-
-		# Build the TournamentGroupNetEarnings data
-		# TODO make this async with its own URL for the view and do an http fetch
-		net_earnings_data = TournamentGroup.objects.build_group_net_earnings_data(
-			group = tournament_group
-		)
-		context['net_earnings_data'] = net_earnings_data
-
-		# For each user generate a random color.
-		# colors = []
-		# for x in net_earnings_data:
-		# 	color_list = list(random.choices(range(256), k=3))
-		# 	color = f"rgb({color_list[0]}, {color_list[1]}, {color_list[2]})"
-		# 	colors.append(color)
-		# context['user_colors'] = colors
-		# END
-
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return render(request=request, template_name='tournament_group/tournament_group_view.html', context=context)
