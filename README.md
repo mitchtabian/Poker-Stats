@@ -18,9 +18,10 @@ This is a notes section for me personally.
 1. TournamentGroup?
 1. Analaytics based on TournamentGroup
 	- Basically this would just extend the per-user analytics
-1. Create invite system for TournamentGroups. Just like with Touranemnts.
 1. Build the graphs so they can stand-alone and not require a view
 	1. Do fetch requests in whatever view uses the graph and fetch the data they need.
+1. Add footer
+1. Create invite system for TournamentGroups. Just like with Tournaments.
 1. Split winners
 	- Need to think about this.
 1. Setup bugsnag

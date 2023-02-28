@@ -5,7 +5,12 @@ from django.db import models
 
 from tournament.models import (
 	Tournament,
-	TournamentPlayer
+	TournamentPlayer,
+	TournamentPlayerResult,
+	TournamentState
+)
+from tournament_group.util import (
+	TournamentGroupNetEarnings
 )
 from user.models import User
 
@@ -180,6 +185,33 @@ class TournamentGroupManager(models.Manager):
 		except TournamentGroup.DoesNotExist:
 			return None
 
+	"""
+	Build a list of TournamentGroupNetEarnings for each user in the group.
+	Note: This is a heavy operation and should be done async.
+	"""
+	def build_group_net_earnings_data(self, group):
+		net_earnings_data = []
+		tournaments = group.get_tournaments()
+		for user in group.get_users():
+			net_earnings = 0
+			for tournament in tournaments:
+				if tournament.get_state() == TournamentState.COMPLETED:
+					result = TournamentPlayerResult.objects.get_results_for_user_by_tournament(
+						user_id = user.id,
+						tournament_id = tournament.id
+					)
+					if len(result) == 0:
+						continue
+					else:
+						net_earnings += result[0].net_earnings
+			net_earnings_data.append(
+				TournamentGroupNetEarnings(
+					username = f"{user.username}",
+					net_earnings = net_earnings
+				)
+			)
+		return net_earnings_data
+
 
 class TournamentGroup(models.Model):
 	admin					= models.ForeignKey(User, on_delete=models.CASCADE)
@@ -191,10 +223,8 @@ class TournamentGroup(models.Model):
 
 	def __str__(self):
 		return f"""\n
-		Admin: {self.admin.username}\n
 		Title: {self.title}\n
-		Tournaments: {self.get_tournaments()}\n
-		Users: {self.get_users()}\n
+		Admin: {self.admin.username}\n
 		"""
 
 	def get_tournaments(self):
@@ -202,6 +232,15 @@ class TournamentGroup(models.Model):
 
 	def get_users(self):
 		return self.users.all()
+
+
+
+
+
+
+
+
+
 
 
 

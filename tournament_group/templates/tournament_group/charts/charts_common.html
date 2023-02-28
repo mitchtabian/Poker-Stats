@@ -1,0 +1,89 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script type="text/javascript">
+
+	// Need to track the mouse position to display title tooltips.
+	var mouseX = 0;
+	var mouseY = 0;
+
+	// Height / Width
+	const chartAspectRatio = .7;
+
+	// The point at which the chart size will become constant.
+	const windowWidthInflectionPoint = 700;
+
+	const chartPaddingSmall = 16;
+
+	function setChartContainerSize(element) {
+		const windowHeight = window.innerHeight;
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			element.style.width = chartWidth + "px";
+			element.style.height = (chartWidth * chartAspectRatio) + "px"
+		} else {
+			// Set constant width of 700px - padding if the window is bigger than 700px
+			const chartWidth = (700 - (2 * chartPaddingSmall))
+			element.style.width = chartWidth + "px";
+			element.style.height = (chartWidth * chartAspectRatio) + "px"
+		}
+	}
+
+	function setInitialSizeOfChart(chart) {
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			chart.canvas.parentNode.style.width = chartWidth + "px";
+			chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+		} else {
+			// Set constant width of 700px - padding if the window is bigger than 700px
+			const chartWidth = (700 - (2 * chartPaddingSmall))
+			chart.canvas.parentNode.style.width = chartWidth + "px";
+			chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+		}
+	}
+
+	function setSizeOfChart(chart) {
+		const windowWidth = window.innerWidth;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
+			chart.canvas.parentNode.style.width = chartWidth + "px";
+			chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+		}
+	}
+
+	const findLabel = (labels, evt) => {
+	  let found = false;
+	  let res = null;
+
+	  labels.forEach(l => {
+		    l.labels.forEach(label => {
+		      if (evt.x > label.x && evt.x < label.x2 && evt.y > label.y && evt.y < label.y2) {
+		        res = label.label;
+		        found = true;
+		      }
+		    });
+		  });
+
+	  return [found, res];
+	};
+
+	const getLabelHitboxes = (scales) => (Object.values(scales).map((s) => ({
+		  scaleId: s.id,
+		  labels: s._labelItems.map((labelItem, i) => ({
+		    x: labelItem.options.translation[0] - s._labelSizes.widths[i] / 2,
+		    x2: labelItem.options.translation[0] + s._labelSizes.widths[i] / 2,
+		    y: labelItem.options.translation[1] - s._labelSizes.heights[i],
+		    y2: labelItem.options.translation[1] + s._labelSizes.heights[i],
+		    label: labelItem.label,
+		    index: i
+		  }))
+	})));
+
+	function mouseCoordinates(event){
+		mouseX = event.clientX + window.pageXOffset;
+		mouseY = event.clientY + window.pageYOffset;
+	}
+
+	document.onmousemove = mouseCoordinates;
+</script>

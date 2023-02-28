@@ -9,34 +9,49 @@
 <div class="container">
   <div class="row">
     <div class="offset-md-1 col-md-10">
-      <div class="d-flex flex-row justify-content-between align-items-center mb-4">
+      <div class="d-flex flex-row justify-content-between tournament-group-section-content-container">
         <h2 class="tournament-group-title">{{tournament_group.title}}</h2>
         {% if request.user == tournament_group.admin %}
-        <a href="{% url 'tournament_group:update' pk=tournament_group.id %}" class="btn btn-outline-primary">Edit</a>
+          <a href="{% url 'tournament_group:update' pk=tournament_group.id %}" class="btn btn-outline-primary">Edit</a>
         {% endif %}
       </div>
+    </div>
+  </div>
+</div>
 
+{% include 'tournament_group/charts/charts_common.html' %}
+{% include 'tournament_group/charts/net_earnings_chart.html' %}
+
+<div class="container">
+  <div class="row">
+    <div class="offset-md-1 col-md-10">
       <!-- Users -->
       <h5>Users</h5>
       <hr>
-      <div class="tournament-group-section-container">
+      <div class="tournament-group-section-content-container">
         <!-- Display the users who have already been added -->
         {% if users %}
           {% include 'tournament_group/snippets/display_user_list_snippet.html' with users=users %}
         {% endif %}
       </div>
+    </div>
+  </div>
+</div>
 
+
+<div class="container">
+  <div class="row">
+    <div class="offset-md-1 col-md-10">
       <!-- Tournaments -->
       <h5>Tournaments</h5>
       <hr>
-      <div class="tournament-group-section-container">
+      <div class="tournament-group-section-content-container">
         {% if tournaments %}
         <div class="mt-4">
           <!-- Display the tournaments that have already been added -->
           {% include 'tournament_group/snippets/tournament_list_snippet.html' with tournaments=tournaments %}
         </div>
         {% endif %}
-
       </div>
     </div>
   </div>
@@ -56,10 +71,11 @@
       text-align: left;
       font-size: 16px;
       margin-right: 16px;
+      margin-top: auto;
     }
-    .tournament-group-section-container {
-      margin-bottom: 16px;
+    .tournament-group-section-content-container {
       font-size: 12px;
+      margin-bottom: 16px;
     }
   }
 
@@ -71,12 +87,12 @@
       text-align: left;
       font-size: 24px;
       margin-right: 16px;
+      margin-top: auto;
     }
-    .tournament-group-section-container {
+    .tournament-group-section-content-container {
       padding-left: 16px;
       padding-right: 16px;
-      padding-bottom: 16px;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
       font-size: 16px;
     }
 
