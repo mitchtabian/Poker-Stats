@@ -1,0 +1,360 @@
+{% load tournament_extras %}
+
+<div class="container d-none" id="id_top_level_error">
+	<div class="row">
+		<div class="offset-md-1 col-md-10">
+			<div class="d-flex flex-column top-level-error">
+				<p class="text-danger" id="id_top_level_error_title"></p>
+				<p class="text-danger" id="id_top_level_error_description"></p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="parent-chart-container" id="id_charts_container">
+	<div class="first-charts-container" id="id_first_charts_container">
+		<div class="net-earnings-container" id="id_net_earnings_container">
+			<div id="id_net_earnings_data_fetch_error" class="d-none d-flex flex-column">
+				<p class="text-danger" id="id_error_title"></p>
+				<p class="text-danger" id="id_error_description"></p>
+				<div class="d-flex flex-row">
+					<button class="btn btn-primary" onclick="retryFetchNetEarningsData()">Retry</button>
+				</div>
+			</div>
+			<canvas class="d-none" id="netEarningsChartId"></canvas>
+			<!-- Loading spinner to show before charts finished sizing and rendering -->
+			<div id="id_tournament_group_data_loading_spinner">
+			  <div class="net-earnings-spinner-container">
+			    <div class="spinner-border net-earnings-spinner-border" style="width: 70px; height: 70px;" role="status">
+			      <span class="visually-hidden">Loading...</span>
+			    </div>
+			  </div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Hidden field with fetch net earnings url -->
+<input class="d-none" id="id_hidden_fetch_net_earnings_url" value="{% url 'tournament_group:fetch_net_earnings_data' pk=tournament_group.id %}">
+
+<!-- Hidden field with fetch rbg colors -->
+<input class="d-none" id="id_hidden_fetch_rbg_colors_url" value="{% url 'tournament_group:fetch_rbg_colors' num_colors=users|length %}">
+
+<!-- Net earnings and losses -->
+<script>
+	var netEarningsChart = null
+	const netEarningsContext = document.getElementById('netEarningsChartId');
+	const usernames_data = [];
+	const short_usernames_data = [];
+	const net_earnings_data = []
+	const colors_data = []
+
+	window.onresize = function() {
+		setSizeOfChart(netEarningsChart)
+	}
+
+	function init() {
+		setChartContainerSize(document.getElementById("id_net_earnings_container"))
+		generateUserColorsData()
+	}
+
+	init()
+
+	function generateUserColorsData() {
+		const fetchRbgColorsUrl = document.getElementById("id_hidden_fetch_rbg_colors_url").value
+		fetch(fetchRbgColorsUrl)
+			.then((response) => {
+				return response.json()
+			})
+			.then((data) => {
+				if (data.error != null) {
+					onTopLevelError(data.error, data.message)
+				} else {
+					const json = data.rbg_colors
+					for (var key in json) {
+						var color = json[key]
+						colors_data.push(color)
+					}
+					onFetchColorsSuccess()
+				}
+			}).catch((error) => {
+				onTopLevelError("An unknown error occurred", "Data parsing issue.")
+			});
+	}
+
+	function onFetchColorsSuccess() {
+		fetchNetEarningsData()
+	}
+
+	function fetchNetEarningsData() {
+		const fetchNetEarningsDataUrl = document.getElementById("id_hidden_fetch_net_earnings_url").value
+		fetch(fetchNetEarningsDataUrl)
+			.then((response) => {
+				return response.json()
+			})
+			.then((data) => {
+				if (data.error != null) {
+					onNetEarningsDataFetchError(data.error, data.message)
+				} else {
+					const json = JSON.parse(data.net_earnings_data)
+					var counter = 1
+					for (var key in json) {
+						var username = json[key]['username']
+						usernames_data.push(username)
+
+						var short_username = "U" + counter
+						short_usernames_data.push(short_username)
+
+						var net_earnings = json[key]['net_earnings']
+						net_earnings_data.push(net_earnings)
+						counter += 1
+					}
+					buildNetEarningsChart()
+					onNetEarningsDataFetched()
+				}
+			}).catch((error) => {
+				onNetEarningsDataFetchError("An unknown error occurred", "Data parsing issue.")
+			});
+	}
+
+	function retryFetchNetEarningsData() {
+		document.getElementById("id_tournament_group_data_loading_spinner").classList.remove("d-none")
+		document.getElementById("netEarningsChartId").classList.add("d-none")
+		document.getElementById("id_net_earnings_data_fetch_error").classList.add("d-none")
+		document.getElementById("id_error_title").innerHTML = ""
+		document.getElementById("id_error_description").innerHTML = ""
+		fetchNetEarningsData()
+	}
+
+	function onTopLevelError(error_title, error_description) {
+		document.getElementById("id_top_level_error").classList.remove("d-none")
+		document.getElementById("id_top_level_error_title").innerHTML = error_title
+		document.getElementById("id_top_level_error_description").innerHTML = error_description
+
+		onNetEarningsDataFetchError("Error", "Something went wrong.")
+	}
+
+	function onNetEarningsDataFetched() {
+		document.getElementById("id_tournament_group_data_loading_spinner").classList.add("d-none")
+		document.getElementById("netEarningsChartId").classList.remove("d-none")
+	}
+
+	function onNetEarningsDataFetchError(error_title, error_description) {
+		document.getElementById("id_net_earnings_data_fetch_error").classList.remove("d-none")
+		document.getElementById("id_tournament_group_data_loading_spinner").classList.add("d-none")
+		document.getElementById("id_error_title").innerHTML = error_title
+		document.getElementById("id_error_description").innerHTML = error_description
+	}
+
+	function buildNetEarningsChart() {
+		const netEarningsData = {
+			labels: short_usernames_data,
+			datasets: [
+				{
+					label: 'Net Earnings',
+					data: net_earnings_data,
+					backgroundColor: colors_data,
+				},
+			]
+		};
+
+		netEarningsChart = new Chart(netEarningsContext, {
+		  type: 'bar',
+		  data: netEarningsData,
+		  options: {
+		  	maintainAspectRatio: false,
+		  	responsive: true,
+		  	plugins: {
+				legend: {
+					display: false,
+				},
+				title: {
+					display: true,
+					text: 'Net Earnings for Players'
+				},
+				tooltip: {
+					callbacks: {
+						label: function(context) {
+							let label = context.dataset.label || '';
+
+							if (label) {
+								label += ': ';
+							}
+							if (context.parsed.y !== null) {
+								label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+							}
+							return label;
+						},
+						title: function(context) {
+							let title = context[0].label
+							let index = short_usernames_data.indexOf(title)
+							return usernames_data[index]
+						}
+					},
+				}
+			},
+			scales: {
+				y: {
+					ticks: {
+						callback: function(value, index, ticks) {
+							return '$' + value;
+						}
+					},
+				},
+			},
+		  },
+		  plugins: [
+			  {
+			  	id: 'customHover',
+				afterEvent: (chart, event, opts) => {
+					const evt = event.event;
+
+					if (evt.type !== 'mousemove') {
+						return;
+					}
+
+					const [found, label] = findLabel(getLabelHitboxes(netEarningsChart.scales), evt);
+
+					// Find the actual username from the raw labels
+					if (found && short_usernames_data.includes(label)) {
+						var labelIndex = short_usernames_data.indexOf(label)
+						var username = usernames_data[labelIndex]
+						showNetEarningsTooltip(chart, username)
+					} else {
+						hideNetEarningsTooltip(chart)
+					}
+				},
+			  },
+		  	],
+		});
+
+		setInitialSizeOfChart(netEarningsChart)
+	}
+
+
+	function hideNetEarningsTooltip(context) {
+	  let tooltipEl = document.getElementById('chartjs-tooltip');
+
+	  // Create element on first render
+	  if (!tooltipEl) {
+	    tooltipEl = document.createElement('div');
+	    tooltipEl.id = 'chartjs-tooltip';
+	    tooltipEl.innerHTML = '<table></table>';
+	    document.body.appendChild(tooltipEl);
+	  }
+	  tooltipEl.classList.add("d-none")
+	}
+
+	function showNetEarningsTooltip(context, label){
+		// Tooltip Element
+	    let tooltipEl = document.getElementById('chartjs-tooltip');
+
+	    // Create element on first render
+	    if (!tooltipEl) {
+	        tooltipEl = document.createElement('div');
+	        tooltipEl.id = 'chartjs-tooltip';
+	        tooltipEl.innerHTML = '<table></table>';
+	        document.body.appendChild(tooltipEl);
+	    }
+	    tooltipEl.classList.remove("d-none")
+
+	    const tooltipModel = context.tooltip;
+
+	    // Set caret Position
+	    tooltipEl.classList.remove('above', 'below', 'no-transform');
+	    if (tooltipModel.yAlign) {
+	        tooltipEl.classList.add(tooltipModel.yAlign);
+	    } else {
+	        tooltipEl.classList.add('no-transform');
+	    }
+
+	    // Set Text
+		const titleLines = [label]
+
+	    let innerHtml = '<thead>';
+
+	    titleLines.forEach(function(title) {
+	        innerHtml += '<tr><th>' + title + '</th></tr>';
+	    });
+	    innerHtml += '</thead><tbody>';
+
+	    innerHtml += '</tbody>';
+
+	    let tableRoot = tooltipEl.querySelector('table');
+	    tableRoot.innerHTML = innerHtml;
+
+	    const position = context.canvas.getBoundingClientRect();
+
+	    const bodyFont = Chart.helpers.toFont(tooltipModel.options.bodyFont);
+
+	    // Display, position, and set styles for font
+	    tooltipEl.style.opacity = .75;
+	    tooltipEl.style.position = 'absolute';
+	    tooltipEl.style.left = mouseX + 'px';
+	    tooltipEl.style.top = mouseY + 'px';
+	    tooltipEl.style.font = bodyFont.string;
+	    tooltipEl.style.padding = '10px';
+	    tooltipEl.style.backgroundColor = '#000';
+	    tooltipEl.style.color = '#fff';
+	    tooltipEl.style.borderRadius = '8px';
+	    tooltipEl.style.pointerEvents = 'none';
+	}
+
+</script>
+
+<style type="text/css">
+
+	.parent-chart-container {
+		margin-bottom: 24px;
+	}
+
+	.net-earnings-container {
+		margin: auto;
+		border-radius: 8px;
+		border: 1px solid #c3c3c3;
+		padding: 16px;
+	}
+
+	.first-charts-container {
+		margin:auto;
+	}
+
+	@media only screen and (min-width: 1400px) {
+		.first-charts-container {
+			display: flex;
+			direction: column;
+		}
+	}
+
+	#id_tournament_group_data_loading_spinner {
+		height: 100%;
+		position: relative;
+	}
+
+	.net-earnings-spinner-container {
+		margin: auto;
+		position: absolute;
+		left: 50%;
+		top: 50%;
+	}
+	.net-earnings-spinner-border {
+		position: absolute;
+		left: -35px;
+		top: -35px;
+	}
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

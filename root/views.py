@@ -13,6 +13,7 @@ from tournament.models import (
 	TournamentSplitElimination,
 	TournamentPlayerResult
 )
+from tournament_group.models import TournamentGroup
 from tournament_analytics.models import TournamentTotals
 from tournament_analytics.util import something
 
@@ -65,6 +66,13 @@ def root_view(request):
 					color = f"rgb({color_list[0]}, {color_list[1]}, {color_list[2]})"
 					colors.append(color)
 				context['elimination_colors'] = colors
+
+			# Tournament Groups
+			tournament_groups = TournamentGroup.objects.get_tournament_groups(
+				user_id = request.user.id
+			)
+			if len(tournament_groups) > 0:
+				context['tournament_groups'] = tournament_groups
 
 			return render(request, "root/root.html", context=context)
 		else:

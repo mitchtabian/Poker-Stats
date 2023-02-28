@@ -11,31 +11,12 @@
   </div>
 </div>
 
-<!-- <div class="parent-chart-container d-none" id="id_charts_container">
-	<div class="first-charts-container">
-		<div class="net-earnings-vs-losses-container">
-			<canvas id="netEarningsVsLossesChartId"></canvas>
-		</div>
-		<div class="mb-4" id="id_chart_spacing">
-
-		</div>
-		<div class="eliminations-and-rebuys-container">
-			<canvas id="eliminationsAndRebuysChartId"></canvas>
-		</div>
-	</div>
-
-	<div class="mb-4" id="id_chart_spacing">
-
-	</div>
-
-	<div class="second-charts-container">
-		<div class="tournament-player-results-container">
-			<canvas id="tournamentPlayerResultsChartId"></canvas>
-		</div>
-	</div>
-</div> -->
-
 <div class="parent-chart-container d-none" id="id_charts_container">
+	<!-- Charts title -->
+	<div class="tournament-analytics" id="id_tournament_analytics_title">
+	  <h2>Your Tournament Analytics</h2>
+	</div>
+
 	<div class="first-charts-container" id="id_first_charts_container">
 		<div class="net-earnings-vs-losses-container">
 			<canvas id="netEarningsVsLossesChartId"></canvas>
@@ -57,6 +38,16 @@
 			<canvas id="eliminationsChartId"></canvas>
 		</div>
 	</div>
+
+	{% if tournament_groups %}
+	<!-- Tournament Groups-->
+	<div class="tournament-groups" id="id_tournament_groups_container">
+	  <h2>More Insights</h2>
+	  <hr>
+	  <p>View the analytics of the TournamentGroup's you're a part of.</p>
+	  {% include 'tournament_group/snippets/tournament_groups_list_snippet.html' with tournament_groups=tournament_groups %}
+	</div>
+	{% endif %}
 </div>
 
 <style type="text/css">
@@ -96,13 +87,14 @@
 		margin:auto;
 	}
 
-	@media only screen and (max-width: 500px) {
+	.tournament-analytics {
+		margin-top: 16px;
+		margin-bottom: 16px;
 	}
 
-	@media only screen and (min-width: 501px) {
-	}
-
-	@media only screen and (min-width: 700px) {
+	.tournament-groups {
+		margin-top: 24px;
+		margin-bottom: 16px;
 	}
 
 	@media only screen and (min-width: 1400px) {
@@ -173,6 +165,22 @@
 			left: net_earnings_vs_losses_container.offset().left
 		});
 
+		// align the title
+		$('.tournament-analytics').offset({
+			left: net_earnings_vs_losses_container.offset().left,
+		});
+		const netEarningsVsLossesWidth = $('.net-earnings-vs-losses-container').width()
+		const tournamentPlayerResultsWidth = $('.tournament-player-results-container').width()
+		const spaceBetween = $('.tournament-player-results-container').offset().left - ($('.net-earnings-vs-losses-container').offset().left + netEarningsVsLossesWidth)
+
+		document.getElementById("id_tournament_analytics_title").style.width = netEarningsVsLossesWidth + tournamentPlayerResultsWidth + spaceBetween + "px"
+
+		// align TournamentGroups section
+		$('.tournament-groups').offset({
+			left: net_earnings_vs_losses_container.offset().left,
+		});
+		document.getElementById("id_tournament_groups_container").style.width = netEarningsVsLossesWidth + tournamentPlayerResultsWidth + spaceBetween + "px"
+
 		var tournament_player_results_container = $('.tournament-player-results-container');
 		$('.eliminations-container').offset({
 			left: tournament_player_results_container.offset().left
@@ -201,6 +209,21 @@
 		$('.eliminations-and-rebuys-container').offset({
 			left: net_earnings_vs_losses_container.offset().left
 		});
+
+		// align the title
+		$('.tournament-analytics').offset({
+			left: net_earnings_vs_losses_container.offset().left
+		});
+		const netEarningsVsLossesWidth = $('.net-earnings-vs-losses-container').width()
+		const tournamentPlayerResultsWidth = $('.tournament-player-results-container').width()
+		const spaceBetween = $('.tournament-player-results-container').offset().left - ($('.net-earnings-vs-losses-container').offset().left + netEarningsVsLossesWidth)
+		document.getElementById("id_tournament_analytics_title").style.width = netEarningsVsLossesWidth + tournamentPlayerResultsWidth + spaceBetween + "px"
+
+		// align TournamentGroups section
+		$('.tournament-groups').offset({
+			left: net_earnings_vs_losses_container.offset().left
+		});
+		document.getElementById("id_tournament_groups_container").style.width = netEarningsVsLossesWidth + tournamentPlayerResultsWidth + spaceBetween + "px"
 
 		var tournament_player_results_container = $('.tournament-player-results-container');
 		$('.eliminations-container').offset({
@@ -238,7 +261,6 @@
 			var color = '{{color}}'
 			colors_data.push(color)
 		{% endfor %}
-
 	}
 
 	buildEliminationsData()
@@ -376,13 +398,13 @@
     	onClick: (e) => {
 	    },
 	    plugins: {
-				legend: {
-					position: 'top',
-				},
-				title: {
-					display: true,
-					text: 'Tournament Results'
-				},
+			legend: {
+				position: 'top',
+			},
+			title: {
+				display: true,
+				text: 'Tournament Results'
+			},
 	    	tooltip: {
 					callbacks: {
 						label: function(context) {
@@ -417,26 +439,26 @@
 	  plugins: [
 		  {
 		  	id: 'customHover',
-				afterEvent: (chart, event, opts) => {
-					const evt = event.event;
+			afterEvent: (chart, event, opts) => {
+				const evt = event.event;
 
-					if (evt.type !== 'mousemove') {
+				if (evt.type !== 'mousemove') {
 					return;
-					}
+				}
 
-					const [found, label] = findLabel(getLabelHitboxes(tournamentPlayerResultsChart.scales), evt);
+				const [found, label] = findLabel(getLabelHitboxes(tournamentPlayerResultsChart.scales), evt);
 
-					// Find the actual tournament title from the raw labels
-					if (found && tournamentPlayerResultsLabels.includes(label)) {
+				// Find the actual tournament title from the raw labels
+				if (found && tournamentPlayerResultsLabels.includes(label)) {
 					var labelIndex = tournamentPlayerResultsLabels.indexOf(label)
 					var tournamentTitle = rawTournamentPlayerResultLabels[labelIndex]
 					var date = tournamentPlayerResultCompletedAtDates[labelIndex]
-						showTooltip(chart, tournamentTitle, date)
-					} else {
-						hideTooltip(chart)
-					}
-				},
+					showTooltip(chart, tournamentTitle, date)
+				} else {
+					hideTooltip(chart)
+				}
 			},
+		  },
 	  ]
 	});
 

@@ -3,6 +3,8 @@ from django.urls import include, path
 from tournament_group.views import (
 	add_tournament_to_group,
 	add_user_to_group,
+	fetch_rbg_colors,
+	fetch_tournament_group_net_earnings_data,
 	remove_tournament_from_group,
 	remove_user_from_group,
 	tournament_group_create_view,
@@ -17,6 +19,8 @@ urlpatterns = [
     path('add_user_to_group/<int:user_id>/<int:tournament_group_id>/', add_user_to_group, name="add_user_to_group"),
     path('add_tourament_to_group/<int:tournament_id>/<int:tournament_group_id>/', add_tournament_to_group, name="add_tournament_to_group"),
     path('remove_tournament_from_group/<int:tournament_id>/<int:tournament_group_id>/', remove_tournament_from_group, name="remove_tournament_from_group"),
+    path('fetch_net_earnings_data/<int:pk>/', fetch_tournament_group_net_earnings_data, name="fetch_net_earnings_data"),
+    path('fetch_rbg_colors/<int:num_colors>/', fetch_rbg_colors, name="fetch_rbg_colors"),
     path('create/', tournament_group_create_view, name="create"),
     path('remove_user_from_group/<int:user_id>/<int:tournament_group_id>/', remove_user_from_group, name="remove_user_from_group"),
     path('update/<int:pk>/', tournament_group_update_view, name="update"),

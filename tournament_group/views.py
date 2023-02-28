@@ -1,11 +1,15 @@
 from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
+import random
+import json
 
 from tournament.models import Tournament, TournamentPlayer
 from tournament_group.forms import CreateTournamentGroupForm
 from tournament_group.models import TournamentGroup
+from tournament_group.util import build_json_from_net_earnings_data
 from user.models import User
 
 @login_required
@@ -118,9 +122,66 @@ def view_tournament_group(request, *args, **kwargs):
 
 		context['edit_mode'] = False
 
+		# Build the TournamentGroupNetEarnings data
+		# TODO make this async with its own URL for the view and do an http fetch
+		net_earnings_data = TournamentGroup.objects.build_group_net_earnings_data(
+			group = tournament_group
+		)
+		context['net_earnings_data'] = net_earnings_data
+
+		# For each user generate a random color.
+		# colors = []
+		# for x in net_earnings_data:
+		# 	color_list = list(random.choices(range(256), k=3))
+		# 	color = f"rgb({color_list[0]}, {color_list[1]}, {color_list[2]})"
+		# 	colors.append(color)
+		# context['user_colors'] = colors
+		# END
+
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return render(request=request, template_name='tournament_group/tournament_group_view.html', context=context)
+
+@login_required
+def fetch_tournament_group_net_earnings_data(request, *args, **kwargs):
+	context = {}
+	try:
+		pk = kwargs['pk']
+		tournament_group = TournamentGroup.objects.get_by_id(pk)
+		if tournament_group == None:
+			raise ValidationError("Our records indicate that TournamentGroup does not exist.")
+
+		net_earnings_data = TournamentGroup.objects.build_group_net_earnings_data(
+			group = tournament_group
+		)
+		# context['net_earnings_data'] = net_earnings_data
+		context['net_earnings_data'] = build_json_from_net_earnings_data(net_earnings_data)
+	except Exception as e:
+		error = {
+			'error': "Unable to retrieve net earnings data.",
+			'message': f"{e.args[0]}"
+		}
+		return JsonResponse(error, status=200)
+	return JsonResponse(context, status=200)
+
+@login_required
+def fetch_rbg_colors(request, *args, **kwargs):
+	context = {}
+	try:
+		num_colors = kwargs['num_colors']
+		colors = {}
+		for x in range(0, int(num_colors)):
+			color_list = list(random.choices(range(256), k=3))
+			color = f"rgb({color_list[0]}, {color_list[1]}, {color_list[2]})"
+			colors[f"{x}"] = color
+		context['rbg_colors'] = colors
+	except Exception as e:
+		error = {
+			'error': "Unable to retrieve colors for graphs.",
+			'message': f"{e.args[0]}"
+		}
+		return JsonResponse(error, status=200)
+	return JsonResponse(context, status=200)
 
 """
 HTMX request for adding a user to a TournamentGroup.
@@ -132,11 +193,11 @@ def add_user_to_group(request, *args, **kwargs):
 		tournament_group_id = kwargs['tournament_group_id']
 
 		user = User.objects.get_by_id(user_id)
-		tourmament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
+		tournament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
 		
 		TournamentGroup.objects.add_users_to_group(
 			admin = request.user,
-			group = tourmament_group,
+			group = tournament_group,
 			users = [user]
 		)
 	except Exception as e:
@@ -153,11 +214,11 @@ def remove_user_from_group(request, *args, **kwargs):
 		tournament_group_id = kwargs['tournament_group_id']
 
 		user = User.objects.get_by_id(user_id)
-		tourmament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
+		tournament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
 		
 		TournamentGroup.objects.remove_user_from_group(
 			admin = request.user,
-			group = tourmament_group,
+			group = tournament_group,
 			user = user
 		)
 	except Exception as e:
@@ -174,11 +235,11 @@ def add_tournament_to_group(request, *args, **kwargs):
 		tournament_group_id = kwargs['tournament_group_id']
 
 		tournament = Tournament.objects.get_by_id(tournament_id)
-		tourmament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
+		tournament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
 		
 		TournamentGroup.objects.add_tournaments_to_group(
 			admin = request.user,
-			group = tourmament_group,
+			group = tournament_group,
 			tournaments = [tournament]
 		)
 	except Exception as e:
@@ -196,11 +257,11 @@ def remove_tournament_from_group(request, *args, **kwargs):
 		tournament_group_id = kwargs['tournament_group_id']
 
 		tournament = Tournament.objects.get_by_id(tournament_id)
-		tourmament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
+		tournament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
 		
 		TournamentGroup.objects.remove_tournament_from_group(
 			admin = request.user,
-			group = tourmament_group,
+			group = tournament_group,
 			tournament = tournament
 		)
 	except Exception as e:
@@ -216,11 +277,11 @@ def update_tournament_group_title(request, *args, **kwargs):
 		title = kwargs['title']
 		tournament_group_id = kwargs['tournament_group_id']
 
-		tourmament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
+		tournament_group = TournamentGroup.objects.get_by_id(tournament_group_id)
 		
 		TournamentGroup.objects.update_tournament_group_title(
 			admin = request.user,
-			group = tourmament_group,
+			group = tournament_group,
 			title = title
 		)
 	except Exception as e:
