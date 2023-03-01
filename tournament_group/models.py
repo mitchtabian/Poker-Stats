@@ -210,7 +210,11 @@ class TournamentGroupManager(models.Manager):
 					net_earnings = net_earnings
 				)
 			)
-		return net_earnings_data
+		return sorted(
+			net_earnings_data,
+			key = lambda x: x.net_earnings,
+			reverse = True 
+		)
 
 
 class TournamentGroup(models.Model):

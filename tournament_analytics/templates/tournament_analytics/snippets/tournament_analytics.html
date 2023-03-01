@@ -11,7 +11,7 @@
   </div>
 </div>
 
-<div class="parent-chart-container d-none" id="id_charts_container">
+<div class="parent-chart-container" id="id_charts_container">
 	<!-- Charts title -->
 	<div class="tournament-analytics" id="id_tournament_analytics_title">
 	  <h2>Your Tournament Analytics</h2>
@@ -51,6 +51,19 @@
 </div>
 
 <style type="text/css">
+
+	.fade-in-container {
+		animation: fadeIn 0.5s;
+	}
+
+	@keyframes fadeIn {
+		0% { opacity: 0; }
+		100% { opacity: 1; }
+	}
+
+	.parent-chart-container {
+		opacity: 0;
+	}
 
 	.net-earnings-vs-losses-container {
 		margin:auto;
@@ -233,7 +246,9 @@
 
 	function onFinishedLoadingCharts(){
 		document.getElementById("id_tournament_complete_spinner").classList.add("d-none")
-		document.getElementById("id_charts_container").classList.remove("d-none")
+		// document.getElementById("id_charts_container").classList.remove("d-none")
+		document.getElementById("id_charts_container").classList.add("fade-in-container")
+		document.getElementById("id_charts_container").style.opacity = 1
 	}
 </script>
 

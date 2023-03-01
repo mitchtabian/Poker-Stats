@@ -1,36 +1,55 @@
 {% load tournament_extras %}
 
-<div class="container d-none" id="id_top_level_error">
-	<div class="row">
-		<div class="offset-md-1 col-md-10">
-			<div class="d-flex flex-column top-level-error">
-				<p class="text-danger" id="id_top_level_error_title"></p>
-				<p class="text-danger" id="id_top_level_error_description"></p>
+<div class="invisible-center-line" id="id_invisible_center_line"></div>
+
+<div class="first-charts-container" id="id_first_charts_container">
+
+	<!-- Loading spinner to show before charts finished sizing and rendering -->
+	<div class="net-earnings-loading-overlay" id="id_net_earnings_loading_spinner">
+		<div class="net-earnings-spinner-container">
+			<div class="spinner-border net-earnings-spinner-border" style="width: 70px; height: 70px;" role="status">
+				<span class="visually-hidden">Loading...</span>
 			</div>
 		</div>
 	</div>
-</div>
 
-<div class="parent-chart-container" id="id_charts_container">
-	<div class="first-charts-container" id="id_first_charts_container">
-		<div class="net-earnings-container" id="id_net_earnings_container">
-			<div id="id_net_earnings_data_fetch_error" class="d-none d-flex flex-column">
-				<p class="text-danger" id="id_error_title"></p>
-				<p class="text-danger" id="id_error_description"></p>
-				<div class="d-flex flex-row">
-					<button class="btn btn-primary" onclick="retryFetchNetEarningsData()">Retry</button>
-				</div>
-			</div>
-			<canvas class="d-none" id="netEarningsChartId"></canvas>
-			<!-- Loading spinner to show before charts finished sizing and rendering -->
-			<div id="id_tournament_group_data_loading_spinner">
-			  <div class="net-earnings-spinner-container">
-			    <div class="spinner-border net-earnings-spinner-border" style="width: 70px; height: 70px;" role="status">
-			      <span class="visually-hidden">Loading...</span>
-			    </div>
-			  </div>
-			</div>
+	<div class="d-flex flex-row d-none" id="id_refresh_after_resize_btn">
+		<button class="btn btn-primary" onclick="refreshNetEarningsData()">Refresh</button>
+	</div>
+
+	<div id="id_net_earnings_data_fetch_error" class="d-none d-flex flex-column">
+		<p class="text-danger" id="id_error_title"></p>
+		<p class="text-danger" id="id_error_description"></p>
+		<div class="d-flex flex-row">
+			<button class="btn btn-primary" onclick="retryFetchNetEarningsData()">Retry</button>
 		</div>
+	</div>
+
+	<div class="net-earnings-container" id="id_net_earnings_container">
+		<canvas class="d-none" id="netEarningsChartId"></canvas>
+	</div>
+
+	<div class="mb-4" id="id_chart_spacing"></div>
+
+	<div class="net-earnings-table table-responsive" id="id_net_earnings_table_container">
+		<table class="table">
+			<thead>
+				<tr>
+					<th scope="col">
+						<div class="d-flex flex-column">
+							Player
+							<!-- <div style="border-bottom: 1px solid black;">Player</div>
+							<div style="font-size: 12px; font-weight: 300;">Games played</div> -->
+						</div>
+					</th>
+					<th scope="col" style="text-align: end;">Net</th>
+				</tr>
+			</thead>
+			<!-- This data is populated programatically -->
+			<tbody id="id_net_earnings_table_row_data">
+
+			</tbody>
+		</table>
 	</div>
 </div>
 
@@ -42,93 +61,105 @@
 
 <!-- chart sizing -->
 <script type="text/javascript">
-	function setNetEarningsChartContainerSize(element, num_users) {
-		const windowWidth = window.innerWidth;
-		if (windowWidth <= windowWidthInflectionPoint) {
-			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
-			element.style.width = chartWidth + "px";
-			if (num_users <= 9) {
-				element.style.height = (chartWidth * chartAspectRatio) + "px"
-			} else {
-				// Add additional height relative to how many users there are. 10px for each user.
-				var additionalSpacing = num_users * 10
-				element.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
-			}
-		} else {
-			// Set constant width of 700px - padding if the window is bigger than 700px
-			const chartWidth = (700 - (2 * chartPaddingSmall))
-			element.style.width = chartWidth + "px";
-			if (num_users <= 9) {
-				element.style.height = (chartWidth * chartAspectRatio) + "px"
-			} else {
-				// Add additional height relative to how many users there are. 10px for each user.
-				var additionalSpacing = num_users * 10
-				element.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
-			}
+	function setNetEarningsTableAndChartPosition() {
+		if (window.innerWidth > 2 * windowWidthInflectionPoint) {
+			$('.net-earnings-table').offset({
+				left: window.innerWidth / 2
+			});
+
+			$('.net-earnings-container').offset({
+				left: (window.innerWidth / 2) - $('.net-earnings-container').width() - (2 * chartPaddingSmall)
+			});
 		}
 	}
 
-	function setInitialSizeOfNetEarningsChart(chart, num_users) {
-		const windowWidth = window.innerWidth;
-		if (windowWidth <= windowWidthInflectionPoint) {
-			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
-			chart.canvas.parentNode.style.width = chartWidth + "px";
-			if (num_users <= 9) {
-				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+	function setNetEarningsElementSize(element_id, num_users) {
+		var element = document.getElementById(element_id)
+		if (window.innerWidth < windowWidthInflectionPoint) {
+			if (num_users <= 7) {
+				element.style.height = (window.innerWidth * chartAspectRatio) + "px"
 			} else {
 				// Add additional height relative to how many users there are. 10px for each user.
-				var additionalSpacing = num_users * 10
-				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
+				var additionalSpacing = (num_users - 7) * 11
+				element.style.height = (window.innerWidth * chartAspectRatio) + (additionalSpacing) + "px"
 			}
 		} else {
-			// Set constant width of 700px - padding if the window is bigger than 700px
-			const chartWidth = (700 - (2 * chartPaddingSmall))
-			chart.canvas.parentNode.style.width = chartWidth + "px";
-			if (num_users <= 9) {
-				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
+			// Set constant width if the window is bigger than 700px
+			const elementWidth = 650
+			element.style.width = elementWidth + "px";
+			if (num_users <= 7) {
+				element.style.height = (elementWidth * chartAspectRatio) + "px"
 			} else {
 				// Add additional height relative to how many users there are. 10px for each user.
-				var additionalSpacing = num_users * 10
-				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
+				var additionalSpacing = (num_users - 7) * 11
+				element.style.height = (elementWidth * chartAspectRatio) + (additionalSpacing) + "px"
 			}
 		}
+		setNetEarningsTableAndChartPosition()
 	}
 
-	function setSizeOfNetEarningsChart(chart, num_users) {
+	/**
+	 * This is only used for the net earnings TABLE. Not the chart.
+	 * */
+	function setNetEarningsElementWidth(element_id) {
+		element = document.getElementById(element_id)
 		const windowWidth = window.innerWidth;
+		var elementWidth = null;
 		if (windowWidth <= windowWidthInflectionPoint) {
-			const chartWidth = (windowWidth - (2 * chartPaddingSmall))
-			chart.canvas.parentNode.style.width = chartWidth + "px";
-			if (num_users <= 9) {
-				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + "px"
-			} else {
-				// Add additional height relative to how many users there are. 10px for each user.
-				var additionalSpacing = num_users * 10
-				chart.canvas.parentNode.style.height = (chartWidth * chartAspectRatio) + (additionalSpacing) + "px"
-			}
+			 elementWidth = windowWidth
+		} else {
+			// Set constant width if the window is bigger than 700px
+			elementWidth = 700
 		}
+		element.style.width = elementWidth + "px";
+		setNetEarningsTableAndChartPosition()
 	}
+
 </script>
 
 <!-- Net earnings and losses -->
 <script>
 	var netEarningsChart = null
 	const netEarningsContext = document.getElementById('netEarningsChartId');
-	const usernames_data = [];
-	const short_usernames_data = [];
-	const net_earnings_data = []
-	const colors_data = []
-
-	window.onresize = function() {
-		setSizeOfNetEarningsChart(netEarningsChart, "{{users|length}}")
-	}
+	var usernames_data = [];
+	var short_usernames_data = [];
+	var net_earnings_data = []
+	var colors_data = []
 
 	function init() {
-		setNetEarningsChartContainerSize(document.getElementById("id_net_earnings_container"), "{{users|length}}")
+		setNetEarningsElementSize("netEarningsChartId", "{{users|length}}")
+		if (window.innerWidth >= 700) {
+			setNetEarningsElementWidth("id_net_earnings_table_container")
+		}
+		document.getElementById("id_net_earnings_loading_spinner").classList.add("fade-in-container")
+		document.getElementById("id_net_earnings_loading_spinner").style.opacity = 1
 		generateUserColorsData()
 	}
 
 	init()
+
+	function onResize() {
+		document.getElementById("id_net_earnings_container").style.opacity = 0;
+		document.getElementById("id_net_earnings_table_container").style.opacity = 0;
+		var netEarningsChartElement = document.getElementById("netEarningsChartId");
+		var refreshBtnElement = document.getElementById("id_refresh_after_resize_btn");
+		netEarningsChart.destroy();
+		document.getElementById("id_net_earnings_table_row_data").innerHTML = ""
+		if (!netEarningsChartElement.classList.contains("d-none")) {
+			netEarningsChartElement.classList.add("d-none")
+		}
+		if (refreshBtnElement.classList.contains("d-none")) {
+			refreshBtnElement.classList.remove("d-none")
+		}
+	}
+
+	window.onresize = function() {
+		onResize()
+	}
+
+	function refreshNetEarningsData() {
+		location.reload()
+	}
 
 	function generateUserColorsData() {
 		const fetchRbgColorsUrl = document.getElementById("id_hidden_fetch_rbg_colors_url").value
@@ -138,22 +169,23 @@
 			})
 			.then((data) => {
 				if (data.error != null) {
-					onTopLevelError(data.error, data.message)
+					onNetEarningsDataFetchError(data.error, data.message)
 				} else {
+					colors_data = [];
 					const json = data.rbg_colors
 					for (var key in json) {
 						var color = json[key]
 						colors_data.push(color)
 					}
-					onFetchColorsSuccess()
+					fetchNetEarningsData()
 				}
 			}).catch((error) => {
-				onTopLevelError("An unknown error occurred", "Data parsing issue.")
+				if (error.message != null) {
+					onNetEarningsDataFetchError("Data parsing issue.", error.message)
+				} else {
+					onNetEarningsDataFetchError("Data parsing issue.", "Unknown error.")
+				}
 			});
-	}
-
-	function onFetchColorsSuccess() {
-		fetchNetEarningsData()
 	}
 
 	function fetchNetEarningsData() {
@@ -168,6 +200,9 @@
 				} else {
 					const json = JSON.parse(data.net_earnings_data)
 					var counter = 1
+					usernames_data = [];
+					short_usernames_data = [];
+					net_earnings_data = [];
 					for (var key in json) {
 						var username = json[key]['username']
 						usernames_data.push(username)
@@ -180,40 +215,89 @@
 						counter += 1
 					}
 					buildNetEarningsChart()
+					populateNetEarningsTable()
 					onNetEarningsDataFetched()
 				}
 			}).catch((error) => {
-				onNetEarningsDataFetchError("An unknown error occurred", "Data parsing issue.")
+				if (error.message != null) {
+					onNetEarningsDataFetchError("Data parsing issue.", error.message)
+				} else {
+					onNetEarningsDataFetchError("Data parsing issue.", "Unknown error.")
+				}
 			});
 	}
 
 	function retryFetchNetEarningsData() {
-		document.getElementById("id_tournament_group_data_loading_spinner").classList.remove("d-none")
-		document.getElementById("netEarningsChartId").classList.add("d-none")
-		document.getElementById("id_net_earnings_data_fetch_error").classList.add("d-none")
-		document.getElementById("id_error_title").innerHTML = ""
-		document.getElementById("id_error_description").innerHTML = ""
-		fetchNetEarningsData()
-	}
-
-	function onTopLevelError(error_title, error_description) {
-		document.getElementById("id_top_level_error").classList.remove("d-none")
-		document.getElementById("id_top_level_error_title").innerHTML = error_title
-		document.getElementById("id_top_level_error_description").innerHTML = error_description
-
-		onNetEarningsDataFetchError("Error", "Something went wrong.")
+		location.reload();
 	}
 
 	function onNetEarningsDataFetched() {
-		document.getElementById("id_tournament_group_data_loading_spinner").classList.add("d-none")
+		document.getElementById("id_net_earnings_loading_spinner").classList.add("d-none")
 		document.getElementById("netEarningsChartId").classList.remove("d-none")
+
+		document.getElementById("id_net_earnings_container").classList.add("fade-in-container")
+		document.getElementById("id_net_earnings_table_container").classList.add("fade-in-container")
+		document.getElementById("id_net_earnings_container").style.opacity = 1
+		document.getElementById("id_net_earnings_table_container").style.opacity = 1
 	}
 
 	function onNetEarningsDataFetchError(error_title, error_description) {
 		document.getElementById("id_net_earnings_data_fetch_error").classList.remove("d-none")
-		document.getElementById("id_tournament_group_data_loading_spinner").classList.add("d-none")
+		document.getElementById("id_net_earnings_loading_spinner").classList.add("d-none")
 		document.getElementById("id_error_title").innerHTML = error_title
 		document.getElementById("id_error_description").innerHTML = error_description
+	}
+
+	function populateNetEarningsTable() {
+		let tableRowsContainer = document.getElementById("id_net_earnings_table_row_data")
+		for (let i = 0; i < net_earnings_data.length; i++) {
+			var row = document.createElement("tr");
+
+			// Build username row
+			var usernameRow = document.createElement("td");
+			var usernameDiv = document.createElement("div")
+			usernameDiv.classList.add("d-flex")
+			usernameDiv.classList.add("flex-row")
+
+			var colorIcon = createSquareDiv(colors_data[i])
+			colorIcon.style.marginRight = "6px"
+			var usernameValueDiv = document.createElement("div")
+			usernameValueDiv.innerHTML = usernames_data[i]
+			usernameValueDiv.classList.add("align-self-center")
+			usernameValueDiv.classList.add("net-earnings-table-text")
+			usernameDiv.appendChild(colorIcon)
+			usernameDiv.appendChild(usernameValueDiv)
+			usernameRow.appendChild(usernameDiv)
+
+			// Build Earnings row
+			var earningsRow = document.createElement("td");
+			netEarnings = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(net_earnings_data[i])
+			earningsRow.innerHTML = netEarnings
+			earningsRow.classList.add("net-earnings-table-text")
+			earningsRow.style.textAlign = "right"
+			if (net_earnings_data[i] > 0) {
+				earningsRow.classList.add("text-success")
+			} else if (net_earnings_data[i] == 0) {
+				earningsRow.classList.add("text-secondary")
+			} else {
+				earningsRow.classList.add("text-danger")
+			}
+
+			// Add row children
+			row.appendChild(usernameRow)
+			row.appendChild(earningsRow)
+			tableRowsContainer.appendChild(row)
+		}
+	}
+
+	function createSquareDiv(color) {
+		var square = document.createElement("div")
+		square.style.height = "16px"
+		square.style.width = "16px"
+		square.style.border = "1px solid #b3b3b3"
+		square.style.backgroundColor = color
+		square.classList.add("align-self-center")
+		return square
 	}
 
 	function buildNetEarningsChart() {
@@ -299,7 +383,7 @@
 		  	],
 		});
 
-		setInitialSizeOfNetEarningsChart(netEarningsChart, "{{users|length}}")
+		setNetEarningsElementSize("id_net_earnings_container", "{{users|length}}")
 	}
 
 
@@ -375,39 +459,100 @@
 
 <style type="text/css">
 
-	.parent-chart-container {
-		margin-bottom: 24px;
+	.net-earnings-loading-overlay {
+		position: absolute;
+		background-color: white;
+		z-index: 16;
+		top: 50%;
+		left: 50%;
+		opacity: 0;
+	}
+
+	/* Used for debugging */
+	.invisible-center-line {
+		position: absolute;
+		height: 1500px;
+		width: 0px;
+		left: 50%;
+	}
+
+	.first-charts-container {
+		margin: auto;
+		position: relative;
+		border: 1px solid #c3c3c3;
+		border-radius: 8px;
+		padding: 16px;
+	}
+
+	.fade-in-container {
+		animation: fadeIn 0.5s;
+	}
+
+	@keyframes fadeIn {
+		0% { opacity: 0; }
+		100% { opacity: 1; }
 	}
 
 	.net-earnings-container {
 		margin: auto;
 		border-radius: 8px;
-		border: 1px solid #c3c3c3;
 		padding: 16px;
+		opacity: 0;
 	}
 
-	.first-charts-container {
-		margin:auto;
+	.net-earnings-table {
+		margin: auto;
+		padding-top: 16px;
+		padding-left: 16px;
+		padding-right: 16px;
+		border-radius: 8px;
+		background-color: #f2f2f2;
+		opacity: 0;
+	}
+
+	#id_refresh_after_resize_btn {
+		position: absolute;
+		z-index: 16;
 	}
 
 	@media only screen and (min-width: 1400px) {
 		.first-charts-container {
+			margin:auto;
 			display: flex;
-			direction: column;
+			direction: row;
 		}
 	}
 
-	#id_tournament_group_data_loading_spinner {
-		height: 100%;
-		position: relative;
+	@media only screen and (min-width: 700px) {
+		.net-earnings-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 16px;
+			max-width: 380px;
+		}
 	}
 
-	.net-earnings-spinner-container {
-		margin: auto;
-		position: absolute;
-		left: 50%;
-		top: 50%;
+	@media only screen and (min-width: 500px) and (max-width: 700px) {
+		.net-earnings-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 14px;
+			max-width: 300px;
+		}
 	}
+
+	@media only screen and (max-width: 500px) {
+		.net-earnings-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 12px;
+			max-width: 250px;
+		}
+	}
+
 	.net-earnings-spinner-border {
 		position: absolute;
 		left: -35px;
