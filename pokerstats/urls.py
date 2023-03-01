@@ -20,6 +20,7 @@ urlpatterns = [
     path('error/<str:error_message>/', error_view, name="error"),
     path('tournament/', include("tournament.urls"), name="tournament"),
     path('user/', include("user.urls"), name="user"),
+    path('tournament_analytics/', include("tournament_analytics.urls"), name="tournament_analytics"),
     path('tournament_group/', include("tournament_group.urls"), name="tournament_group"),
 ]
 
