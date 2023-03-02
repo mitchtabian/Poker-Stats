@@ -1,0 +1,454 @@
+<div class="pot-contributions-charts-container" id="id_pot_contributions_charts_container">
+
+	<!-- Loading spinner to show before charts finished sizing and rendering -->
+	<div class="pot-contributions-loading-overlay" id="id_pot_contributions_loading_spinner">
+		<div class="pot-contributions-spinner-container">
+			<div class="spinner-border pot-contributions-spinner-border" style="width: 70px; height: 70px;" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		</div>
+	</div>
+
+	<div id="id_pot_contributions_data_fetch_error" class="d-none d-flex flex-column">
+		<p class="text-danger" id="id_pot_contributions_error_title"></p>
+		<p class="text-danger" id="id_pot_contributions_error_description"></p>
+		<div class="d-flex flex-row">
+			<button class="btn btn-primary" onclick="retryFetchPotContributionsData()">Retry</button>
+		</div>
+	</div>
+
+	<div class="pot-contributions-container" id="id_pot_contributions_container">
+		<canvas class="d-none" id="potContributionsChartId"></canvas>
+	</div>
+
+	<div class="mb-4" id="id_chart_spacing"></div>
+
+	<div class="pot-contributions-table table-responsive" id="id_pot_contributions_table_container">
+		<table class="table">
+			<thead>
+				<tr>
+					<th scope="col">
+						<div class="d-flex flex-column">Player</div>
+					</th>
+					<th scope="col" style="text-align: end;">Contributions</th>
+				</tr>
+			</thead>
+			<!-- This data is populated programatically -->
+			<tbody id="id_pot_contributions_table_row_data"></tbody>
+		</table>
+	</div>
+</div>
+
+<!-- Hidden field with fetch pot contributions url -->
+<input class="d-none" id="id_hidden_fetch_pot_contributions_url" value="{% url 'tournament_group:fetch_pot_contributions_data' pk=tournament_group.id %}">
+
+<!-- chart sizing -->
+<script type="text/javascript">
+	function setPotContributionsTableAndChartPosition() {
+		if (window.innerWidth > 2 * windowWidthInflectionPoint) {
+			$('.pot-contributions-table').offset({
+				left: window.innerWidth / 2
+			});
+
+			$('.pot-contributions-container').offset({
+				left: (window.innerWidth / 2) - $('.pot-contributions-container').width() - (2 * chartPaddingSmall)
+			});
+		}
+	}
+
+	function setPotContributionsElementSize(element_id, num_users) {
+		var element = document.getElementById(element_id)
+		if (window.innerWidth < windowWidthInflectionPoint) {
+			if (num_users <= 7) {
+				element.style.height = (window.innerWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = (num_users - 7) * 11
+				element.style.height = (window.innerWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		} else {
+			// Set constant width if the window is bigger than 700px
+			const elementWidth = 650
+			element.style.width = elementWidth + "px";
+			if (num_users <= 7) {
+				element.style.height = (elementWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = (num_users - 7) * 11
+				element.style.height = (elementWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		}
+		setPotContributionsTableAndChartPosition()
+	}
+
+	/**
+	 * This is only used for the pot contributions TABLE. Not the chart.
+	 * */
+	function setPotContributionsElementWidth(element_id) {
+		element = document.getElementById(element_id)
+		const windowWidth = window.innerWidth;
+		var elementWidth = null;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			 elementWidth = windowWidth
+		} else {
+			// Set constant width if the window is bigger than 700px
+			elementWidth = 700
+		}
+		element.style.width = elementWidth + "px";
+		setPotContributionsTableAndChartPosition()
+	}
+
+</script>
+
+<!-- Pot Contributions -->
+<script>
+	var potContributionsChart = null
+	const potContributionsContext = document.getElementById('potContributionsChartId');
+	var pot_contributions_usernames_data = [];
+	var pot_contributions_short_usernames_data = [];
+	var contributions = []
+	var total_contributions = 0
+
+	function initPotContributionsData() {
+		setPotContributionsElementSize("potContributionsChartId", "{{users|length}}")
+		if (window.innerWidth >= 700) {
+			setPotContributionsElementWidth("id_pot_contributions_table_container")
+		}
+		document.getElementById("id_pot_contributions_loading_spinner").classList.add("fade-in-container")
+		document.getElementById("id_pot_contributions_loading_spinner").style.opacity = 1
+	}
+
+	initPotContributionsData()
+
+	function onPotContributionsResize() {
+		document.getElementById("id_pot_contributions_container").style.opacity = 0;
+		document.getElementById("id_pot_contributions_table_container").style.opacity = 0;
+		var potContributionsChartElement = document.getElementById("potContributionsChartId");
+		var refreshBtnElement = document.getElementById("id_pot_contributions_refresh_after_resize_btn");
+		potContributionsChart.destroy();
+		document.getElementById("id_pot_contributions_table_row_data").innerHTML = ""
+		if (!potContributionsChartElement.classList.contains("d-none")) {
+			potContributionsChartElement.classList.add("d-none")
+		}
+		if (potContributionsChartElement.classList.contains("d-none")) {
+			potContributionsChartElement.classList.remove("d-none")
+		}
+	}
+
+	function fetchPotContributionsData() {
+		const fetchPotContributionsDataUrl = document.getElementById("id_hidden_fetch_pot_contributions_url").value
+		fetch(fetchPotContributionsDataUrl)
+			.then((response) => {
+				return response.json()
+			})
+			.then((data) => {
+				if (data.error != null) {
+					onPotContributionsDataFetchError(data.error, data.message)
+				} else {
+					const json = JSON.parse(data.pot_contributions_data)
+					var counter = 1
+					pot_contributions_usernames_data = [];
+					pot_contributions_short_usernames_data = [];
+					contributions = [];
+					total_contributions = 0
+					for (var key in json) {
+						var username = json[key]['username']
+						pot_contributions_usernames_data.push(username)
+
+						var short_username = "U" + counter
+						pot_contributions_short_usernames_data.push(short_username)
+
+						var contribution = json[key]['contribution']
+						contributions.push(contribution)
+						counter += 1
+
+						total_contributions += Number(contribution)
+					}
+					buildPotContributionsChart()
+					populatePotContributionsTable()
+					onPotContributionsDataFetched()
+				}
+			}).catch((error) => {
+				if (error.message != null) {
+					onPotContributionsDataFetchError("Data parsing issue.", error.message)
+				} else {
+					onPotContributionsDataFetchError("Data parsing issue.", "Unknown error.")
+				}
+			});
+	}
+
+	function retryFetchPotContributionsData() {
+		location.reload();
+	}
+
+	function onPotContributionsDataFetched() {
+		document.getElementById("id_pot_contributions_loading_spinner").classList.add("d-none")
+		document.getElementById("potContributionsChartId").classList.remove("d-none")
+
+		document.getElementById("id_pot_contributions_container").classList.add("fade-in-container")
+		document.getElementById("id_pot_contributions_table_container").classList.add("fade-in-container")
+		document.getElementById("id_pot_contributions_container").style.opacity = 1
+		document.getElementById("id_pot_contributions_table_container").style.opacity = 1
+	}
+
+	function onPotContributionsDataFetchError(error_title, error_description) {
+		document.getElementById("id_pot_contributions_data_fetch_error").classList.remove("d-none")
+		document.getElementById("id_pot_contributions_loading_spinner").classList.add("d-none")
+		document.getElementById("id_pot_contributions_error_title").innerHTML = error_title
+		document.getElementById("id_pot_contributions_error_description").innerHTML = error_description
+	}
+
+	function populatePotContributionsTable() {
+		let tableRowsContainer = document.getElementById("id_pot_contributions_table_row_data")
+		for (let i = 0; i < contributions.length; i++) {
+			var row = document.createElement("tr");
+
+			// Build username column
+			var usernameCol = document.createElement("td");
+			var usernameDiv = document.createElement("div")
+			usernameDiv.classList.add("d-flex")
+			usernameDiv.classList.add("flex-row")
+
+			var colorIcon = createSquareDiv(colors_data[i])
+			colorIcon.style.marginRight = "6px"
+			var usernameValueDiv = document.createElement("div")
+			usernameValueDiv.innerHTML = pot_contributions_usernames_data[i]
+			usernameValueDiv.classList.add("align-self-center")
+			usernameValueDiv.classList.add("pot-contributions-table-text")
+			usernameDiv.appendChild(colorIcon)
+			usernameDiv.appendChild(usernameValueDiv)
+			usernameCol.appendChild(usernameDiv)
+
+			// Build Earnings column
+			var moneyCol = document.createElement("td");
+			money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(contributions[i])
+			moneyCol.innerHTML = money
+			moneyCol.classList.add("pot-contributions-table-text")
+			moneyCol.style.textAlign = "right"
+
+			// Add row children
+			row.appendChild(usernameCol)
+			row.appendChild(moneyCol)
+			tableRowsContainer.appendChild(row)
+		}
+
+		// Add a total row
+		var row = document.createElement("tr");
+
+		var totalCol = document.createElement("td");
+		var totalDiv = document.createElement("div")
+
+		totalDiv.innerHTML = "Total"
+		totalDiv.classList.add("pot-contributions-table-text")
+		totalCol.appendChild(totalDiv)
+
+		var moneyCol = document.createElement("td");
+		moneyCol.innerHTML = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total_contributions)
+		moneyCol.classList.add("pot-contributions-table-text")
+		moneyCol.style.textAlign = "right"
+		moneyCol.classList.add("text-success")
+
+		// Add row children
+		row.appendChild(totalCol)
+		row.appendChild(moneyCol)
+		tableRowsContainer.appendChild(row)
+	}
+
+	/**
+	 * Draw the total contributions in the center of the doughnut.
+	 * */
+	const centerDoughnutTextPlugin = {
+		id: 'doughnut_center_text',
+		beforeDraw: function(chart, a, b) {
+			var width = chart.width,
+			height = chart.height,
+			ctx = chart.ctx;
+
+			ctx.restore();
+			var fontSize = (height / 300).toFixed(2);
+			ctx.font = fontSize + "em sans-serif";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "#5cb85c"
+
+			var text = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total_contributions),
+			textX = Math.round((width - ctx.measureText(text).width) / 2),
+			textY = height / 2;
+
+			ctx.fillText(text, textX, textY);
+			ctx.save();
+		}
+	}
+
+	function buildPotContributionsChart() {
+		const potContributionsData = {
+			labels: pot_contributions_short_usernames_data,
+			datasets: [
+				{
+					label: 'Pot Contributions',
+					data: contributions,
+					backgroundColor: colors_data,
+				},
+			]
+		};
+
+		potContributionsChart = new Chart(potContributionsContext, {
+			type: 'doughnut',
+			data: potContributionsData,
+			options: {
+				maintainAspectRatio: false,
+				responsive: true,
+				hoverOffset: 30,
+				plugins: {
+					legend: {
+						display: false,
+					},
+					title: {
+						display: true,
+						text: 'Pot Contributions'
+					},
+					tooltip: {
+						callbacks: {
+							label: function(context) {
+								let label = context.dataset.label || '';
+
+								if (label) {
+									label += ': ';
+								}
+								if (context.parsed !== null) {
+									label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed);
+								}
+								return label;
+							},
+							title: function(context) {
+								let title = context[0].label
+								let index = pot_contributions_short_usernames_data.indexOf(title)
+								return pot_contributions_usernames_data[index]
+							}
+						},
+					}
+				},
+			},
+			plugins: [
+				centerDoughnutTextPlugin
+			],
+		});
+
+		setPotContributionsElementSize("id_pot_contributions_container", "{{users|length}}")
+	}
+
+</script>
+
+<style type="text/css">
+
+	.pot-contributions-loading-overlay {
+		position: absolute;
+		background-color: white;
+		z-index: 16;
+		top: 50%;
+		left: 50%;
+		opacity: 0;
+	}
+
+	.pot-contributions-charts-container {
+		margin: auto;
+		position: relative;
+		border: 1px solid #c3c3c3;
+		border-radius: 8px;
+		padding: 16px;
+	}
+
+	.pot-contributions-container {
+		margin: auto;
+		border-radius: 8px;
+		padding: 16px;
+		opacity: 0;
+	}
+
+	.pot-contributions-table {
+		margin: auto;
+		padding-top: 16px;
+		padding-left: 16px;
+		padding-right: 16px;
+		border-radius: 8px;
+		background-color: #f2f2f2;
+		opacity: 0;
+	}
+
+	#id_pot_contributions_refresh_after_resize_btn {
+		position: absolute;
+		z-index: 16;
+	}
+
+	@media only screen and (min-width: 1400px) {
+		.pot-contributions-charts-container {
+			margin:auto;
+			display: flex;
+			direction: row;
+		}
+	}
+
+	@media only screen and (min-width: 700px) {
+		.pot-contributions-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 16px;
+			max-width: 380px;
+		}
+	}
+
+	@media only screen and (min-width: 500px) and (max-width: 700px) {
+		.pot-contributions-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 14px;
+			max-width: 300px;
+		}
+	}
+
+	@media only screen and (max-width: 500px) {
+		.pot-contributions-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 12px;
+			max-width: 250px;
+		}
+	}
+
+	.pot-contributions-spinner-border {
+		position: absolute;
+		left: -35px;
+		top: -35px;
+	}
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

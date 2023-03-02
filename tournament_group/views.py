@@ -9,7 +9,10 @@ import json
 from tournament.models import Tournament, TournamentPlayer
 from tournament_group.forms import CreateTournamentGroupForm
 from tournament_group.models import TournamentGroup
-from tournament_group.util import build_json_from_net_earnings_data
+from tournament_group.util import (
+	build_json_from_net_earnings_data,
+	build_json_from_pot_contributions_data
+)
 from user.models import User
 
 @login_required
@@ -164,6 +167,28 @@ def fetch_rbg_colors(request, *args, **kwargs):
 		}
 		return JsonResponse(error, status=200)
 	return JsonResponse(context, status=200)
+
+@login_required
+def fetch_tournament_group_pot_contributions_data(request, *args, **kwargs):
+	context = {}
+	try:
+		pk = kwargs['pk']
+		tournament_group = TournamentGroup.objects.get_by_id(pk)
+		if tournament_group == None:
+			raise ValidationError("Our records indicate that TournamentGroup does not exist.")
+
+		pot_contributions_data = TournamentGroup.objects.build_group_pot_contributions_data(
+			group = tournament_group
+		)
+		context['pot_contributions_data'] = build_json_from_pot_contributions_data(pot_contributions_data)
+	except Exception as e:
+		error = {
+			'error': "Unable to retrieve pot contributions data.",
+			'message': f"{e.args[0]}"
+		}
+		return JsonResponse(error, status=200)
+	return JsonResponse(context, status=200)
+
 
 """
 HTMX request for adding a user to a TournamentGroup.
