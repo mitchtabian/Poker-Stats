@@ -16,12 +16,11 @@ Project for tracking poker stats from tournaments.
 # TODO
 This is a notes section for me personally.
 1. TournamentGroup?
-1. Analaytics based on TournamentGroup
-	- Basically this would just extend the per-user analytics
-1. Build the graphs so they can stand-alone and not require a view
-	1. Do fetch requests in whatever view uses the graph and fetch the data they need.
+	1. Tournament Seasons
+		1. Add start_date and end_date to TournamentGroup? Then I can build a progress bar in the TournamentGroup view.
+	1. Tournament "MVP"? How would this be calculated
+1. Completing a tournament takes a long time. Figure out why.
 1. Add footer
-1. Add start_date and end_date to TournamentGroup? Then I can build a progress bar in the TournamentGroup view.
 1. Create invite system for TournamentGroups. Just like with Tournaments.
 1. Split winners
 	- Need to think about this.

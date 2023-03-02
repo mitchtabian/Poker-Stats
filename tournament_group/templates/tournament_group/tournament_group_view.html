@@ -31,13 +31,13 @@
 <div class="container mt-4">
   <div class="row">
     <div class="offset-md-1 col-md-10">
-      <!-- Users -->
-      <h5>Users</h5>
+      <!-- Players -->
+      <h5>Players</h5>
       <hr>
       <div class="tournament-group-section-content-container">
         <!-- Display the users who have already been added -->
         {% if users %}
-          {% include 'tournament_group/snippets/display_user_list_snippet.html' with users=users %}
+          {% include 'tournament_group/snippets/display_user_list_snippet.html' with tournaments=tournaments users=users %}
         {% endif %}
       </div>
     </div>
@@ -53,8 +53,8 @@
       <hr>
       <div class="tournament-group-section-content-container">
         {% if tournaments %}
-        <div class="mt-4">
-          <!-- Display the tournaments that have already been added -->
+        <div class="mt-4" style="font-weight: 500;">Tournament count: {{tournaments|length}}</div>
+        <div class="mt-3">
           {% include 'tournament_group/snippets/tournament_list_snippet.html' with tournaments=tournaments %}
         </div>
         {% endif %}

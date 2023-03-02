@@ -247,6 +247,13 @@ def concatenate_string(string, length):
 		return f"{string[:length]}..."
 	return string
 
+"""
+Get the number of completed tournaments in a list of tournaments
+"""
+@register.filter
+def completed_count(tournaments):
+	return len(tournaments.exclude(completed_at = None))
+
 
 
 

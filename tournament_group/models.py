@@ -14,7 +14,8 @@ from tournament.models import (
 from tournament_group.util import (
 	TournamentGroupNetEarnings,
 	TournamentGroupPotContributions,
-	TournamentGroupEliminationsAndRebuys
+	TournamentGroupEliminationsAndRebuys,
+	TournamentGroupTournamentsPlayed
 )
 from user.models import User
 
@@ -293,6 +294,35 @@ class TournamentGroupManager(models.Manager):
 		return sorted(
 			eliminations_and_rebuys_data,
 			key = lambda x: x.eliminations,
+			reverse = True
+		)
+
+	"""
+	Build a list of TournamentGroupTournamentsPlayed for each user in the group.
+	Note: This is a heavy operation and should be done async.
+	"""
+	def build_group_tournaments_played_data(self, group):
+		tournaments_played_data = []
+		tournaments = group.get_tournaments()
+		for user in group.get_users():
+			count = 0
+			for tournament in tournaments:
+				if tournament.get_state() == TournamentState.COMPLETED:
+					players = TournamentPlayer.objects.get_all_tournament_players_by_user_id(user.id).filter(tournament = tournament)
+					if len(players) > 1:
+						raise ValidationError(f"According to our records {user.username} was added to {tournament.title} more than once.")
+					elif len(players) == 0:
+						continue
+					count += 1
+			tournaments_played_data.append(
+				TournamentGroupTournamentsPlayed(
+					username = f"{user.username}",
+					count = count,
+				)
+			)
+		return sorted(
+			tournaments_played_data,
+			key = lambda x: x.count,
 			reverse = True
 		)
 
