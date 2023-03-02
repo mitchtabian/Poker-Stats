@@ -2,7 +2,6 @@ from itertools import chain
 from django.core.exceptions import ValidationError
 from django.db import models
 
-
 from tournament.models import (
 	Tournament,
 	TournamentPlayer,
@@ -279,7 +278,7 @@ class TournamentGroupManager(models.Manager):
 					)
 					for split_elimination in split_eliminations:
 						eliminator_count = len(split_elimination.eliminators.all())
-						eliminations_count += round(Decimal((1.00 / eliminator_count)), 2)
+						eliminations_count += round((1.00 / eliminator_count), 2)
 					rebuys = TournamentRebuy.objects.get_rebuys_for_player(
 						player = player
 					)
