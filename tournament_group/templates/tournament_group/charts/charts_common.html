@@ -134,8 +134,8 @@
 	}
 
 	window.onresize = function() {
-		onPotContributionsResize()
 		onNetEarningsResize()
+		onPotContributionsResize()
 	}
 </script>
 
@@ -152,7 +152,7 @@
 		if (isColorsDataFetched) {
 			clearInterval(colorsLoadingCheckInterval);
 			fetchNetEarningsData()
-			// fetchPotContributionsData()
+			fetchPotContributionsData()
 		}
 	}
 

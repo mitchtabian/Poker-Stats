@@ -121,17 +121,21 @@
 	initPotContributionsData()
 
 	function onPotContributionsResize() {
-		document.getElementById("id_pot_contributions_container").style.opacity = 0;
-		document.getElementById("id_pot_contributions_table_container").style.opacity = 0;
+		var potContributionsContainer = document.getElementById("id_pot_contributions_container")
+		potContributionsContainer.style.opacity = 0;
+		var potContributionsTableContainer = document.getElementById("id_pot_contributions_table_container")
+		potContributionsTableContainer.style.opacity = 0;
 		var potContributionsChartElement = document.getElementById("potContributionsChartId");
-		var refreshBtnElement = document.getElementById("id_pot_contributions_refresh_after_resize_btn");
 		potContributionsChart.destroy();
 		document.getElementById("id_pot_contributions_table_row_data").innerHTML = ""
+		if (!potContributionsContainer.classList.contains("d-none")) {
+			potContributionsContainer.classList.add("d-none")
+		}
+		if (!potContributionsTableContainer.classList.contains("d-none")) {
+			potContributionsTableContainer.classList.add("d-none")
+		}
 		if (!potContributionsChartElement.classList.contains("d-none")) {
 			potContributionsChartElement.classList.add("d-none")
-		}
-		if (potContributionsChartElement.classList.contains("d-none")) {
-			potContributionsChartElement.classList.remove("d-none")
 		}
 	}
 

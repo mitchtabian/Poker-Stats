@@ -126,12 +126,20 @@
 	initNetEarningsData()
 
 	function onNetEarningsResize() {
-		document.getElementById("id_net_earnings_container").style.opacity = 0;
-		document.getElementById("id_net_earnings_table_container").style.opacity = 0;
+		var netEarningsContainer = document.getElementById("id_net_earnings_container")
+		netEarningsContainer.style.opacity = 0;
+		var netEarningsTableContainer = document.getElementById("id_net_earnings_table_container")
+		netEarningsTableContainer.style.opacity = 0;
 		var netEarningsChartElement = document.getElementById("netEarningsChartId");
 		var refreshBtnElement = document.getElementById("id_refresh_after_resize_btn");
 		netEarningsChart.destroy();
 		document.getElementById("id_net_earnings_table_row_data").innerHTML = ""
+		if (!netEarningsContainer.classList.contains("d-none")) {
+			netEarningsContainer.classList.add("d-none")
+		}
+		if (!netEarningsTableContainer.classList.contains("d-none")) {
+			netEarningsTableContainer.classList.add("d-none")
+		}
 		if (!netEarningsChartElement.classList.contains("d-none")) {
 			netEarningsChartElement.classList.add("d-none")
 		}
