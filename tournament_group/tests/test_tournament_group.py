@@ -467,6 +467,3 @@ class TournamentGroupTestCase(TransactionTestCase):
 
 
 
-
-
-
