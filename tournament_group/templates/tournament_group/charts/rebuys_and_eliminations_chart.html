@@ -1,0 +1,561 @@
+
+<div class="elim-and-rebuys-charts-container" id="id_elim_and_rebuys_charts_container">
+
+	<!-- Loading spinner to show before charts finished sizing and rendering -->
+	<div class="elim-and-rebuys-loading-overlay" id="id_elim_and_rebuys_loading_spinner">
+		<div class="elim-and-rebuys-spinner-container">
+			<div class="spinner-border elim-and-rebuys-spinner-border" style="width: 70px; height: 70px;" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		</div>
+	</div>
+
+	<div id="id_elim_and_rebuys_data_fetch_error" class="d-none d-flex flex-column">
+		<p class="text-danger" id="id_elim_and_rebuys_error_title"></p>
+		<p class="text-danger" id="id_elim_and_rebuys_error_description"></p>
+		<div class="d-flex flex-row">
+			<button class="btn btn-primary" onclick="retryFetchElimAndRebuysData()">Retry</button>
+		</div>
+	</div>
+
+	<div class="elim-and-rebuys-container" id="id_elim_and_rebuys_container">
+		<canvas class="d-none" id="elimAndRebuysChartId"></canvas>
+	</div>
+
+	<div class="mb-4" id="id_chart_spacing"></div>
+
+	<div class="elim-and-rebuys-table table-responsive" id="id_elim_and_rebuys_table_container">
+		<table class="table">
+			<thead>
+				<tr>
+					<th scope="col">
+						<div class="chart-col-text">Player</div>
+					</th>
+					<th scope="col chart-col-text" style="text-align: end;"><div class="chart-col-text">Rebuys</div></th>
+					<th scope="col chart-col-text" style="text-align: end;"><div class="chart-col-text">Eliminations</div></th>
+				</tr>
+			</thead>
+			<!-- This data is populated programatically -->
+			<tbody id="id_elim_and_rebuys_table_row_data"></tbody>
+		</table>
+	</div>
+</div>
+
+<!-- Hidden field with fetch eliminations and rebuys url -->
+<input class="d-none" id="id_hidden_fetch_elim_and_rebuys_url" value="{% url 'tournament_group:fetch_elim_and_rebuys_data' pk=tournament_group.id %}">
+
+
+<!-- chart sizing -->
+<script type="text/javascript">
+	function setElimAndRebuysTableAndChartPosition() {
+		if (window.innerWidth > 2 * windowWidthInflectionPoint) {
+			$('.elim-and-rebuys-table').offset({
+				left: window.innerWidth / 2
+			});
+
+			$('.elim-and-rebuys-container').offset({
+				left: (window.innerWidth / 2) - $('.elim-and-rebuys-container').width() - (2 * chartPaddingSmall)
+			});
+		}
+	}
+
+	function setElimAndRebuysElementSize(element_id, num_users) {
+		var element = document.getElementById(element_id)
+		if (window.innerWidth < windowWidthInflectionPoint) {
+			if (num_users <= 7) {
+				element.style.height = (window.innerWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = (num_users - 7) * 11
+				element.style.height = (window.innerWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		} else {
+			// Set constant width if the window is bigger than 700px
+			const elementWidth = 650
+			element.style.width = elementWidth + "px";
+			if (num_users <= 7) {
+				element.style.height = (elementWidth * chartAspectRatio) + "px"
+			} else {
+				// Add additional height relative to how many users there are. 10px for each user.
+				var additionalSpacing = (num_users - 7) * 11
+				element.style.height = (elementWidth * chartAspectRatio) + (additionalSpacing) + "px"
+			}
+		}
+		setElimAndRebuysTableAndChartPosition()
+	}
+
+	/**
+	 * This is only used for the eliminations and rebuys TABLE. Not the chart.
+	 * */
+	function setElimAndRebuysElementWidth(element_id) {
+		element = document.getElementById(element_id)
+		const windowWidth = window.innerWidth;
+		var elementWidth = null;
+		if (windowWidth <= windowWidthInflectionPoint) {
+			 elementWidth = windowWidth
+		} else {
+			// Set constant width if the window is bigger than 700px
+			elementWidth = 700
+		}
+		element.style.width = elementWidth + "px";
+		setElimAndRebuysTableAndChartPosition()
+	}
+
+</script>
+
+<!-- Eliminations and Rebuys -->
+<script>
+	var elimAndRebuysChart = null
+	const elimAndRebuysContext = document.getElementById('elimAndRebuysChartId');
+	var elim_and_rebuys_usernames_data = [];
+	var elim_and_rebuys_short_usernames_data = [];
+	var eliminations_data = []
+	var rebuys_data = []
+
+	function initElimAndRebuysData() {
+		setElimAndRebuysElementSize("elimAndRebuysChartId", "{{users|length}}")
+		if (window.innerWidth >= 700) {
+			setElimAndRebuysElementWidth("id_elim_and_rebuys_table_container")
+		}
+		document.getElementById("id_elim_and_rebuys_loading_spinner").classList.add("fade-in-container")
+		document.getElementById("id_elim_and_rebuys_loading_spinner").style.opacity = 1
+	}
+
+	initElimAndRebuysData()
+
+	function onElimAndRebuysResize() {
+		var elimAndRebuysContainer = document.getElementById("id_elim_and_rebuys_container")
+		elimAndRebuysContainer.style.opacity = 0;
+		var elimAndRebuysTableContainer = document.getElementById("id_elim_and_rebuys_table_container")
+		elimAndRebuysTableContainer.style.opacity = 0;
+		var elimAndRebuysChartElement = document.getElementById("elimAndRebuysChartId");
+		elimAndRebuysChart.destroy();
+		document.getElementById("id_elim_and_rebuys_table_row_data").innerHTML = ""
+		if (!elimAndRebuysContainer.classList.contains("d-none")) {
+			elimAndRebuysContainer.classList.add("d-none")
+		}
+		if (!elimAndRebuysTableContainer.classList.contains("d-none")) {
+			elimAndRebuysTableContainer.classList.add("d-none")
+		}
+		if (!elimAndRebuysChartElement.classList.contains("d-none")) {
+			elimAndRebuysChartElement.classList.add("d-none")
+		}
+	}
+
+	function fetchElimAndRebuysData() {
+		const fetchElimAndRebuysDataUrl = document.getElementById("id_hidden_fetch_elim_and_rebuys_url").value
+		fetch(fetchElimAndRebuysDataUrl)
+			.then((response) => {
+				return response.json()
+			})
+			.then((data) => {
+				if (data.error != null) {
+					onElimAndRebuysDataFetchError(data.error, data.message)
+				} else {
+					const json = JSON.parse(data.eliminations_and_rebuys_data)
+					var counter = 1
+					elim_and_rebuys_usernames_data = [];
+					elim_and_rebuys_short_usernames_data = [];
+					eliminations_data = [];
+					rebuys_data = [];
+					for (var key in json) {
+						var username = json[key]['username']
+						elim_and_rebuys_usernames_data.push(username)
+
+						var short_username = "U" + counter
+						elim_and_rebuys_short_usernames_data.push(short_username)
+
+						var eliminations = json[key]['eliminations']
+						eliminations_data.push(eliminations)
+
+						var rebuys = Number(json[key]['rebuys']) * -1 // Make rebuys negative so they face down on chart
+						rebuys_data.push(rebuys)
+
+						counter += 1
+					}
+					buildElimAndRebuysChart()
+					populateElimAndRebuysTable()
+					onElimAndRebuysDataFetched()
+				}
+			}).catch((error) => {
+				if (error.message != null) {
+					onElimAndRebuysDataFetchError("Data parsing issue.", error.message)
+				} else {
+					onElimAndRebuysDataFetchError("Data parsing issue.", "Unknown error.")
+				}
+			});
+	}
+
+	function retryFetchElimAndRebuysData() {
+		location.reload();
+	}
+
+	function onElimAndRebuysDataFetched() {
+		document.getElementById("id_elim_and_rebuys_loading_spinner").classList.add("d-none")
+		document.getElementById("elimAndRebuysChartId").classList.remove("d-none")
+
+		document.getElementById("id_elim_and_rebuys_container").classList.add("fade-in-container")
+		document.getElementById("id_elim_and_rebuys_table_container").classList.add("fade-in-container")
+		document.getElementById("id_elim_and_rebuys_container").style.opacity = 1
+		document.getElementById("id_elim_and_rebuys_table_container").style.opacity = 1
+	}
+
+	function onElimAndRebuysDataFetchError(error_title, error_description) {
+		document.getElementById("id_elim_and_rebuys_data_fetch_error").classList.remove("d-none")
+		document.getElementById("id_elim_and_rebuys_loading_spinner").classList.add("d-none")
+		document.getElementById("id_elim_and_rebuys_error_title").innerHTML = error_title
+		document.getElementById("id_elim_and_rebuys_error_description").innerHTML = error_description
+	}
+
+	function populateElimAndRebuysTable() {
+		let tableRowsContainer = document.getElementById("id_elim_and_rebuys_table_row_data")
+		for (let i = 0; i < contributions.length; i++) {
+			var row = document.createElement("tr");
+
+			// Build username column
+			var usernameCol = document.createElement("td");
+			var usernameDiv = document.createElement("div")
+			usernameDiv.classList.add("d-flex")
+			usernameDiv.classList.add("flex-row")
+
+			var colorIcon = createSquareDiv(colors_data[i])
+			colorIcon.style.marginRight = "6px"
+			var usernameValueDiv = document.createElement("div")
+			usernameValueDiv.innerHTML = elim_and_rebuys_usernames_data[i]
+			usernameValueDiv.classList.add("align-self-center")
+			usernameValueDiv.classList.add("elim-and-rebuys-table-text")
+			usernameDiv.appendChild(colorIcon)
+			usernameDiv.appendChild(usernameValueDiv)
+			usernameCol.appendChild(usernameDiv)
+
+			// Build Eliminations column
+			var elimCountCol = document.createElement("td");
+			eliminations = eliminations_data[i]
+			if (eliminations == 0) {
+				elimCountCol.innerHTML = "--"
+			} else {
+				elimCountCol.innerHTML = Math.abs(eliminations)
+			}
+			elimCountCol.classList.add("elim-and-rebuys-table-text")
+			elimCountCol.style.textAlign = "right"
+
+			// Build Rebuys column
+			var rebuyCountCol = document.createElement("td");
+			rebuys = rebuys_data[i]
+			if (rebuys == 0) {
+				rebuyCountCol.innerHTML = "--"
+			} else {
+				rebuyCountCol.innerHTML = Math.abs(rebuys)
+			}
+
+			rebuyCountCol.classList.add("elim-and-rebuys-table-text")
+			rebuyCountCol.style.textAlign = "right"
+
+			// Add row children
+			row.appendChild(usernameCol)
+			row.appendChild(rebuyCountCol)
+			row.appendChild(elimCountCol)
+			tableRowsContainer.appendChild(row)
+		}
+	}
+
+	function buildElimAndRebuysChart() {
+		const elimAndRebuysData = {
+			labels: elim_and_rebuys_short_usernames_data,
+			datasets: [
+				{
+					label: 'Eliminations',
+					data: eliminations_data,
+					stack: 'Eliminations Stack',
+					backgroundColor: colors_data,
+				},
+				{
+					label: 'Rebuys',
+					data: rebuys_data,
+					stack: 'Rebuys Stack',
+					backgroundColor: colors_data,
+				},
+			]
+		};
+
+		elimAndRebuysChart = new Chart(elimAndRebuysContext, {
+			type: 'bar',
+			data: elimAndRebuysData,
+			options: {
+				indexAxis: 'y',
+				maintainAspectRatio: false,
+				responsive: true,
+				plugins: {
+					legend: {
+						display: false,
+					},
+					title: {
+						display: true,
+						text: 'Eliminations and Rebuys'
+					},
+					tooltip: {
+						callbacks: {
+							label: function(context) {
+								let label = context.dataset.label || '';
+
+								if (label) {
+									label += ': ';
+								}
+								if (context.parsed.x !== null) {
+									// Make x-axis values labeled as positive. Need this b/c rebuys are negative.
+									label += Math.abs(context.parsed.x)
+								}
+								return label;
+							},
+							title: function(context) {
+								let title = context[0].label
+								let index = short_usernames_data.indexOf(title)
+								return usernames_data[index]
+							}
+						},
+					},
+				},
+				scales: {
+					x: {
+						title: {
+							display: true,
+							text: '<- Rebuys | Eliminations ->',
+						},
+						ticks: {
+							callback: function(value, index, ticks) {
+								return Math.abs(value);
+							}
+						},
+					},
+				},
+			},
+			plugins: [
+				{
+					id: 'elimAndRebuysHover',
+					afterEvent: (chart, event, opts) => {
+						const evt = event.event;
+
+						if (evt.type !== 'mousemove') {
+							return;
+						}
+
+						const [found, label] = findLabel(getLabelHitboxes(elimAndRebuysChart.scales), evt);
+
+						// Find the actual username from the raw labels
+						if (found && short_usernames_data.includes(label)) {
+							var labelIndex = short_usernames_data.indexOf(label)
+							var username = usernames_data[labelIndex]
+							showChartTooltip(chart, username)
+						} else {
+							hideChartTooltip(chart)
+						}
+					},
+				},
+			],
+		});
+
+		setElimAndRebuysElementSize("id_elim_and_rebuys_container", "{{users|length}}")
+	}
+
+</script>
+
+<style type="text/css">
+
+	.elim-and-rebuys-loading-overlay {
+		position: absolute;
+		background-color: white;
+		z-index: 16;
+		top: 50%;
+		left: 50%;
+		opacity: 0;
+	}
+
+	.elim-and-rebuys-charts-container {
+		margin: auto;
+		position: relative;
+		border: 1px solid #c3c3c3;
+		border-radius: 8px;
+		padding: 16px;
+	}
+
+	.elim-and-rebuys-container {
+		margin: auto;
+		border-radius: 8px;
+		padding: 16px;
+		opacity: 0;
+	}
+
+	.elim-and-rebuys-table {
+		margin: auto;
+		padding-top: 16px;
+		padding-left: 16px;
+		padding-right: 16px;
+		border-radius: 8px;
+		background-color: #f2f2f2;
+		opacity: 0;
+	}
+
+	@media only screen and (min-width: 1400px) {
+		.elim-and-rebuys-charts-container {
+			margin:auto;
+			display: flex;
+			direction: row;
+		}
+	}
+
+	@media only screen and (min-width: 700px) {
+		.elim-and-rebuys-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 16px;
+			max-width: 310px;
+		}
+	}
+
+	@media only screen and (min-width: 500px) and (max-width: 700px) {
+		.elim-and-rebuys-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 14px;
+			max-width: 230px;
+		}
+	}
+
+	@media only screen and (max-width: 500px) {
+		.elim-and-rebuys-table-text {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			font-size: 12px;
+			max-width: 180px;
+		}
+	}
+
+	.elim-and-rebuys-spinner-border {
+		position: absolute;
+		left: -35px;
+		top: -35px;
+	}
+</style>
+
+
+
+
+
+
+
+<!--
+<script>
+
+	function randomPositive() {
+		return Math.floor(Math.random() * 10);
+	}
+
+	function randomNegative() {
+		return Math.floor(Math.random() * -10);
+	}
+
+
+	function buildEliminationsAndRebuysChart() {
+		var barChartData = {
+		labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'January2', 'February2'],
+		datasets: [{
+			label: 'Eliminations',
+			backgroundColor: colors_data,
+			stack: 'Stack 0',
+			data: [
+				randomPositive(),
+				randomPositive(),
+				randomPositive(),
+				randomPositive(),
+				randomPositive(),
+				randomPositive(),
+				randomPositive(),
+				randomPositive(),
+				randomPositive()
+			]
+		}, {
+			label: 'Rebuys',
+			backgroundColor: colors_data,
+			stack: 'Stack 1',
+			data: [
+				randomNegative(),
+				randomNegative(),
+				randomNegative(),
+				randomNegative(),
+				randomNegative(),
+				randomNegative(),
+				randomNegative(),
+				randomNegative(),
+				randomNegative()
+			]
+		}]
+
+	};
+
+		var ctx = document.getElementById('elimAndRebuysChartId').getContext('2d');
+		window.myBar = new Chart(ctx, {
+			type: 'bar',
+			data: barChartData,
+			options: {
+				plugins: {
+					legend: {
+						display: false,
+					},
+					title: {
+						display: true,
+						text: 'Eliminations and Rebuys'
+					},
+					tooltip: {
+						callbacks: {
+							label: function(context) {
+								let label = context.dataset.label || '';
+
+								if (label) {
+									label += ': ';
+								}
+								if (context.parsed.y !== null) {
+									// label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+									label += Math.abs(context.parsed.y)
+								}
+
+								return label;
+							},
+						},
+					},
+				},
+				responsive: true,
+				scales: {
+					y: {
+						title: {
+							display: true,
+							text: '<- Rebuys | Eliminations ->',
+						},
+						ticks: {
+							callback: function(value, index, ticks) {
+								return Math.abs(value);
+							}
+						},
+					},
+				},
+			}
+		});
+	}
+
+
+</script> -->
+
+
+
+
+
+
+
+
+
+
+
+
+

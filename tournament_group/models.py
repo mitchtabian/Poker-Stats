@@ -7,11 +7,15 @@ from tournament.models import (
 	Tournament,
 	TournamentPlayer,
 	TournamentPlayerResult,
-	TournamentState
+	TournamentState,
+	TournamentElimination,
+	TournamentSplitElimination,
+	TournamentRebuy
 )
 from tournament_group.util import (
 	TournamentGroupNetEarnings,
-	TournamentGroupPotContributions
+	TournamentGroupPotContributions,
+	TournamentGroupEliminationsAndRebuys
 )
 from user.models import User
 
@@ -246,6 +250,51 @@ class TournamentGroupManager(models.Manager):
 			pot_contributions,
 			key = lambda x: x.contribution,
 			reverse = True 
+		)
+
+	"""
+	Build a list of TournamentGroupEliminationsAndRebuys for each user in the group.
+	Note: This is a heavy operation and should be done async.
+	"""
+	def build_group_eliminations_and_rebuys_data(self, group):
+		eliminations_and_rebuys_data = []
+		tournaments = group.get_tournaments()
+		for user in group.get_users():
+			eliminations_count = 0.00
+			rebuys_count = 0
+			for tournament in tournaments:
+				if tournament.get_state() == TournamentState.COMPLETED:
+					players = TournamentPlayer.objects.get_all_tournament_players_by_user_id(user.id).filter(tournament = tournament)
+					if len(players) > 1:
+						raise ValidationError(f"According to our records {user.username} was added to {tournament.title} more than once.")
+					elif len(players) == 0:
+						continue
+					player = players[0]
+					eliminations = TournamentElimination.objects.get_eliminations_by_eliminator(
+						player_id = player.id
+					)
+					eliminations_count += len(eliminations)
+					split_eliminations = TournamentSplitElimination.objects.get_split_eliminations_by_eliminator(
+						player_id = player.id
+					)
+					for split_elimination in split_eliminations:
+						eliminator_count = len(split_elimination.eliminators.all())
+						eliminations_count += round(Decimal((1.00 / eliminator_count)), 2)
+					rebuys = TournamentRebuy.objects.get_rebuys_for_player(
+						player = player
+					)
+					rebuys_count += len(rebuys)
+			eliminations_and_rebuys_data.append(
+				TournamentGroupEliminationsAndRebuys(
+					username = f"{user.username}",
+					eliminations = eliminations_count,
+					rebuys = rebuys_count
+				)
+			)
+		return sorted(
+			eliminations_and_rebuys_data,
+			key = lambda x: x.eliminations,
+			reverse = True
 		)
 
 
