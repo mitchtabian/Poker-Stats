@@ -2,7 +2,30 @@
 
 {% if users and tournaments %}
 <div class="mt-4 table-responsive group-users-table">
-  <table class="table ">
+
+   <!-- Loading spinner -->
+    <div id="id_users_table_loading_spinner">
+      <div class="users-table-loading-overlay">
+        <div class="users-table-spinner-container">
+          <div class="spinner-border users-table-spinner-border" style="width: 40px; height: 40px;" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row for displaying errors -->
+    <div class="d-none" id="id_users_table_errors">
+      <div class="users-table-errors d-flex flex-column">
+        <div class="text-danger" id="id_users_table_error_title"></div>
+        <div class="text-danger" id="id_users_table_error_message"></div>
+        <div class="d-flex flex-row mt-4">
+          <button class="btn btn-primary" onclick="retryFetchTournamentPlayedData()">Retry</button>
+        </div>
+      </div>
+    </div>
+
+  <table class="table" id="id_users_table_container">
     <thead>
       <tr>
         <th scope="col" style="text-align: start;"><div class="chart-col-text">Username</div></th>
@@ -23,32 +46,12 @@
         </th>
       </tr>
     </thead>
+
     <!-- The rows are programatically populated from a get request -->
-    <tbody id="id_users_table_rows">
-
-      <!-- Loading spinner -->
-      <td id="id_users_table_loading_spinner">
-        <div class="users-table-loading-overlay">
-          <div class="users-table-spinner-container">
-            <div class="spinner-border users-table-spinner-border" style="width: 40px; height: 40px;" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-          </div>
-        </div>
-      </td>
-
-      <!-- Row for displaying errors -->
-      <td class="d-none" id="id_users_table_errors">
-        <div class="users-table-errors d-flex flex-column">
-          <div class="text-danger" id="id_users_table_error_title"></div>
-          <div class="text-danger" id="id_users_table_error_message"></div>
-          <div class="d-flex flex-row mt-4">
-            <button class="btn btn-primary" onclick="retryFetchTournamentPlayedData()">Retry</button>
-          </div>
-        </div>
-      </td>
-    </tbody>
+    <tbody id="id_users_table_rows"></tbody>
   </table>
+
+
 </div>
 
 <!-- Hidden field with fetch tournaments played url -->
@@ -94,7 +97,6 @@
 
   fetchTournamentsPlayedData()
 
-
   function onTournamentsPlayedDataFetched(usernames, counts) {
     var tableRowsBody = document.getElementById("id_users_table_rows")
 
@@ -132,6 +134,8 @@
       tr.appendChild(pctCol)
       tableRowsBody.appendChild(tr)
     }
+    document.getElementById("id_users_table_container").classList.add("fade-in-container")
+    document.getElementById("id_users_table_container").style.opacity = 1
     hideUsersTableLoadingSpinner()
   }
 
@@ -175,6 +179,10 @@
 </script>
 
 <style type="text/css">
+
+  #id_users_table_container {
+    opacity: 0;
+  }
 
   .group-users-table {
     margin: auto;
