@@ -1,7 +1,5 @@
 {% load tournament_extras %}
 
-<div class="invisible-center-line" id="id_invisible_center_line"></div>
-
 <div class="first-charts-container" id="id_first_charts_container">
 
 	<!-- Loading spinner to show before charts finished sizing and rendering -->
@@ -36,28 +34,19 @@
 			<thead>
 				<tr>
 					<th scope="col">
-						<div class="d-flex flex-column">
-							Player
-							<!-- <div style="border-bottom: 1px solid black;">Player</div>
-							<div style="font-size: 12px; font-weight: 300;">Games played</div> -->
-						</div>
+						<div class="d-flex flex-column">Player</div>
 					</th>
 					<th scope="col" style="text-align: end;">Net</th>
 				</tr>
 			</thead>
 			<!-- This data is populated programatically -->
-			<tbody id="id_net_earnings_table_row_data">
-
-			</tbody>
+			<tbody id="id_net_earnings_table_row_data"></tbody>
 		</table>
 	</div>
 </div>
 
 <!-- Hidden field with fetch net earnings url -->
 <input class="d-none" id="id_hidden_fetch_net_earnings_url" value="{% url 'tournament_group:fetch_net_earnings_data' pk=tournament_group.id %}">
-
-<!-- Hidden field with fetch rbg colors url -->
-<input class="d-none" id="id_hidden_fetch_rbg_colors_url" value="{% url 'tournament_group:fetch_rbg_colors' num_colors=users|length %}">
 
 <!-- chart sizing -->
 <script type="text/javascript">
@@ -124,21 +113,19 @@
 	var usernames_data = [];
 	var short_usernames_data = [];
 	var net_earnings_data = []
-	var colors_data = []
 
-	function init() {
+	function initNetEarningsData() {
 		setNetEarningsElementSize("netEarningsChartId", "{{users|length}}")
 		if (window.innerWidth >= 700) {
 			setNetEarningsElementWidth("id_net_earnings_table_container")
 		}
 		document.getElementById("id_net_earnings_loading_spinner").classList.add("fade-in-container")
 		document.getElementById("id_net_earnings_loading_spinner").style.opacity = 1
-		generateUserColorsData()
 	}
 
-	init()
+	initNetEarningsData()
 
-	function onResize() {
+	function onNetEarningsResize() {
 		document.getElementById("id_net_earnings_container").style.opacity = 0;
 		document.getElementById("id_net_earnings_table_container").style.opacity = 0;
 		var netEarningsChartElement = document.getElementById("netEarningsChartId");
@@ -153,39 +140,8 @@
 		}
 	}
 
-	window.onresize = function() {
-		onResize()
-	}
-
 	function refreshNetEarningsData() {
 		location.reload()
-	}
-
-	function generateUserColorsData() {
-		const fetchRbgColorsUrl = document.getElementById("id_hidden_fetch_rbg_colors_url").value
-		fetch(fetchRbgColorsUrl)
-			.then((response) => {
-				return response.json()
-			})
-			.then((data) => {
-				if (data.error != null) {
-					onNetEarningsDataFetchError(data.error, data.message)
-				} else {
-					colors_data = [];
-					const json = data.rbg_colors
-					for (var key in json) {
-						var color = json[key]
-						colors_data.push(color)
-					}
-					fetchNetEarningsData()
-				}
-			}).catch((error) => {
-				if (error.message != null) {
-					onNetEarningsDataFetchError("Data parsing issue.", error.message)
-				} else {
-					onNetEarningsDataFetchError("Data parsing issue.", "Unknown error.")
-				}
-			});
 	}
 
 	function fetchNetEarningsData() {
@@ -253,13 +209,13 @@
 		for (let i = 0; i < net_earnings_data.length; i++) {
 			var row = document.createElement("tr");
 
-			// Build username row
-			var usernameRow = document.createElement("td");
+			// Build username col
+			var usernameCol = document.createElement("td");
 			var usernameDiv = document.createElement("div")
 			usernameDiv.classList.add("d-flex")
 			usernameDiv.classList.add("flex-row")
 
-			var colorIcon = createSquareDiv(colors_data[i])
+			var colorIcon = createSquareDiv(colors_data[i]) // colors_data is from /tournament_group/charts/charts_common.html
 			colorIcon.style.marginRight = "6px"
 			var usernameValueDiv = document.createElement("div")
 			usernameValueDiv.innerHTML = usernames_data[i]
@@ -267,37 +223,27 @@
 			usernameValueDiv.classList.add("net-earnings-table-text")
 			usernameDiv.appendChild(colorIcon)
 			usernameDiv.appendChild(usernameValueDiv)
-			usernameRow.appendChild(usernameDiv)
+			usernameCol.appendChild(usernameDiv)
 
-			// Build Earnings row
-			var earningsRow = document.createElement("td");
+			// Build Earnings col
+			var earningsCol = document.createElement("td");
 			netEarnings = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(net_earnings_data[i])
-			earningsRow.innerHTML = netEarnings
-			earningsRow.classList.add("net-earnings-table-text")
-			earningsRow.style.textAlign = "right"
+			earningsCol.innerHTML = netEarnings
+			earningsCol.classList.add("net-earnings-table-text")
+			earningsCol.style.textAlign = "right"
 			if (net_earnings_data[i] > 0) {
-				earningsRow.classList.add("text-success")
+				earningsCol.classList.add("text-success")
 			} else if (net_earnings_data[i] == 0) {
-				earningsRow.classList.add("text-secondary")
+				earningsCol.classList.add("text-secondary")
 			} else {
-				earningsRow.classList.add("text-danger")
+				earningsCol.classList.add("text-danger")
 			}
 
 			// Add row children
-			row.appendChild(usernameRow)
-			row.appendChild(earningsRow)
+			row.appendChild(usernameCol)
+			row.appendChild(earningsCol)
 			tableRowsContainer.appendChild(row)
 		}
-	}
-
-	function createSquareDiv(color) {
-		var square = document.createElement("div")
-		square.style.height = "16px"
-		square.style.width = "16px"
-		square.style.border = "1px solid #b3b3b3"
-		square.style.backgroundColor = color
-		square.classList.add("align-self-center")
-		return square
 	}
 
 	function buildNetEarningsChart() {
@@ -307,7 +253,7 @@
 				{
 					label: 'Net Earnings',
 					data: net_earnings_data,
-					backgroundColor: colors_data,
+					backgroundColor: colors_data, // colors_data is from /tournament_group/charts/charts_common.html
 				},
 			]
 		};
@@ -374,9 +320,9 @@
 					if (found && short_usernames_data.includes(label)) {
 						var labelIndex = short_usernames_data.indexOf(label)
 						var username = usernames_data[labelIndex]
-						showNetEarningsTooltip(chart, username)
+						showChartTooltip(chart, username)
 					} else {
-						hideNetEarningsTooltip(chart)
+						hideChartTooltip(chart)
 					}
 				},
 			  },
@@ -384,75 +330,6 @@
 		});
 
 		setNetEarningsElementSize("id_net_earnings_container", "{{users|length}}")
-	}
-
-
-	function hideNetEarningsTooltip(context) {
-	  let tooltipEl = document.getElementById('chartjs-tooltip');
-
-	  // Create element on first render
-	  if (!tooltipEl) {
-	    tooltipEl = document.createElement('div');
-	    tooltipEl.id = 'chartjs-tooltip';
-	    tooltipEl.innerHTML = '<table></table>';
-	    document.body.appendChild(tooltipEl);
-	  }
-	  tooltipEl.classList.add("d-none")
-	}
-
-	function showNetEarningsTooltip(context, label){
-		// Tooltip Element
-	    let tooltipEl = document.getElementById('chartjs-tooltip');
-
-	    // Create element on first render
-	    if (!tooltipEl) {
-	        tooltipEl = document.createElement('div');
-	        tooltipEl.id = 'chartjs-tooltip';
-	        tooltipEl.innerHTML = '<table></table>';
-	        document.body.appendChild(tooltipEl);
-	    }
-	    tooltipEl.classList.remove("d-none")
-
-	    const tooltipModel = context.tooltip;
-
-	    // Set caret Position
-	    tooltipEl.classList.remove('above', 'below', 'no-transform');
-	    if (tooltipModel.yAlign) {
-	        tooltipEl.classList.add(tooltipModel.yAlign);
-	    } else {
-	        tooltipEl.classList.add('no-transform');
-	    }
-
-	    // Set Text
-		const titleLines = [label]
-
-	    let innerHtml = '<thead>';
-
-	    titleLines.forEach(function(title) {
-	        innerHtml += '<tr><th>' + title + '</th></tr>';
-	    });
-	    innerHtml += '</thead><tbody>';
-
-	    innerHtml += '</tbody>';
-
-	    let tableRoot = tooltipEl.querySelector('table');
-	    tableRoot.innerHTML = innerHtml;
-
-	    const position = context.canvas.getBoundingClientRect();
-
-	    const bodyFont = Chart.helpers.toFont(tooltipModel.options.bodyFont);
-
-	    // Display, position, and set styles for font
-	    tooltipEl.style.opacity = .75;
-	    tooltipEl.style.position = 'absolute';
-	    tooltipEl.style.left = mouseX + 'px';
-	    tooltipEl.style.top = mouseY + 'px';
-	    tooltipEl.style.font = bodyFont.string;
-	    tooltipEl.style.padding = '10px';
-	    tooltipEl.style.backgroundColor = '#000';
-	    tooltipEl.style.color = '#fff';
-	    tooltipEl.style.borderRadius = '8px';
-	    tooltipEl.style.pointerEvents = 'none';
 	}
 
 </script>
@@ -468,29 +345,12 @@
 		opacity: 0;
 	}
 
-	/* Used for debugging */
-	.invisible-center-line {
-		position: absolute;
-		height: 1500px;
-		width: 0px;
-		left: 50%;
-	}
-
 	.first-charts-container {
 		margin: auto;
 		position: relative;
 		border: 1px solid #c3c3c3;
 		border-radius: 8px;
 		padding: 16px;
-	}
-
-	.fade-in-container {
-		animation: fadeIn 0.5s;
-	}
-
-	@keyframes fadeIn {
-		0% { opacity: 0; }
-		100% { opacity: 1; }
 	}
 
 	.net-earnings-container {

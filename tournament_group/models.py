@@ -10,7 +10,8 @@ from tournament.models import (
 	TournamentState
 )
 from tournament_group.util import (
-	TournamentGroupNetEarnings
+	TournamentGroupNetEarnings,
+	TournamentGroupPotContributions
 )
 from user.models import User
 
@@ -213,6 +214,37 @@ class TournamentGroupManager(models.Manager):
 		return sorted(
 			net_earnings_data,
 			key = lambda x: x.net_earnings,
+			reverse = True 
+		)
+
+	"""
+	Build a list of TournamentGroupPotContributions for each user in the group.
+	Note: This is a heavy operation and should be done async.
+	"""
+	def build_group_pot_contributions_data(self, group):
+		pot_contributions = []
+		tournaments = group.get_tournaments()
+		for user in group.get_users():
+			contribution = 0
+			for tournament in tournaments:
+				if tournament.get_state() == TournamentState.COMPLETED:
+					result = TournamentPlayerResult.objects.get_results_for_user_by_tournament(
+						user_id = user.id,
+						tournament_id = tournament.id
+					)
+					if len(result) == 0:
+						continue
+					else:
+						contribution += result[0].investment
+			pot_contributions.append(
+				TournamentGroupPotContributions(
+					username = f"{user.username}",
+					contribution = contribution
+				)
+			)
+		return sorted(
+			pot_contributions,
+			key = lambda x: x.contribution,
 			reverse = True 
 		)
 

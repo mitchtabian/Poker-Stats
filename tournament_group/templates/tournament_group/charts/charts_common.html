@@ -1,6 +1,12 @@
+<!-- Hidden field with fetch rbg colors url -->
+<input class="d-none" id="id_hidden_fetch_rbg_colors_url" value="{% url 'tournament_group:fetch_rbg_colors' num_colors=users|length %}">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="text/javascript">
+
+	var colors_data = [];
+	var isColorsDataFetched = false;
 
 	// Need to track the mouse position to display title tooltips.
 	var mouseX = 0;
@@ -48,4 +54,166 @@
 	}
 
 	document.onmousemove = mouseCoordinates;
+
+	function createSquareDiv(color) {
+		var square = document.createElement("div")
+		square.style.height = "16px"
+		square.style.width = "16px"
+		square.style.border = "1px solid #b3b3b3"
+		square.style.backgroundColor = color
+		square.classList.add("align-self-center")
+		return square
+	}
+
+	function hideChartTooltip(context) {
+		let tooltipEl = document.getElementById('chartjs-tooltip');
+
+		// Create element on first render
+		if (!tooltipEl) {
+			tooltipEl = document.createElement('div');
+			tooltipEl.id = 'chartjs-tooltip';
+			tooltipEl.innerHTML = '<table></table>';
+			document.body.appendChild(tooltipEl);
+		}
+		tooltipEl.classList.add("d-none")
+	}
+
+	function showChartTooltip(context, label){
+		// Tooltip Element
+		let tooltipEl = document.getElementById('chartjs-tooltip');
+
+		// Create element on first render
+		if (!tooltipEl) {
+			tooltipEl = document.createElement('div');
+			tooltipEl.id = 'chartjs-tooltip';
+			tooltipEl.innerHTML = '<table></table>';
+			document.body.appendChild(tooltipEl);
+		}
+		tooltipEl.classList.remove("d-none")
+
+		const tooltipModel = context.tooltip;
+
+		// Set caret Position
+		tooltipEl.classList.remove('above', 'below', 'no-transform');
+		if (tooltipModel.yAlign) {
+			tooltipEl.classList.add(tooltipModel.yAlign);
+		} else {
+			tooltipEl.classList.add('no-transform');
+		}
+
+		// Set Text
+		const titleLines = [label]
+
+		let innerHtml = '<thead>';
+
+		titleLines.forEach(function(title) {
+			innerHtml += '<tr><th>' + title + '</th></tr>';
+		});
+		innerHtml += '</thead><tbody>';
+
+		innerHtml += '</tbody>';
+
+		let tableRoot = tooltipEl.querySelector('table');
+		tableRoot.innerHTML = innerHtml;
+
+		const position = context.canvas.getBoundingClientRect();
+
+		const bodyFont = Chart.helpers.toFont(tooltipModel.options.bodyFont);
+
+		// Display, position, and set styles for font
+		tooltipEl.style.opacity = .75;
+		tooltipEl.style.position = 'absolute';
+		tooltipEl.style.left = mouseX + 'px';
+		tooltipEl.style.top = mouseY + 'px';
+		tooltipEl.style.font = bodyFont.string;
+		tooltipEl.style.padding = '10px';
+		tooltipEl.style.backgroundColor = '#000';
+		tooltipEl.style.color = '#fff';
+		tooltipEl.style.borderRadius = '8px';
+		tooltipEl.style.pointerEvents = 'none';
+	}
+
+	window.onresize = function() {
+		onPotContributionsResize()
+		onNetEarningsResize()
+	}
 </script>
+
+
+<!-- Generate colors data for the charts -->
+<script type="text/javascript">
+
+	/**
+	 * Every 200 ms check if the colors data has been loaded. Once it is, fetch the data for the graphs.
+	 * */
+	const colorsLoadingCheckInterval = setInterval(() => areColorsFinishedLoading(), 200)
+
+	function areColorsFinishedLoading() {
+		if (isColorsDataFetched) {
+			clearInterval(colorsLoadingCheckInterval);
+			fetchNetEarningsData()
+			fetchPotContributionsData()
+		}
+	}
+
+	function generateUserColorsData() {
+		const fetchRbgColorsUrl = document.getElementById("id_hidden_fetch_rbg_colors_url").value
+		fetch(fetchRbgColorsUrl)
+			.then((response) => {
+				return response.json()
+			})
+			.then((data) => {
+				if (data.error != null) {
+					onNetEarningsDataFetchError(data.error, data.message)
+				} else {
+					colors_data = [];
+					const json = data.rbg_colors
+					for (var key in json) {
+						var color = json[key]
+						colors_data.push(color)
+					}
+					// Colors data is finished loading. Now load the charts.
+					isColorsDataFetched = true
+				}
+			}).catch((error) => {
+				if (error.message != null) {
+					onNetEarningsDataFetchError("Data parsing issue.", error.message)
+				} else {
+					onNetEarningsDataFetchError("Data parsing issue.", "Unknown error.")
+				}
+			});
+	}
+
+	generateUserColorsData()
+
+</script>
+
+<style type="text/css">
+	.fade-in-container {
+		animation: fadeIn 0.5s;
+	}
+
+	@keyframes fadeIn {
+		0% { opacity: 0; }
+		100% { opacity: 1; }
+	}
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
