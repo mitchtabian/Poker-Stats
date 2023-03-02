@@ -1,29 +1,190 @@
-{% if users %}
-<div class="mt-4">
-  <ul class="list-group">
-    {% for user in users %}
-      {% if user == tournament_group.admin %}
-      <div class="list-group-item">
-        <div class="user-username"><span class="user-admin-text">(Admin)</span>{{user.username}}</div>
-      </div>
-      {% else %}
-      <div class="list-group-item d-flex flex-row">
-        {% if edit_mode %}
-        <a href="{% url 'tournament_group:remove_user_from_group' user_id=user.id tournament_group_id=tournament_group.id %}">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-x-square remove-user-icon" viewBox="0 0 16 16">
-            <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
-            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-          </svg>
-        </a>
-        {% endif %}
-        <div class="user-username">{{user.username}}</div>
-      </div>
-      {% endif %}
-    {% endfor %}
-  </ul>
+{% load tournament_extras %}
+
+{% if users and tournaments %}
+<div class="mt-4 table-responsive group-users-table">
+  <table class="table ">
+    <thead>
+      <tr>
+        <th scope="col" style="text-align: start;"><div class="chart-col-text">Username</div></th>
+        <th scope="col" style="text-align: end;">
+          <div class="d-flex flex-column">
+            <div class="chart-col-text">Tournaments</div>
+            <div class="chart-col-text">Played</div>
+          </div>
+        </th>
+        <th scope="col" style="text-align: end;">
+          <div class="d-flex flex-row justify-content-end">
+            <div class="chart-col-text" style="margin-right: 6px">%</div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Only completed tournaments contribute to statistics.">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+            </svg>
+          </div>
+        </th>
+      </tr>
+    </thead>
+    <!-- The rows are programatically populated from a get request -->
+    <tbody id="id_users_table_rows">
+
+      <!-- Loading spinner -->
+      <td id="id_users_table_loading_spinner">
+        <div class="users-table-loading-overlay">
+          <div class="users-table-spinner-container">
+            <div class="spinner-border users-table-spinner-border" style="width: 40px; height: 40px;" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </td>
+
+      <!-- Row for displaying errors -->
+      <td class="d-none" id="id_users_table_errors">
+        <div class="users-table-errors d-flex flex-column">
+          <div class="text-danger" id="id_users_table_error_title"></div>
+          <div class="text-danger" id="id_users_table_error_message"></div>
+          <div class="d-flex flex-row mt-4">
+            <button class="btn btn-primary" onclick="retryFetchTournamentPlayedData()">Retry</button>
+          </div>
+        </div>
+      </td>
+    </tbody>
+  </table>
 </div>
 
+<!-- Hidden field with fetch tournaments played url -->
+<input class="d-none" id="id_hidden_fetch_tournaments_played_url" value="{% url 'tournament_group:fetch_tournaments_played_data' pk=tournament_group.id %}">
+
+<script type="text/javascript">
+  // Initialize tooltip plugin
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+
+  function fetchTournamentsPlayedData() {
+    const fetchTournamentsPlayedDataUrl = document.getElementById("id_hidden_fetch_tournaments_played_url").value
+    fetch(fetchTournamentsPlayedDataUrl)
+      .then((response) => {
+        return response.json()
+      })
+      .then((data) => {
+        if (data.error != null) {
+          onTournamentsPlayedDataFetchError(data.error, data.message)
+        } else {
+          const json = JSON.parse(data.tournaments_played)
+          const usernames = [];
+          const counts = [];
+          var tournamentCount = 0
+          for (var key in json) {
+            var username = json[key]['username']
+            usernames.push(username)
+
+            var count = json[key]['count']
+            counts.push(count)
+          }
+          onTournamentsPlayedDataFetched(usernames, counts);
+        }
+      }).catch((error) => {
+        if (error.message != null) {
+          onTournamentsPlayedDataFetchError("Data parsing issue.", error.message)
+        } else {
+          onTournamentsPlayedDataFetchError("Data parsing issue.", "Unknown error.")
+        }
+      });
+  }
+
+  fetchTournamentsPlayedData()
+
+
+  function onTournamentsPlayedDataFetched(usernames, counts) {
+    var tableRowsBody = document.getElementById("id_users_table_rows")
+
+    var tournamentCount = "{{tournaments|completed_count}}";
+
+    for (var i = 0; i < usernames.length; i++) {
+      username = usernames[i]
+      count = counts[i]
+
+      var tr = document.createElement("tr")
+
+      var usernameCol = document.createElement("td")
+      usernameCol.style.textAlign = "left"
+      var usernameDiv = document.createElement("div")
+      usernameDiv.classList.add('user-username')
+      usernameDiv.innerHTML = username
+      usernameCol.appendChild(usernameDiv)
+
+      var countCol = document.createElement("td")
+      countCol.style.textAlign = "right"
+      var countDiv = document.createElement("div")
+      countDiv.classList.add('users-table-row-data')
+      countDiv.innerHTML = count
+      countCol.appendChild(countDiv)
+
+      var pctCol = document.createElement("td")
+      pctCol.style.textAlign = "right"
+      var pctDiv = document.createElement("div")
+      pctDiv.classList.add('users-table-row-data')
+      pctDiv.innerHTML = Math.trunc(Number(count) / tournamentCount * 100) + "%"
+      pctCol.appendChild(pctDiv)
+
+      tr.appendChild(usernameCol)
+      tr.appendChild(countCol)
+      tr.appendChild(pctCol)
+      tableRowsBody.appendChild(tr)
+    }
+    hideUsersTableLoadingSpinner()
+  }
+
+  function onTournamentsPlayedDataFetchError(error_title, error_description) {
+    hideUsersTableLoadingSpinner()
+
+    var errorContainer = document.getElementById("id_users_table_errors")
+    var errorTitleContainer = document.getElementById("id_users_table_error_title")
+    var errorMessageContainer = document.getElementById("id_users_table_error_message")
+
+    errorTitleContainer.innerHTML = error_title
+    errorMessageContainer.innerHTML = error_description
+    errorContainer.classList.remove("d-none")
+  }
+
+  function retryFetchTournamentPlayedData() {
+    var errorContainer = document.getElementById("id_users_table_errors")
+    var loadingSpinnerElement = document.getElementById("id_users_table_loading_spinner")
+    var errorTitleContainer = document.getElementById("id_users_table_error_title")
+    var errorMessageContainer = document.getElementById("id_users_table_error_message")
+
+    errorTitleContainer.innerHTML = ""
+    errorMessageContainer.innerHTML = ""
+
+    if (!errorContainer.classList.contains("d-none")) {
+      errorContainer.classList.add("d-none")
+    }
+    if (loadingSpinnerElement.classList.contains("d-none")) {
+      loadingSpinnerElement.classList.remove("d-none")
+    }
+
+    fetchTournamentsPlayedData()
+  }
+
+  function hideUsersTableLoadingSpinner() {
+    var loadingSpinnerElement = document.getElementById("id_users_table_loading_spinner")
+    if (!loadingSpinnerElement.classList.contains("d-none")) {
+      loadingSpinnerElement.classList.add("d-none")
+    }
+  }
+</script>
+
 <style type="text/css">
+
+  .group-users-table {
+    margin: auto;
+    padding-top: 16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    border-radius: 8px;
+    background-color: #f2f2f2;
+  }
+
   .user-admin-text {
     font-weight: 500;
     margin-right: 6px;
@@ -52,6 +213,10 @@
       text-overflow: ellipsis;
       text-align: left;
       font-size: 13px;
+      max-width: 200px;
+    }
+    .users-table-row-data {
+      font-size: 13px;
     }
   }
   @media only screen and (min-width: 500px) and (max-width: 600px) {
@@ -60,6 +225,10 @@
       white-space: wrap;
       text-overflow: ellipsis;
       text-align: left;
+      font-size: 13px;
+      max-width: 230px;
+    }
+    .users-table-row-data {
       font-size: 13px;
     }
   }
@@ -71,6 +240,10 @@
       text-overflow: ellipsis;
       text-align: left;
       font-size: 16px;
+      max-width: 260px;
+    }
+    .users-table-row-data {
+      font-size: 16px;
     }
   }
 
@@ -80,6 +253,10 @@
       white-space: wrap;
       text-overflow: ellipsis;
       text-align: left;
+      font-size: 16px;
+      max-width: 290px;
+    }
+    .users-table-row-data {
       font-size: 16px;
     }
   }
@@ -91,6 +268,10 @@
       text-overflow: ellipsis;
       text-align: left;
       font-size: 16px;
+      max-width: 450px;
+    }
+    .users-table-row-data {
+      font-size: 16px;
     }
   }
 
@@ -100,6 +281,10 @@
       white-space: wrap;
       text-overflow: ellipsis;
       text-align: left;
+      font-size: 16px;
+      max-width: 550px;
+    }
+    .users-table-row-data {
       font-size: 16px;
     }
   }

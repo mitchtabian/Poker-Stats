@@ -48,6 +48,21 @@ def build_json_from_eliminations_and_rebuys_data(list_of_group_eliminations_and_
 		data_list.append(data)
 	return json.dumps(data_list)
 
+@dataclass
+class TournamentGroupTournamentsPlayed:
+	username: str
+	count: int
+
+def build_json_from_tournaments_played_data(list_of_group_tournaments_played):
+	data_list = []
+	for item in list_of_group_tournaments_played:
+		data = {
+			'username': item.username,
+			'count': f"{item.count}",
+		}
+		data_list.append(data)
+	return json.dumps(data_list)
+
 
 
 

@@ -12,7 +12,8 @@ from tournament_group.models import TournamentGroup
 from tournament_group.util import (
 	build_json_from_net_earnings_data,
 	build_json_from_pot_contributions_data,
-	build_json_from_eliminations_and_rebuys_data
+	build_json_from_eliminations_and_rebuys_data,
+	build_json_from_tournaments_played_data
 )
 from user.models import User
 
@@ -206,6 +207,27 @@ def fetch_tournament_group_eliminations_and_rebuys_data(request, *args, **kwargs
 	except Exception as e:
 		error = {
 			'error': "Unable to retrieve eliminations and rebuys data.",
+			'message': f"{e.args[0]}"
+		}
+		return JsonResponse(error, status=200)
+	return JsonResponse(context, status=200)
+
+@login_required
+def fetch_tournament_group_touraments_played_data(request, *args, **kwargs):
+	context = {}
+	try:
+		pk = kwargs['pk']
+		tournament_group = TournamentGroup.objects.get_by_id(pk)
+		if tournament_group == None:
+			raise ValidationError("Our records indicate that TournamentGroup does not exist.")
+
+		tournaments_played = TournamentGroup.objects.build_group_tournaments_played_data(
+			group = tournament_group
+		)
+		context['tournaments_played'] = build_json_from_tournaments_played_data(tournaments_played)
+	except Exception as e:
+		error = {
+			'error': "Unable to retrieve tournaments played data.",
 			'message': f"{e.args[0]}"
 		}
 		return JsonResponse(error, status=200)

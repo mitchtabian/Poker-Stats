@@ -39,7 +39,7 @@
 
         <!-- Display the users who have already been added -->
         {% if current_users %}
-          {% include 'tournament_group/snippets/display_user_list_snippet.html' with users=current_users %}
+          {% include 'tournament_group/snippets/display_user_list_snippet_edit_mode.html' with users=current_users %}
         {% endif %}
 
         <!-- Adding new users -->
