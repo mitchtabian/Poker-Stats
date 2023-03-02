@@ -133,10 +133,13 @@
 		tooltipEl.style.pointerEvents = 'none';
 	}
 
-	window.onresize = function() {
-		onNetEarningsResize()
-		onPotContributionsResize()
-	}
+	var width = $(window).width();
+	$(window).on('resize', function(){
+		if(width !== $(window).width()){
+			onNetEarningsResize()
+			onPotContributionsResize()
+		}
+	});
 </script>
 
 
