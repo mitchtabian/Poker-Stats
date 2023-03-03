@@ -1,6 +1,10 @@
+from enum import Enum
 from itertools import chain
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
+from datetime import datetime
+import pytz
 
 from tournament.models import (
 	Tournament,
@@ -119,6 +123,18 @@ class TournamentGroupManager(models.Manager):
 		for tournament in tournaments:
 			if not self.has_at_least_one_user_played_in_tournament(group = group, tournament=tournament):
 				raise ValidationError(f"None of the users in this TournamentGroup have played in {tournament.title}.")
+			if tournament.get_state() != TournamentState.COMPLETED:
+				raise ValidationError(f"Only completed tournaments can be added to a Tournament Group.")
+
+		# Only add tournaments that fall within the allowed date range.
+		if group.start_at != None:
+			for tournament in tournaments:
+				if tournament.completed_at < group.start_at:
+					raise ValidationError(f"The completion date for '{tournament.title}' does not fall within the allowed date range.")
+		if group.end_at != None:
+			for tournament in tournaments:
+				if tournament.completed_at > group.end_at:
+					raise ValidationError(f"The completion date for '{tournament.title}' does not fall within the allowed date range.")
 
 		updated_group = group
 		updated_group.tournaments.add(*tournaments)
@@ -326,12 +342,71 @@ class TournamentGroupManager(models.Manager):
 			reverse = True
 		)
 
+	"""
+	Format of 'end_at_date': 2023/03/16
+	"""
+	def update_end_at_date(self, user, group, end_at_date):
+		if user != group.admin:
+			raise ValidationError("You're not the Tournament Group admin!")
+
+		# Make it timezone aware and force time to 11:59.
+		timezone = pytz.timezone('US/Pacific')
+		date_with_time_added = f"{end_at_date} 23:59"
+		datetime_object = timezone.localize(datetime.strptime(date_with_time_added, "%Y/%m/%d %H:%M"))
+
+		if group.start_at != None:
+			if datetime_object < group.start_at:
+				raise ValidationError("The 'end date' cannot be before the 'start date'.")
+
+		updated_group = TournamentGroup.objects.get_by_id(group.id)
+		updated_group.end_at = datetime_object
+		updated_group.save()
+		return updated_group
+
+	"""
+	Format of 'start_at_date': 2023/03/16
+	"""
+	def update_start_at_date(self, user, group, start_at_date):
+		if user != group.admin:
+			raise ValidationError("You're not the Tournament Group admin!")
+
+		# Make it timezone aware and force time to 12:00am.
+		timezone = pytz.timezone('US/Pacific')
+		date_with_time_added = f"{start_at_date} 00:00"
+		datetime_object = timezone.localize(datetime.strptime(date_with_time_added, "%Y/%m/%d %H:%M"))
+
+		if group.end_at != None:
+			if datetime_object > group.end_at:
+				raise ValidationError("The 'start date' cannot be after the 'end date'.")
+
+		updated_group = TournamentGroup.objects.get_by_id(group.id)
+		updated_group.start_at = datetime_object
+		updated_group.save()
+		return updated_group
+
+"""
+Used to denote the state of the TournamentGroup with respect to start_at and end_at fields.
+1. NONE: start_at == None and end_at == None
+2. STARTED: start_at != None and end_at == None
+3. ENDED: start_at != None and end_at  != None
+"""
+class TournamentGroupState(Enum):
+	NONE = 0
+	STARTED = 1
+	ENDED = 2
 
 class TournamentGroup(models.Model):
 	admin					= models.ForeignKey(User, on_delete=models.CASCADE)
 	title					= models.CharField(blank=False, null=False, max_length=255, unique=False)
 	tournaments				= models.ManyToManyField(Tournament, related_name="tournaments_in_group")
 	users					= models.ManyToManyField(User, related_name="users_in_group")
+	
+	"""
+	start_at and end_at are dates marking the start and end date of the group. This can be used to 
+	implement "seasons". Example: A 2023 season would start January 1 2023 and end Decemeber 31 2023.
+	"""
+	start_at				= models.DateTimeField(null=True, blank=True)
+	end_at					= models.DateTimeField(null=True, blank=True)
 
 	objects = TournamentGroupManager()
 
@@ -347,9 +422,40 @@ class TournamentGroup(models.Model):
 	def get_users(self):
 		return self.users.all()
 
+	def get_state(self):
+		if self.start_at == None and self.end_at == None:
+			return TournamentGroupState.NONE
+		elif self.start_at != None and self.end_at == None:
+			return TournamentGroupState.STARTED
+		else:
+			return TournamentGroupState.ENDED
 
+	"""
+	Return how many days have elapsed since the TournamentGroup started.
+	"""
+	def get_progress(self):
+		if self.get_state() != TournamentGroupState.NONE:
+			return (timezone.now() - self.start_at).days
+		else:
+			return None
 
+	"""
+	Return how many days until since the TournamentGroup ends.
+	"""
+	def get_days_remaining(self):
+		if self.get_state() != TournamentGroupState.NONE:
+			return (self.end_at - timezone.now()).days
+		else:
+			return None
 
+	"""
+	Return how many days the TournamentGroup is active for.
+	"""
+	def get_group_duration(self):
+		if self.get_state() != TournamentGroupState.NONE:
+			return (self.end_at - self.start_at).days
+		else:
+			return None
 
 
 

@@ -20,6 +20,7 @@ This is a notes section for me personally.
 		1. Add start_date and end_date to TournamentGroup? Then I can build a progress bar in the TournamentGroup view.
 	1. Tournament "MVP"? How would this be calculated
 1. Completing a tournament takes a long time. Figure out why.
+1. Rendering tournament view takes a long time. Figure out why.
 1. Add footer
 1. Create invite system for TournamentGroups. Just like with Tournaments.
 1. Split winners
@@ -28,9 +29,6 @@ This is a notes section for me personally.
 1. Setup Jira for further feature work
 1. Prevent analytics from considering tournaments you did not join
 	- everything in tournament_analytics.html
-1. Performance improvements?
-	1. tournament view renders pretty slow in production.
-		- Why is it not slow on my computer?
 1. Send an email when invited to tournament
 1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Add a notes field to the tournament. 

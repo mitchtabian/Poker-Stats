@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block head_title %}Update Tournament Group{% endblock %}
 
 {% load tournament_extras %}
+{% load humanize %}
 {% load bootstrap5 %}
 
 {% block content %}
@@ -21,6 +24,7 @@
 
       <h2 class="mb-4">Edit Tournament Group</h2>
 
+      <!-- Title -->
       <h5>Title</h5>
       <hr>
       <div class="tournament-group-section-container">
@@ -31,6 +35,54 @@
           </div>
         </div>
       </div>
+
+      <!-- start_at and end_at dates -->
+      <h5>
+        <div class="d-flex flex-row">
+          Dates
+          <svg xmlns="http://www.w3.org/2000/svg" style="margin-left: 6px;" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" id="id_earnings_info_icon" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Dates can be used to designate 'seasons' for your Tournament groups">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+          </svg>
+        </div>
+      </h5>
+      <hr>
+      <div class="tournament-group-section-container" id="id_dates_container">
+
+        {% if start_at_date or end_at_date %}
+          <div class='alert alert-warning mt-3' role="alert">
+            <div class="d-flex flex-column">
+              <div style="font-weight: 500;">WARNING</div>
+              <div>Any tournaments that do not fall within the date range will be automatically removed from the Tournament Group.</div>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- start_at date -->
+        <div class="date-container">
+          <label for="id_start_at_date" class="form-label">Start Date</label>
+          <div class="input-group">
+            <button class="btn btn-outline-primary" type="button" id="id_start_at_date">Edit</button>
+            <input class="form-control" aria-describedby="Choose a start date" type="text" Placeholder="Start at date" aria-label="Update start_at date" value="{{start_at_date_raw}}" autocomplete="off" disabled>
+          </div>
+
+          <!-- Hidden htmx field for updating start_at date -->
+          <input class="d-none" hx-get="{% url 'tournament_group:update' pk=tournament_group.id %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="click" type="text" name="update_start_at_date" id="id_update_start_at_date" placeholder="start_at date" aria-label="Update start_at date" value="{{start_at_date}}">
+        </div>
+
+        <!-- end_at date -->
+        <div class="date-container">
+          <label for="id_end_at_date" class="form-label">End Date</label>
+          <div class="input-group">
+            <button class="btn btn-outline-primary" type="button" id="id_end_at_date">Edit</button>
+            <input class="form-control" aria-describedby="Choose an end date" type="text" Placeholder="End at date" aria-label="Update end_at date" value="{{end_at_date_raw}}" autocomplete="off" disabled>
+          </div>
+
+          <!-- Hidden htmx field for updating end_at date -->
+          <input class="d-none" hx-get="{% url 'tournament_group:update' pk=tournament_group.id %}" hx-target="#body_container" hx-swap="innerHTML" hx-trigger="click" type="text" name="update_end_at_date" id="id_update_end_at_date" placeholder="end_at date" aria-label="Update end_at date" value="{{end_at_date}}">
+        </div>
+      </div>
+
 
       <!-- Users -->
       <h5>Users</h5>
@@ -71,7 +123,7 @@
             <h6>
               <div class="d-flex flex-row">
                 <div style="margin-right: 4px;">Add New Tournament</div>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" id="id_earnings_info_icon" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Only tournaments that the users have played in can be added to the Tournament Group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle align-self-center" id="id_earnings_info_icon" viewBox="0 0 16 16" data-toggle="tooltip" data-placement="top" title="Only tournaments that at least one useer has played in can be added to the Tournament Group. Tournaments also must be completed.">
                   <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                   <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
                 </svg>
@@ -96,6 +148,10 @@
     padding: 16px;
     background-color: #f2f2f2;
     border-radius: 8px;
+    margin-top: 16px;
+  }
+
+  .date-container {
     margin-top: 16px;
   }
 
@@ -129,6 +185,41 @@
   }
 </style>
 
+<!-- Datetime picker -->
+<link rel="stylesheet" type="text/css" href="{% static 'datetime-picker/jquery.datetimepicker.css' %}"/>
+<script src="{% static 'datetime-picker/jquery.datetimepicker.full.min.js' %}"></script>
+<script type="text/javascript">
+  $('#id_start_at_date').datetimepicker({
+    timepicker:false,
+    onSelectDate:function(ct, input){
+      const new_datetime = input.val()
+      const date = new_datetime.split(" ")[0]
+      input.blur()
+      updateStartAtDate(date)
+    },
+  });
+  $('#id_end_at_date').datetimepicker({
+    timepicker:false,
+    onSelectDate:function(ct, input){
+      const new_datetime = input.val()
+      const date = new_datetime.split(" ")[0]
+      input.blur()
+      updateEndAtDate(date)
+    },
+  });
+
+  function updateEndAtDate(date) {
+    document.getElementById("id_update_end_at_date").value = date
+    document.getElementById("id_update_end_at_date").click()
+  }
+
+  function updateStartAtDate(date) {
+    document.getElementById("id_update_start_at_date").value = date
+    document.getElementById("id_update_start_at_date").click()
+  }
+
+</script>
+
 <script src="https://unpkg.com/htmx.org@1.8.5"></script>
 
 <script type="text/javascript">
@@ -141,6 +232,8 @@
     event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
   })
 </script>
+
+
 
 {% endblock content %}
 
