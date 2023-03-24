@@ -124,6 +124,13 @@ class TournamentGroupTestCase(TransactionTestCase):
 		)
 
 		tournament = build_tournament(structure, admin_user=cat)
+
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+		tournament = Tournament.objects.complete_tournament(
+						user = cat,
+						tournament_id = tournament.id
+					)
+
 		TournamentGroup.objects.add_tournaments_to_group(
 			admin = cat,
 			group = cats_group,
@@ -169,6 +176,13 @@ class TournamentGroupTestCase(TransactionTestCase):
 			allow_rebuys = True
 		)
 		tournament = build_tournament(structure = structure, admin_user = dog)
+
+		Tournament.objects.start_tournament(user = dog, tournament_id = tournament.id)
+		tournament = Tournament.objects.complete_tournament(
+						user = dog,
+						tournament_id = tournament.id
+					)
+
 		TournamentGroup.objects.add_tournaments_to_group(
 			admin = cat,
 			group = cats_group,
@@ -178,8 +192,8 @@ class TournamentGroupTestCase(TransactionTestCase):
 		# Verify there are two tournaments in the group
 		groups = TournamentGroup.objects.get_tournament_groups(user_id = cat.id)
 		self.assertEqual(len(groups[0].get_tournaments()), 2)
-		self.assertEqual(groups[0].get_tournaments()[0].admin, cat)
-		self.assertEqual(groups[0].get_tournaments()[1].admin, dog)
+		self.assertEqual(groups[0].get_tournaments()[1].admin, cat)
+		self.assertEqual(groups[0].get_tournaments()[0].admin, dog)
 
 		# Now remove dog from the group. This should also remove dogs tournament since cat did not play in it.
 		TournamentGroup.objects.remove_user_from_group(
@@ -211,6 +225,13 @@ class TournamentGroupTestCase(TransactionTestCase):
 		)
 
 		tournament = build_tournament(structure, admin_user=cat)
+
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+		tournament = Tournament.objects.complete_tournament(
+						user = cat,
+						tournament_id = tournament.id
+					)
+
 		TournamentGroup.objects.add_tournaments_to_group(
 			admin = cat,
 			group = cats_group,
@@ -234,6 +255,13 @@ class TournamentGroupTestCase(TransactionTestCase):
 			allow_rebuys = True
 		)
 		tournament = build_tournament(structure = structure, admin_user = dog)
+
+		Tournament.objects.start_tournament(user = dog, tournament_id = tournament.id)
+		tournament = Tournament.objects.complete_tournament(
+						user = dog,
+						tournament_id = tournament.id
+					)
+
 		TournamentGroup.objects.add_tournaments_to_group(
 			admin = cat,
 			group = cats_group,
@@ -257,6 +285,13 @@ class TournamentGroupTestCase(TransactionTestCase):
 			allow_rebuys = True
 		)
 		tournament = build_tournament(structure = structure, admin_user = bird)
+
+		Tournament.objects.start_tournament(user = bird, tournament_id = tournament.id)
+		tournament = Tournament.objects.complete_tournament(
+						user = bird,
+						tournament_id = tournament.id
+					)
+
 		TournamentGroup.objects.add_tournaments_to_group(
 			admin = cat,
 			group = cats_group,
@@ -266,9 +301,9 @@ class TournamentGroupTestCase(TransactionTestCase):
 		# Verify there are three tournaments in the group
 		groups = TournamentGroup.objects.get_tournament_groups(user_id = cat.id)
 		self.assertEqual(len(groups[0].get_tournaments()), 3)
-		self.assertEqual(groups[0].get_tournaments()[0].admin, cat)
+		self.assertEqual(groups[0].get_tournaments()[2].admin, cat)
 		self.assertEqual(groups[0].get_tournaments()[1].admin, dog)
-		self.assertEqual(groups[0].get_tournaments()[2].admin, bird)
+		self.assertEqual(groups[0].get_tournaments()[0].admin, bird)
 
 		# Find the tournaments in the group that only cat participated in.
 		cats_groups = TournamentGroup.objects.get_tournament_groups(
@@ -319,6 +354,12 @@ class TournamentGroupTestCase(TransactionTestCase):
 
 		dog = User.objects.get_by_username("dog")
 		tournament = build_tournament(structure, admin_user=cat)
+
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+		tournament = Tournament.objects.complete_tournament(
+						user = cat,
+						tournament_id = tournament.id
+					)
 
 		# Verify you cannot add tournaments to a group if you are not admin
 		with self.assertRaisesMessage(ValidationError, "You're not the admin of that TournamentGroup."):
@@ -395,6 +436,12 @@ class TournamentGroupTestCase(TransactionTestCase):
 		dog = User.objects.get_by_username("dog")
 		tournament = build_tournament(structure, admin_user=cat)
 
+		Tournament.objects.start_tournament(user = cat, tournament_id = tournament.id)
+		tournament = Tournament.objects.complete_tournament(
+						user = cat,
+						tournament_id = tournament.id
+					)
+
 		# Add a tournament to the group
 		TournamentGroup.objects.add_tournaments_to_group(
 			admin = cat,
@@ -424,6 +471,13 @@ class TournamentGroupTestCase(TransactionTestCase):
 			allow_rebuys = True
 		)
 		dog_tournament = build_tournament(structure = structure, admin_user = dog)
+
+		Tournament.objects.start_tournament(user = dog, tournament_id = dog_tournament.id)
+		dog_tournament = Tournament.objects.complete_tournament(
+						user = dog,
+						tournament_id = dog_tournament.id
+					)
+
 		with self.assertRaisesMessage(ValidationError, f"{dog_tournament.title} is not in this TournamentGroup."):
 			TournamentGroup.objects.remove_tournament_from_group(
 				admin = cat,

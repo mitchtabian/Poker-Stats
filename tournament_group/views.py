@@ -3,10 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.utils import timezone
+from datetime import datetime
 import random
 import json
 
-from tournament.models import Tournament, TournamentPlayer
+from tournament.models import Tournament, TournamentPlayer, TournamentState
 from tournament_group.forms import CreateTournamentGroupForm
 from tournament_group.models import TournamentGroup
 from tournament_group.util import (
@@ -57,6 +59,18 @@ def tournament_group_update_view(request, *args, **kwargs):
 		current_users = tournament_group.get_users()
 		context['current_users'] = current_users
 
+		# Current start_at date.
+		start_at_date = tournament_group.start_at
+		if start_at_date != None:
+			context['start_at_date_raw'] = start_at_date
+			context['start_at_date'] = datetime.strftime(start_at_date, "%Y/%m/%d %H:%M")
+
+		# Current end_at date
+		end_at_date = tournament_group.end_at
+		if end_at_date != None:
+			context['end_at_date_raw'] = end_at_date
+			context['end_at_date'] = datetime.strftime(end_at_date, "%Y/%m/%d %H:%M")
+
 		# Get the updated title
 		new_title = request.POST.get("new_title")
 		if new_title == None or new_title == "":
@@ -92,14 +106,83 @@ def tournament_group_update_view(request, *args, **kwargs):
 			for tournament in current_tournaments:
 				tournament_search_result = tournament_search_result.exclude(id=tournament.id)
 
-			# Exclude tournaments where none of the users in this group have played.
+			# Exclude tournaments where:
+			# 1. None of the users in this group have played.
+			# 2. Not completed
+			# 3. Not within the allowed date range
 			for tournament in tournament_search_result:
 				if not TournamentGroup.objects.has_at_least_one_user_played_in_tournament(group=tournament_group, tournament=tournament):
 					tournament_search_result = tournament_search_result.exclude(id=tournament.id)
+				if tournament.get_state() != TournamentState.COMPLETED:
+					tournament_search_result = tournament_search_result.exclude(id=tournament.id)
+				if tournament.completed_at != None:
+					if tournament_group.start_at != None and tournament.completed_at < tournament_group.start_at:
+						tournament_search_result = tournament_search_result.exclude(id=tournament.id)
+					if tournament_group.end_at != None and tournament.completed_at > tournament_group.end_at:
+						tournament_search_result = tournament_search_result.exclude(id=tournament.id)
+
 			context['tournament_search_result'] = tournament_search_result
 			context['search_tournaments'] = search_tournaments
 
+		# Update end_at date with htmx
+		end_at_date = request.GET.get("update_end_at_date")
+		if end_at_date != None:
+			updated_group = TournamentGroup.objects.update_end_at_date(
+				user = request.user,
+				group = tournament_group,
+				end_at_date = end_at_date
+			)
+			context['end_at_date_raw'] = updated_group.end_at
+			context['end_at_date'] = datetime.strftime(updated_group.end_at, "%Y/%m/%d")
+
+		# Update start_at date with htmx
+		start_at_date = request.GET.get("update_start_at_date")
+		if start_at_date != None:
+			updated_group = TournamentGroup.objects.update_start_at_date(
+				user = request.user,
+				group = tournament_group,
+				start_at_date = start_at_date
+			)
+			context['start_at_date_raw'] = updated_group.start_at
+			context['start_at_date'] = datetime.strftime(updated_group.start_at, "%Y/%m/%d")
+
+		current_tournaments = tournament_group.get_tournaments()
+		context['current_tournaments'] = current_tournaments
+
 		context['edit_mode'] = True
+
+		# Remove tournaments that do not fall within new date range.
+		# Get an updated version of the group at this point b/c if may have changed.
+		tournament_group = TournamentGroup.objects.get_by_id(tournament_group.id)
+		removed_tournaments = []
+		for tournament in current_tournaments:
+			if tournament.completed_at != None:
+				if tournament_group.end_at != None and tournament.completed_at > tournament_group.end_at:
+					TournamentGroup.objects.remove_tournament_from_group(
+							admin = tournament_group.admin,
+							group = tournament_group,
+							tournament = tournament
+						)
+					removed_tournaments.append(tournament)
+					continue
+				if tournament_group.start_at != None and tournament.completed_at < tournament_group.start_at:
+					TournamentGroup.objects.remove_tournament_from_group(
+							admin = tournament_group.admin,
+							group = tournament_group,
+							tournament = tournament
+						)
+					removed_tournaments.append(tournament)
+					continue
+					
+		if len(removed_tournaments) > 0:
+			warning_message = "Removed tournaments: "
+			for index,tournament in enumerate(removed_tournaments):
+				if index > 0:
+					warning_message += ", "
+				warning_message += f"({tournament.title})"
+			messages.warning(request, warning_message)
+			current_tournaments = tournament_group.get_tournaments()
+			context['current_tournaments'] = current_tournaments
 	except Exception as e:
 		messages.error(request, e.args[0])
 	return render(request=request, template_name='tournament_group/update_tournament_group.html', context=context)
@@ -124,6 +207,27 @@ def view_tournament_group(request, *args, **kwargs):
 
 		tournaments = tournament_group.get_tournaments()
 		context['tournaments'] = tournaments
+
+		start_at = tournament_group.start_at
+		context['start_at'] = start_at
+
+		end_at = tournament_group.end_at
+		context['end_at'] = end_at
+
+		if start_at and end_at:
+			today = timezone.now()
+			if start_at > today:
+				context['days_until_start'] = (start_at - today).days
+			if today > end_at:
+				context['days_since_end'] = (today - end_at).days
+			progress = tournament_group.get_progress()
+			duration = tournament_group.get_group_duration()
+			days_remaining = tournament_group.get_days_remaining()
+			pct = progress / duration
+			context['progress_pct'] = int(pct * 100)
+			context['duration'] = duration
+			context['progress'] = progress
+			context['days_remaining'] = days_remaining
 
 		context['edit_mode'] = False
 	except Exception as e:

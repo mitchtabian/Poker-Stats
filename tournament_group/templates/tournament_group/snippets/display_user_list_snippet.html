@@ -1,6 +1,6 @@
 {% load tournament_extras %}
 
-{% if users and tournaments %}
+{% if users %}
 <div class="mt-4 table-responsive group-users-table">
 
    <!-- Loading spinner -->
@@ -126,7 +126,12 @@
       pctCol.style.textAlign = "right"
       var pctDiv = document.createElement("div")
       pctDiv.classList.add('users-table-row-data')
-      pctDiv.innerHTML = Math.trunc(Number(count) / tournamentCount * 100) + "%"
+      if (tournamentCount > 0) {
+        pctDiv.innerHTML = Math.trunc(Number(count) / tournamentCount * 100) + "%"
+      } else {
+        pctDiv.innerHTML = "--"
+      }
+
       pctCol.appendChild(pctDiv)
 
       tr.appendChild(usernameCol)

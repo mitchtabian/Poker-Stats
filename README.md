@@ -15,22 +15,17 @@ Project for tracking poker stats from tournaments.
 
 # TODO
 This is a notes section for me personally.
-1. TournamentGroup?
-	1. Tournament Seasons
-		1. Add start_date and end_date to TournamentGroup? Then I can build a progress bar in the TournamentGroup view.
-	1. Tournament "MVP"? How would this be calculated
-1. Completing a tournament takes a long time. Figure out why.
-1. Add footer
-1. Create invite system for TournamentGroups. Just like with Tournaments.
 1. Split winners
 	- Need to think about this.
+1. Tournament "MVP"? How would this be calculated
+1. Completing a tournament takes a long time. Figure out why.
+1. Rendering tournament view takes a long time. Figure out why.
+1. Add footer
+1. Create invite system for TournamentGroups. Just like with Tournaments.
 1. Setup bugsnag
 1. Setup Jira for further feature work
 1. Prevent analytics from considering tournaments you did not join
 	- everything in tournament_analytics.html
-1. Performance improvements?
-	1. tournament view renders pretty slow in production.
-		- Why is it not slow on my computer?
 1. Send an email when invited to tournament
 1. Add timestamp input for backfilling tournaments (this can override the started_at and completed_at dates?)
 1. Add a notes field to the tournament. 
@@ -63,6 +58,13 @@ This is a notes section for me personally.
 	- The data wouldn't be great but at least you'd see placement data.
 	- I have a spike branch thats incomplete https://github.com/pokerstats/Poker-Stats/tree/backfill-no-bounties-rebuys-enabled
 		- Would just need to create a new function instead of using `complete_tournament_for_backfill`. That does not take in elim_dict and instead accepts the dict of rebuys.
+
+# Running tests
+```
+python3 manage.py test tournament/
+python3 manage.py test tournament_analytics/tests
+python3 manage.py test tournament_group/tests
+```
 
 # Resources
 1. django-allauth
